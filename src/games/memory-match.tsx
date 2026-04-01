@@ -58,6 +58,33 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
 
   const checkingRef = useRef(false);
 
+  const finishGame = useCallback((won: boolean, finalMatched: number, finalMoves: number, finalScore: number) => {
+    setPhase('done');
+    const efficiency = config.pairs > 0 ? finalMoves / config.pairs : 99;
+    let stars: number;
+    let summary: string;
+
+    if (won) {
+      if (efficiency < 1.4) {
+        stars = 3;
+        summary = `Amazing memory! All ${config.pairs} pairs in just ${finalMoves} moves! Your brain is incredible! 🌟`;
+      } else if (efficiency < 2) {
+        stars = 2;
+        summary = `Great job! ${finalMoves} moves for ${config.pairs} pairs. Try to remember card positions to use fewer moves!`;
+      } else {
+        stars = 1;
+        summary = `You found all pairs in ${finalMoves} moves! Focus on one row at a time to remember better.`;
+      }
+      const bonus = config.time > 0 ? timeLeft * 3 : 50;
+      setScore(s => s + bonus);
+      onEnd({ score: finalScore + bonus, stars, summary });
+    } else {
+      stars = 1;
+      summary = `Time's up! You found ${finalMatched} pairs. Take a mental snapshot of each row to remember faster!`;
+      onEnd({ score: finalScore, stars, summary });
+    }
+  }, [config, timeLeft, onEnd]);
+
   // Timer
   useEffect(() => {
     if (phase !== 'playing' || config.time <= 0) return;
@@ -152,33 +179,6 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       }
     }
   }, [phase, cards, flippedIndices, matched, moves, score, config, onScore, onProgress]);
-
-  const finishGame = useCallback((won: boolean, finalMatched: number, finalMoves: number, finalScore: number) => {
-    setPhase('done');
-    const efficiency = config.pairs > 0 ? finalMoves / config.pairs : 99;
-    let stars: number;
-    let summary: string;
-
-    if (won) {
-      if (efficiency < 1.4) {
-        stars = 3;
-        summary = `Amazing memory! All ${config.pairs} pairs in just ${finalMoves} moves! Your brain is incredible! 🌟`;
-      } else if (efficiency < 2) {
-        stars = 2;
-        summary = `Great job! ${finalMoves} moves for ${config.pairs} pairs. Try to remember card positions to use fewer moves!`;
-      } else {
-        stars = 1;
-        summary = `You found all pairs in ${finalMoves} moves! Focus on one row at a time to remember better.`;
-      }
-      const bonus = config.time > 0 ? timeLeft * 3 : 50;
-      setScore(s => s + bonus);
-      onEnd({ score: finalScore + bonus, stars, summary });
-    } else {
-      stars = 1;
-      summary = `Time's up! You found ${finalMatched} pairs. Take a mental snapshot of each row to remember faster!`;
-      onEnd({ score: finalScore, stars, summary });
-    }
-  }, [config, timeLeft, onEnd]);
 
   const cardSize = config.pairs >= 12 ? 52 : config.pairs >= 8 ? 62 : 72;
 
