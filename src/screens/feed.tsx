@@ -62,7 +62,8 @@ export function Feed() {
   };
 
   const formatTime = (ts: number) => {
-    const diff = Date.now() - ts;
+    const now = useRef(Date.now()).current;
+    const diff = now - ts;
     if (diff < 60000) return 'just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;

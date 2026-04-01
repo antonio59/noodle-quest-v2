@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Swords, Trophy, Clock } from 'lucide-react';
+import { Trophy, Clock } from 'lucide-react';
 
 interface Challenge {
   id: string;
@@ -18,7 +18,7 @@ export function Challenges() {
   const [tab, setTab] = useState<'pending' | 'history'>('pending');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
 
-  const fetchChallenges = async () => {
+  const fetchChallenges = useCallback(async () => {
     if (!player) return;
     try {
       const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
@@ -42,9 +42,12 @@ export function Challenges() {
         })));
       }
     } catch { /* offline */ }
-  };
+  }, [player]);
 
-  useEffect(() => { fetchChallenges(); }, [player]);
+  useEffect(() => {
+    const timer = setTimeout(fetchChallenges, 0);
+    return () => clearTimeout(timer);
+  }, [fetchChallenges]);
 
   return (
     <div className="h-full flex flex-col">
