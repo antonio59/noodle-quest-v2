@@ -1,0 +1,33 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 8 * * 1' # Weekly Monday 8am
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: npm audit
+        run: npm audit --audit-level=high || true
+
+      - name: Check for secrets in code
+        run: |
+          echo "Scanning for potential secrets..."
+          ! grep -r "CONVEX_URL\|API_KEY\|SECRET\|PASSWORD\|TOKEN" src/ --include="*.ts" --include="*.tsx" | grep -v "import.meta.env" | grep -v "VITE_CONVEX_URL" || echo "::warning::Potential secret found in source"
