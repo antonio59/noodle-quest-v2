@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Trophy, Star, Gamepad2 } from 'lucide-react';
 
 interface LeaderboardEntry {
   rank: number;
@@ -26,7 +25,7 @@ export function Leaderboard() {
         });
         const data = await res.json();
         if (data.value) {
-          setEntries(data.value.map((e: any, i: number) => ({
+          setEntries(data.value.map((e: Record<string, unknown>, i: number) => ({
             rank: i + 1,
             name: e.playerName,
             avatar: e.avatar,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { ArrowLeft, Star } from 'lucide-react';
 import type { GameDefinition, GameResult } from '@/types';
 
@@ -9,7 +9,7 @@ interface PlayGameProps {
   onBack: () => void;
 }
 
-export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
+export function PlayGame({ game, stage, onBack }: PlayGameProps) {
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
