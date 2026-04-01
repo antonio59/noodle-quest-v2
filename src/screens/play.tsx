@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { ArrowLeft, Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import type { GameDefinition, GameResult } from '@/types';
 
 interface PlayGameProps {
@@ -9,17 +10,35 @@ interface PlayGameProps {
   onBack: () => void;
 }
 
-export function PlayGame({ game, stage, onBack }: PlayGameProps) {
+export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
+  const { player } = useAuth();
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [ended, setEnded] = useState<GameResult | null>(null);
-  const areaRef = useRef<HTMLDivElement>(null);
+  const savedRef = useRef(false);
 
   const GameComponent = game.component;
 
+  const saveScore = useCallback(async (result: GameResult) => {
+    if (!player || savedRef.current) return;
+    savedRef.current = true;
+    try {
+      await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'games:saveScore',
+          format: 'convex_encoded_json',
+          args: [{ playerId: player.playerId, gameId, stage, score: result.score, stars: result.stars }],
+        }),
+      });
+    } catch { /* offline */ }
+  }, [player, gameId, stage]);
+
   const handleEnd = (result: GameResult) => {
     setEnded(result);
+    saveScore(result);
   };
 
   const renderStars = (count: number) => (
@@ -93,7 +112,7 @@ export function PlayGame({ game, stage, onBack }: PlayGameProps) {
       )}
 
       {/* Game area */}
-      <div ref={areaRef} className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         <GameComponent
           stage={stage}
           onScore={pts => setScore(s => s + pts)}

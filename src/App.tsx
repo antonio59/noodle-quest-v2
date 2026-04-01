@@ -5,13 +5,14 @@ import { PlayGame } from '@/screens/play';
 import { Feed } from '@/screens/feed';
 import { Profile } from '@/screens/profile';
 import { Leaderboard } from '@/screens/leaderboard';
+import { Challenges } from '@/screens/challenges';
 import { Landing } from '@/screens/landing';
 import { Auth } from '@/screens/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/NavBar';
 import type { GameDefinition } from '@/types';
 
-export type Screen = 'home' | 'games' | 'leaderboard' | 'feed' | 'profile';
+export type Screen = 'home' | 'games' | 'challenges' | 'leaderboard' | 'feed' | 'profile';
 
 export function AppRouter() {
   const { player } = useAuth();
@@ -40,6 +41,7 @@ export function AppRouter() {
       <main className="flex-1 overflow-hidden">
         {screen === 'home' && <Home onPlay={(g, id, s) => setPlaying({ game: g, id, stage: s })} />}
         {screen === 'games' && <GameHub onPlay={(g, id, s) => setPlaying({ game: g, id, stage: s })} />}
+        {screen === 'challenges' && <Challenges />}
         {screen === 'leaderboard' && <Leaderboard />}
         {screen === 'feed' && <Feed />}
         {screen === 'profile' && <Profile />}

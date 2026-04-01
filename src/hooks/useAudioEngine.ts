@@ -11,11 +11,13 @@ export function useAudioEngine() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
 
-  const getCtx = useCallback(() => {
+  const getCtx = useCallback(async () => {
     if (!ctxRef.current) {
       ctxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    if (ctxRef.current.state === 'suspended') ctxRef.current.resume();
+    if (ctxRef.current.state === 'suspended') {
+      await ctxRef.current.resume();
+    }
     return ctxRef.current;
   }, []);
 
@@ -26,18 +28,16 @@ export function useAudioEngine() {
     setCurrentTrack(null);
   }, []);
 
-  // Lo-fi beat: detuned chords + vinyl crackle + slow hi-hat
-  const playLofi = useCallback((bpm = 75) => {
-    const ctx = getCtx();
+  const playLofi = useCallback(async (bpm = 75) => {
+    const ctx = await getCtx();
     const beatLen = 60 / bpm;
     const nodes: { stop: () => void }[] = [];
 
-    // Chord pad (jazzy 7th chord)
     const chords = [
-      [261.6, 329.6, 392.0, 493.9], // Cmaj7
-      [293.7, 370.0, 440.0, 523.3], // Dm7
-      [349.2, 440.0, 523.3, 659.3], // Fmaj7
-      [392.0, 493.9, 587.3, 740.0], // G7
+      [261.6, 329.6, 392.0, 493.9],
+      [293.7, 370.0, 440.0, 523.3],
+      [349.2, 440.0, 523.3, 659.3],
+      [392.0, 493.9, 587.3, 740.0],
     ];
 
     let chordIdx = 0;
@@ -52,7 +52,7 @@ export function useAudioEngine() {
         const gain = ctx.createGain();
         const filter = ctx.createBiquadFilter();
         osc.type = 'sine';
-        osc.frequency.value = freq * 0.998; // detune
+        osc.frequency.value = freq * 0.998;
         filter.type = 'lowpass';
         filter.frequency.value = 800;
         gain.gain.setValueAtTime(0.04, ctx.currentTime);
@@ -63,10 +63,9 @@ export function useAudioEngine() {
         osc.start();
         osc.stop(ctx.currentTime + beatLen * 4);
       });
-      setTimeout(playChord, beatLen * 4000);
+      if (running) setTimeout(playChord, beatLen * 4000);
     };
 
-    // Vinyl crackle (noise burst)
     const playCrackle = () => {
       if (!running) return;
       const bufferSize = ctx.sampleRate * 0.05;
@@ -86,10 +85,9 @@ export function useAudioEngine() {
       filter.connect(gain);
       gain.connect(ctx.destination);
       source.start();
-      setTimeout(playCrackle, 100 + Math.random() * 300);
+      if (running) setTimeout(playCrackle, 100 + Math.random() * 300);
     };
 
-    // Hi-hat
     const playHihat = () => {
       if (!running) return;
       const bufferSize = ctx.sampleRate * 0.05;
@@ -110,10 +108,9 @@ export function useAudioEngine() {
       filter.connect(gain);
       gain.connect(ctx.destination);
       source.start();
-      setTimeout(playHihat, beatLen * 2000);
+      if (running) setTimeout(playHihat, beatLen * 2000);
     };
 
-    // Kick
     const playKick = () => {
       if (!running) return;
       const osc = ctx.createOscillator();
@@ -127,7 +124,7 @@ export function useAudioEngine() {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.2);
-      setTimeout(playKick, beatLen * 4000);
+      if (running) setTimeout(playKick, beatLen * 4000);
     };
 
     playChord();
@@ -139,13 +136,12 @@ export function useAudioEngine() {
     return nodes;
   }, [getCtx]);
 
-  // Focus: slow evolving pad
-  const playFocus = useCallback(() => {
-    const ctx = getCtx();
+  const playFocus = useCallback(async () => {
+    const ctx = await getCtx();
     const nodes: { stop: () => void }[] = [];
     let running = true;
 
-    const notes = [220, 277.2, 329.6, 440, 554.4]; // A minor pentatonic
+    const notes = [220, 277.2, 329.6, 440, 554.4];
     let noteIdx = 0;
 
     const playPad = () => {
@@ -168,7 +164,7 @@ export function useAudioEngine() {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 6);
-      setTimeout(playPad, 4000);
+      if (running) setTimeout(playPad, 4000);
     };
 
     playPad();
@@ -176,11 +172,9 @@ export function useAudioEngine() {
     return nodes;
   }, [getCtx]);
 
-  // Nature: filtered noise (rain/wind)
-  const playNature = useCallback(() => {
-    const ctx = getCtx();
+  const playNature = useCallback(async () => {
+    const ctx = await getCtx();
     const nodes: { stop: () => void }[] = [];
-    let running = true;
 
     const bufferSize = ctx.sampleRate * 2;
     const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -215,23 +209,21 @@ export function useAudioEngine() {
     gain.connect(ctx.destination);
     source.start();
 
-    nodes.push({ stop: () => { running = false; source.stop(); lfo.stop(); } });
+    nodes.push({ stop: () => { source.stop(); lfo.stop(); } });
     return nodes;
   }, [getCtx]);
 
-  // Meditation: slow breathing guide tones
-  const playMeditation = useCallback(() => {
-    const ctx = getCtx();
+  const playMeditation = useCallback(async () => {
+    const ctx = await getCtx();
     const nodes: { stop: () => void }[] = [];
     let running = true;
 
     const breathCycle = () => {
       if (!running) return;
-      // Inhale (4s)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
-      osc1.frequency.value = 174.6; // F3
+      osc1.frequency.value = 174.6;
       gain1.gain.setValueAtTime(0, ctx.currentTime);
       gain1.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 4);
       gain1.gain.linearRampToValueAtTime(0, ctx.currentTime + 8);
@@ -240,13 +232,12 @@ export function useAudioEngine() {
       osc1.start();
       osc1.stop(ctx.currentTime + 8);
 
-      // Exhale (4s) starts after inhale
       setTimeout(() => {
         if (!running) return;
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.type = 'sine';
-        osc2.frequency.value = 130.8; // C3
+        osc2.frequency.value = 130.8;
         gain2.gain.setValueAtTime(0, ctx.currentTime);
         gain2.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 4);
         gain2.gain.linearRampToValueAtTime(0, ctx.currentTime + 8);
@@ -256,7 +247,7 @@ export function useAudioEngine() {
         osc2.stop(ctx.currentTime + 8);
       }, 4000);
 
-      setTimeout(breathCycle, 12000);
+      if (running) setTimeout(breathCycle, 12000);
     };
 
     breathCycle();
@@ -264,29 +255,28 @@ export function useAudioEngine() {
     return nodes;
   }, [getCtx]);
 
-  const play = useCallback((trackId: string, config: TrackConfig) => {
+  const play = useCallback(async (trackId: string, config: TrackConfig) => {
     stopAll();
     let nodes: { stop: () => void }[] = [];
     switch (config.type) {
-      case 'lofi': nodes = playLofi(config.bpm); break;
-      case 'focus': nodes = playFocus(); break;
-      case 'nature': nodes = playNature(); break;
-      case 'meditation': nodes = playMeditation(); break;
+      case 'lofi': nodes = await playLofi(config.bpm); break;
+      case 'focus': nodes = await playFocus(); break;
+      case 'nature': nodes = await playNature(); break;
+      case 'meditation': nodes = await playMeditation(); break;
     }
     nodesRef.current = nodes;
     setIsPlaying(true);
     setCurrentTrack(trackId);
   }, [stopAll, playLofi, playFocus, playNature, playMeditation]);
 
-  const toggle = useCallback((trackId: string, config: TrackConfig) => {
+  const toggle = useCallback(async (trackId: string, config: TrackConfig) => {
     if (isPlaying && currentTrack === trackId) {
       stopAll();
     } else {
-      play(trackId, config);
+      await play(trackId, config);
     }
   }, [isPlaying, currentTrack, stopAll, play]);
 
-  // Cleanup on unmount
   useEffect(() => () => stopAll(), [stopAll]);
 
   return { isPlaying, currentTrack, play, stop: stopAll, toggle };
