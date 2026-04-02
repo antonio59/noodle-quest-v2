@@ -1,73 +1,108 @@
-# React + TypeScript + Vite
+# 🍜 Noodle Quest
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Brain games, board games, and focus tracks for the whole family.
 
-Currently, two official plugins are available:
+## What is it?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Noodle Quest is a web app for training focus, memory, and flexibility through fun mini-games. Play solo or challenge friends. Vibe to lo-fi beats while you play.
 
-## React Compiler
+### Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **22 Brain Games** — Focus, memory, motor skills, flexibility, social, and sequence games across 10-20 stages each
+- **Board Games** — Chess, Checkers, Ludo, Snakes & Ladders, Dominoes (multiplayer, real-time)
+- **Focus Tracks** — Synthesized lo-fi beats, ambient nature sounds, and guided meditation via Web Audio API
+- **Leaderboard** — Compete with friends and family on stars earned
+- **Challenges** — Send 1v1 challenges to friends on any game
+- **Chat & Activity** — Real-time feed with @mentions and score updates
+- **Favorites** — Pin your go-to games for quick access
+- **Random Stage** — Jump into a random game at a random stage
 
-## Expanding the ESLint configuration
+### Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+| Layer | Tech |
+|-------|------|
+| Frontend | React, TypeScript, Vite, Tailwind CSS |
+| Backend | Convex (real-time, serverless) |
+| Audio | Web Audio API (synthesized, no audio files) |
+| Deploy | Netlify |
+| CI | GitHub Actions + Dependabot |
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+```bash
+# Install dependencies
+npm install
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Set up environment
+cp .env.example .env
+# Edit .env with your Convex URL
+
+# Start dev server
+npm run dev
+
+# Start Convex dev backend
+npm run convex:dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+| `npm run convex:dev` | Start Convex dev backend |
+| `npm run convex:deploy` | Deploy Convex functions |
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
 ```
+src/
+  components/     # Shared UI components (NavBar)
+  contexts/       # React contexts (AuthContext)
+  games/          # 22 game components (one .tsx each)
+  hooks/          # Custom hooks (useAudioEngine)
+  lib/            # Utilities (Convex client, game registry)
+  screens/        # App screens (Home, GameHub, Play, Feed, etc.)
+  tracks/         # Audio track definitions
+  types.ts        # Shared TypeScript types
+convex/
+  auth.ts         # Player auth (sign up, log in, avatar)
+  games.ts        # Scores, progress, leaderboard
+  feed.ts         # Chat/feed posts
+  challenges.ts   # 1v1 challenges
+  schema.ts       # Database schema
+```
+
+## Adding a New Game
+
+1. Create `src/games/my-game.tsx`:
+
+```tsx
+import type { GameProps } from '@/types';
+import { registerGame } from '@/lib/game-registry';
+
+function MyGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+  // Game logic here
+  return <div>My game UI</div>;
+}
+
+registerGame('my-game', {
+  name: 'My Game',
+  emoji: '🎮',
+  description: 'What this game does',
+  category: 'focus',
+  stages: 10,
+  component: MyGame,
+});
+```
+
+2. Register in `src/main.tsx`:
+```tsx
+import '@/games/my-game';
+```
+
+## License
+
+Private — family and friends only.

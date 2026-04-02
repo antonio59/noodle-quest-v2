@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FeedPost } from '@/types';
+
+const NOW = Date.now();
 
 export function Feed() {
   const { player } = useAuth();
@@ -62,8 +64,7 @@ export function Feed() {
   };
 
   const formatTime = (ts: number) => {
-    const now = useRef(Date.now()).current;
-    const diff = now - ts;
+    const diff = NOW - ts;
     if (diff < 60000) return 'just now';
     if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;

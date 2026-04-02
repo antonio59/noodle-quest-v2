@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Medal } from 'lucide-react';
 
 interface LeaderboardEntry {
   rank: number;
@@ -9,13 +10,16 @@ interface LeaderboardEntry {
   games: number;
 }
 
+const PODIUM_ORDER = [1, 0, 2]; // silver, gold, bronze display order
+const MEDALS = ['🥇', '🥈', '🥉'];
+const HEIGHTS = ['h-20', 'h-28', 'h-16'];
+
 export function Leaderboard() {
   const { player } = useAuth();
   const [tab, setTab] = useState<'overall' | 'game'>('overall');
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
-    // Fetch from Convex
     const fetchLeaderboard = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
@@ -27,10 +31,10 @@ export function Leaderboard() {
         if (data.value) {
           setEntries(data.value.map((e: Record<string, unknown>, i: number) => ({
             rank: i + 1,
-            name: e.playerName,
-            avatar: e.avatar,
-            stars: e.totalStars,
-            games: e.gamesPlayed,
+            name: e.playerName as string,
+            avatar: e.avatar as string,
+            stars: e.totalStars as number,
+            games: e.gamesPlayed as number,
           })));
         }
       } catch { /* offline */ }
@@ -64,23 +68,25 @@ export function Leaderboard() {
       <div className="flex-1 overflow-y-auto">
         {/* Top 3 podium */}
         {top3.length >= 3 && (
-          <div className="flex items-end justify-center gap-3 p-6 pb-2">
-            {[1, 0, 2].map(idx => {
-              const e = top3[idx];
-              if (!e) return null;
-              const medals = ['🥇', '🥈', '🥉'];
-              const heights = ['h-16', 'h-24', 'h-12'];
-              return (
-                <div key={idx} className="flex flex-col items-center">
-                  <div className="text-3xl mb-1">{e.avatar}</div>
-                  <div className="text-xs font-semibold truncate max-w-[80px]">{e.name}</div>
-                  <div className="text-accent text-xs font-bold">{e.stars} ⭐</div>
-                  <div className={`w-16 ${heights[idx]} bg-card-hover rounded-t-lg mt-2 flex items-start justify-center pt-1`}>
-                    <span className="text-lg">{medals[idx]}</span>
+          <div className="bg-gradient-to-b from-accent/5 to-transparent p-6">
+            <div className="flex items-end justify-center gap-4">
+              {PODMIUM_ORDER.map(idx => {
+                const e = top3[idx];
+                if (!e) return null;
+                return (
+                  <div key={idx} className="flex flex-col items-center w-24">
+                    <div className={`text-4xl mb-1 ${idx === 0 ? 'animate-[celebrate_1s_ease_infinite]' : ''}`}>
+                      {e.avatar}
+                    </div>
+                    <div className="text-xs font-bold truncate w-full text-center">{e.name}</div>
+                    <div className="text-accent text-xs font-bold">{e.stars} ⭐</div>
+                    <div className={`w-20 ${HEIGHTS[idx]} bg-card-hover rounded-t-xl mt-3 flex items-start justify-center pt-2 border-t-2 ${idx === 0 ? 'border-warning' : idx === 1 ? 'border-gray-300' : 'border-orange-400'}`}>
+                      <span className="text-xl">{MEDALS[idx]}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -88,38 +94,50 @@ export function Leaderboard() {
         <div className="p-4 space-y-2">
           {entries.length === 0 ? (
             <div className="text-center text-text-muted text-sm py-12">
-              No scores yet! Play some games to appear here. 🎮
+              <Medal className="mx-auto mb-2 text-text-muted" size={32} />
+              No scores yet! Play some games to climb the ranks.
             </div>
           ) : (
             rest.map(e => (
               <div
                 key={e.rank}
-                className={`flex items-center gap-3 p-3 rounded-xl ${
-                  e.name === player?.name ? 'bg-accent/10 ring-1 ring-accent/30' : 'bg-card'
+                className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                  e.name === player?.name
+                    ? 'bg-accent/10 ring-1 ring-accent/30'
+                    : 'bg-card hover:bg-card-hover'
                 }`}
               >
-                <span className="w-8 h-8 flex items-center justify-center bg-card-hover rounded-full text-sm font-bold">
+                <span className="w-8 h-8 flex items-center justify-center bg-card-hover rounded-full text-sm font-bold text-text-muted">
                   {e.rank}
                 </span>
                 <span className="text-xl">{e.avatar}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">{e.name}</div>
-                  <div className="text-text-muted text-xs">{e.games} games played</div>
+                  <div className="font-semibold text-sm truncate">
+                    {e.name}
+                    {e.name === player?.name && <span className="text-accent text-xs ml-2">(you)</span>}
+                  </div>
+                  <div className="text-text-muted text-xs">{e.games} game{e.games !== 1 ? 's' : ''} played</div>
                 </div>
-                <span className="text-accent font-bold">{e.stars} ⭐</span>
+                <div className="text-right">
+                  <span className="text-accent font-bold text-sm">{e.stars}</span>
+                  <span className="text-warning text-xs ml-0.5">⭐</span>
+                </div>
               </div>
             ))
           )}
         </div>
 
         {/* Tips */}
-        <div className="p-4 space-y-2">
-          <h3 className="text-sm font-bold text-text-dim">💡 Tips</h3>
+        <div className="p-4 space-y-2 pb-8">
+          <h3 className="text-sm font-bold text-text-dim">💡 How to climb</h3>
           <div className="bg-card rounded-xl p-3 text-sm text-text-muted border-l-3 border-accent">
             Complete all stages of each game to earn maximum stars!
           </div>
           <div className="bg-card rounded-xl p-3 text-sm text-text-muted border-l-3 border-accent">
-            Replay stages for 3-star scores to collect more stars faster.
+            Replay stages for 3-star scores to collect stars faster.
+          </div>
+          <div className="bg-card rounded-xl p-3 text-sm text-text-muted border-l-3 border-accent">
+            Challenge friends — beat their scores to rank higher!
           </div>
         </div>
       </div>

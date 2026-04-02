@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
-import { Star, Zap, Trophy } from 'lucide-react';
+import { Star, Zap, Shuffle, Play } from 'lucide-react';
 
 interface HomeProps {
   onPlay: (game: GameDefinition, id: string, stage: number) => void;
@@ -10,7 +10,16 @@ interface HomeProps {
 export function Home({ onPlay }: HomeProps) {
   const { player } = useAuth();
   const games = getAllGames();
-  const recentGames = games.slice(0, 4);
+  const recentGames = games.slice(0, 6);
+
+  const handleRandomPlay = () => {
+    if (games.length === 0) return;
+    const game = games[Math.floor(Math.random() * games.length)];
+    const stage = Math.floor(Math.random() * game.stages) + 1;
+    onPlay(game, game.id, stage);
+  };
+
+  const dailyGame = games[new Date().getDate() % games.length];
 
   return (
     <div className="h-full overflow-y-auto">
@@ -21,51 +30,69 @@ export function Home({ onPlay }: HomeProps) {
             <p className="text-text-muted text-sm">Welcome back,</p>
             <h1 className="text-2xl font-bold">{player?.avatar} {player?.name}</h1>
           </div>
-          <button className="text-3xl active:scale-90 transition-transform">
-            {player?.avatar || '🎮'}
-          </button>
+          <div className="bg-card rounded-xl px-3 py-2 text-center">
+            <div className="text-lg font-bold text-warning">0</div>
+            <div className="text-text-muted text-[10px]">⭐ Stars</div>
+          </div>
         </div>
+
+        {/* Daily Game */}
+        {dailyGame && (
+          <div className="bg-gradient-to-r from-accent/15 to-primary/10 rounded-2xl p-4 mb-4 border border-accent/10">
+            <div className="text-xs font-bold text-accent mb-2">📅 DAILY CHALLENGE</div>
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">{dailyGame.emoji}</div>
+              <div className="flex-1">
+                <div className="font-bold">{dailyGame.name}</div>
+                <div className="text-text-muted text-xs">Can you beat it today?</div>
+              </div>
+              <button
+                onClick={() => onPlay(dailyGame, dailyGame.id, 1)}
+                className="bg-accent text-bg font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-1 active:scale-95"
+              >
+                <Play size={14} /> Play
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Random Play */}
+        <button
+          onClick={handleRandomPlay}
+          className="w-full bg-card hover:bg-card-hover border border-white/5 text-text font-semibold py-3 rounded-xl mb-6 flex items-center justify-center gap-2 transition-all active:scale-95"
+        >
+          <Shuffle size={18} className="text-accent" /> Random Stage — Surprise Me!
+        </button>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
             { icon: Star, label: 'Stars', value: '0', color: 'text-warning' },
             { icon: Zap, label: 'Streak', value: '0', color: 'text-success' },
-            { icon: Trophy, label: 'Games', value: String(games.length), color: 'text-accent' },
+            { icon: Play, label: 'Games', value: String(games.length), color: 'text-accent' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-xl p-3 text-center">
-              <s.icon className={`mx-auto mb-1 ${s.color}`} size={20} />
+              <s.icon className={`mx-auto mb-1 ${s.color}`} size={18} />
               <div className="text-xl font-bold">{s.value}</div>
-              <div className="text-text-muted text-xs">{s.label}</div>
+              <div className="text-text-muted text-[10px]">{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Quick Play */}
-        <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-          <Zap size={18} className="text-accent" /> Quick Play
-        </h2>
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <h2 className="text-sm font-bold text-text-dim mb-3">Quick Play</h2>
+        <div className="grid grid-cols-3 gap-2 mb-6">
           {recentGames.map(g => (
             <button
               key={g.id}
               onClick={() => onPlay(g, g.id, 1)}
-              className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
+              className="bg-card hover:bg-card-hover rounded-xl p-3 text-center transition-all active:scale-95"
             >
-              <div className="text-3xl mb-2">{g.emoji}</div>
-              <div className="font-semibold text-sm">{g.name}</div>
-              <div className="text-text-muted text-xs mt-1 line-clamp-2">{g.description}</div>
+              <div className="text-2xl mb-1">{g.emoji}</div>
+              <div className="font-semibold text-xs truncate">{g.name}</div>
             </button>
           ))}
         </div>
-
-        {/* All Games CTA */}
-        <button
-          onClick={() => {}}
-          className="w-full bg-accent-soft text-accent font-semibold py-3 rounded-xl hover:bg-accent/20 transition-colors"
-        >
-          Browse All Games →
-        </button>
       </div>
     </div>
   );
