@@ -2,6 +2,13 @@ import { useState } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
+// Define AI difficulty levels
+const DIFFICULTY_LEVELS = {
+  easy: { enterChance: 0.4, ladderChance: 0.6, snakeAvoidChance: 0.5 },
+  medium: { enterChance: 0.8, ladderChance: 0.9, snakeAvoidChance: 0.8 },
+  hard: { enterChance: 1.0, ladderChance: 1.0, snakeAvoidChance: 1.0 },
+};
+
 const BOARD_SIZE = 100;
 
 // Snakes: head -> tail (go back)
@@ -24,7 +31,48 @@ function getCellPos(cell: number): { row: number; col: number } {
   return { row, col };
 }
 
-function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+// Simple AI: prefer ladders > avoid snakes > exact finish > random
+function aiMove(playerPos: number, aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
+  const { enterChance, ladderChance, snakeAvoidChance } = DIFFICULTY_LEVELS[difficulty];
+  
+  // Prefer entering (if in yard and dice is 6)
+  if (aiPos === 0 && Math.random() < enterChance) {
+    return 6;
+  }
+  
+  // Prefer ladders (if close to a ladder)
+  if (Math.random() < ladderChance) {
+    for (const [bottom, top] of Object.entries(LADDERS)) {
+      const b = parseInt(bottom);
+      if (b > aiPos && b - aiPos <= 6) {
+        return b - aiPos;
+      }
+      if (top > aiPos && top - aiPos <= 6) {
+        return top - aiPos;
+      }
+    }
+  }
+  
+  // Avoid snakes (if possible)
+  if (Math.random() < snakeAvoidChance) {
+    for (const [head, tail] of Object.entries(SNAKES)) {
+      const h = parseInt(head);
+      if (h > aiPos && h - aiPos <= 6 && h - aiPos !== 6) {
+        return h - aiPos - 1;
+      }
+    }
+  }
+  
+  // Exact finish
+  if (BOARD_SIZE - aiPos <= 6) {
+    return BOARD_SIZE - aiPos;
+  }
+  
+  // Random move
+  return rollDie();
+}
+
+function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const [playerPos, setPlayerPos] = useState(0);
   const [aiPos, setAiPos] = useState(0);
   const [turn, setTurn] = useState<'player' | 'ai'>('player');
@@ -32,10 +80,10 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
   const [wins, setWins] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [animating, setAnimating] = useState(false);
-
   const targetWins = Math.min(stage, 10);
+  const difficulty = aiDifficulty || 'medium';
 
-  const moveToken = (currentPos: number, steps: number, setter: (p: number) => void, name: string, onComplete: () => void) => {
+  const moveToken=*** number, steps: number, setter: (p: number) => void, name: string, onComplete: () => void) => {
     let target = currentPos + steps;
     if (target > BOARD_SIZE) target = currentPos; // can't overshoot
 
@@ -119,7 +167,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
 
   const aiTurn = () => {
     if (gameOver) return;
-    const d = rollDie();
+    const d = aiMove(playerPos, aiPos, difficulty);
 
     if (aiPos === 0 && d !== 6) {
       onMessage(`AI rolled ${d} — no 6, can't start.`);
@@ -222,6 +270,7 @@ registerGame('snakes-ladders', {
   category: 'board',
   stages: 10,
   component: SnakesLaddersGame,
+  aiDifficulty: 'medium',
 });
 
 export default SnakesLaddersGame;

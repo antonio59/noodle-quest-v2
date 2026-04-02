@@ -8,6 +8,9 @@ export interface GameDefinition {
   benefits?: string[];
   duration?: string;
   bestFor?: string[];
+  aiDifficulty?: 'easy' | 'medium' | 'hard';
+  tabDescription?: string;
+  tabBenefits?: string[];
 }
 
 export interface GameProps {

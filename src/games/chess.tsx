@@ -2,6 +2,13 @@ import { useState, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
+// Define AI difficulty levels
+const DIFFICULTY_LEVELS = {
+  easy: { captureChance: 0.4, centerControlChance: 0.6, forwardMoveChance: 0.7 },
+  medium: { captureChance: 0.8, centerControlChance: 0.9, forwardMoveChance: 0.95 },
+  hard: { captureChance: 1.0, centerControlChance: 1.0, forwardMoveChance: 1.0 },
+};
+
 type PieceType = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P';
 type Piece = { type: PieceType; color: 'w' | 'b' } | null;
 type Board = Piece[][];
@@ -123,8 +130,12 @@ function hasAnyLegalMoves(b: Board, color: 'w' | 'b'): boolean {
 // Piece values for AI scoring
 const PIECE_VALUES: Record<PieceType, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 100 };
 
-function aiMove(b: Board): { from: Pos; to: Pos } | null {
+function aiMove(b: Board, difficulty: 'easy' | 'medium' | 'hard'): { from: Pos; to: Pos } | null {
   const allMoves: { from: Pos; to: Pos; score: number }[] = [];
+  
+  // Apply difficulty-based filtering
+  const { captureChance, centerControlChance, forwardMoveChance } = DIFFICULTY_LEVELS[difficulty];
+  
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if (b[r][c]?.color === 'b') {
@@ -132,28 +143,55 @@ function aiMove(b: Board): { from: Pos; to: Pos } | null {
           let score = 0;
           if (b[nr][nc]) score += PIECE_VALUES[b[nr][nc]!.type] * 10; // capture
           if (nr === 7 && b[r][c]?.type === 'P') score += 80; // promotion
-          // Center control
-          if ((nr === 3 || nr === 4) && (nc === 3 || nc === 4)) score += 2;
-          // Forward movement
-          score += (nr - r);
+          
+          // Center control (with probability based on difficulty)
+          if (Math.random() < centerControlChance && (nr === 3 || nr === 4) && (nc === 3 || nc === 4)) {
+            score += 2;
+          }
+          
+          // Forward movement (with probability based on difficulty)
+          if (Math.random() < forwardMoveChance) {
+            score += (nr - r);
+          }
+          
+          // Capture preference (with probability based on difficulty)
+          if (Math.random() < captureChance && b[nr][nc]) {
+            score += PIECE_VALUES[b[nr][nc]!.type] * 10;
+          }
+          
           allMoves.push({ from: [r, c], to: [nr, nc], score });
         }
       }
     }
   }
+  
   if (allMoves.length === 0) return null;
+  
+  // For easy: more random moves
+  if (difficulty === 'easy') {
+    return allMoves[Math.floor(Math.random() * allMoves.length)];
+  }
+  
+  // For medium: mostly best moves but with some randomness
+  if (difficulty === 'medium') {
+    allMoves.sort((a, b) => b.score - a.score);
+    const top = allMoves.slice(0, Math.min(5, allMoves.length));
+    return top[Math.floor(Math.random() * top.length)];
+  }
+  
+  // For hard: always best move
   allMoves.sort((a, b) => b.score - a.score);
-  const top = allMoves.slice(0, Math.min(5, allMoves.length));
-  return top[Math.floor(Math.random() * top.length)];
+  return allMoves[0];
 }
 
-function ChessGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const [board, setBoard] = useState<Board>(initBoard);
   const [selected, setSelected] = useState<Pos | null>(null);
   const [turn, setTurn] = useState<'w' | 'b'>('w');
   const [wins, setWins] = useState(0);
   const [captured, setCaptured] = useState<{ w: PieceType[]; b: PieceType[] }>({ w: [], b: [] });
   const targetWins = Math.min(stage, 10);
+  const difficulty = aiDifficulty || 'medium';
 
   const handleCell = (r: number, c: number) => {
     if (turn !== 'w') return;
@@ -217,7 +255,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) 
     if (next === 'b') {
       onMessage('AI thinking...');
       setTimeout(() => {
-        const aiM = aiMove(b);
+        const aiM = aiMove(b, difficulty);
         if (aiM) {
           const nb = cloneBoard(b);
           const capturedPiece = nb[aiM.to[0]][aiM.to[1]];
@@ -320,6 +358,7 @@ registerGame('chess', {
   category: 'board',
   stages: 10,
   component: ChessGame,
+  aiDifficulty: 'medium',
 });
 
 export default ChessGame;

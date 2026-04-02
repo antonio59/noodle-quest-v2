@@ -2,6 +2,13 @@ import { useState } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
+// Define AI difficulty levels
+const DIFFICULTY_LEVELS = {
+  easy: { winChance: 0.3, blockChance: 0.6, centerChance: 0.8 },
+  medium: { winChance: 0.7, blockChance: 0.9, centerChance: 0.95 },
+  hard: { winChance: 1.0, blockChance: 1.0, centerChance: 1.0 },
+};
+
 type Cell = 'X' | 'O' | null;
 type Player = 'X' | 'O';
 
@@ -20,30 +27,41 @@ function checkWinner(board: Cell[]): Cell | 'draw' | null {
 }
 
 // Simple AI: win > block > center > random
-function aiMove(board: Cell[], ai: Player): number {
+function aiMove(board: Cell[], ai: Player, difficulty: 'easy' | 'medium' | 'hard'): number {
   const human = ai === 'X' ? 'O' : 'X';
-  // Try to win
-  for (const [a, b, c] of WIN_LINES) {
-    const line = [board[a], board[b], board[c]];
-    if (line.filter(x => x === ai).length === 2 && line.includes(null)) {
-      return [a, b, c][line.indexOf(null)];
+  const { winChance, blockChance, centerChance } = DIFFICULTY_LEVELS[difficulty];
+  
+  // Try to win (with probability based on difficulty)
+  if (Math.random() < winChance) {
+    for (const [a, b, c] of WIN_LINES) {
+      const line = [board[a], board[b], board[c]];
+      if (line.filter(x => x === ai).length === 2 && line.includes(null)) {
+        return [a, b, c][line.indexOf(null)];
+      }
     }
   }
-  // Try to block
-  for (const [a, b, c] of WIN_LINES) {
-    const line = [board[a], board[b], board[c]];
-    if (line.filter(x => x === human).length === 2 && line.includes(null)) {
-      return [a, b, c][line.indexOf(null)];
+  
+  // Try to block (with probability based on difficulty)
+  if (Math.random() < blockChance) {
+    for (const [a, b, c] of WIN_LINES) {
+      const line = [board[a], board[b], board[c]];
+      if (line.filter(x => x === human).length === 2 && line.includes(null)) {
+        return [a, b, c][line.indexOf(null)];
+      }
     }
   }
-  // Center
-  if (!board[4]) return 4;
-  // Random
+  
+  // Center (with probability based on difficulty)
+  if (Math.random() < centerChance && !board[4]) {
+    return 4;
+  }
+  
+  // Random move
   const empty = board.map((c, i) => c === null ? i : -1).filter(i => i >= 0);
   return empty[Math.floor(Math.random() * empty.length)];
 }
 
-function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [turn, setTurn] = useState<Player>('X');
   const [winner, setWinner] = useState<Cell | 'draw' | null>(null);
@@ -53,6 +71,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
 
   const human: Player = 'X';
   const ai: Player = 'O';
+  const difficulty = aiDifficulty || 'medium';
 
   const handleCell = (i: number) => {
     if (board[i] || winner || turn !== human) return;
@@ -66,7 +85,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
       setTurn(ai);
       onMessage('Thinking...');
       setTimeout(() => {
-        const aiIdx = aiMove(next, ai);
+        const aiIdx = aiMove(next, ai, difficulty);
         const afterAi = [...next];
         afterAi[aiIdx] = ai;
         setBoard(afterAi);
@@ -152,6 +171,7 @@ registerGame('tic-tac-toe', {
   category: 'board',
   stages: 10,
   component: TicTacToeGame,
+  aiDifficulty: 'medium',
 });
 
 export default TicTacToeGame;
