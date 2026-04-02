@@ -1,12 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { LogOut, Star, Gamepad2 } from 'lucide-react';
+import { AVATARS } from '@/lib/avatars';
 
 export function Profile() {
   const { player, logout, updateAvatar } = useAuth();
   const games = getAllGames();
-
-  const AVATARS = ['🦊','🐱','🐶','🦁','🐼','🐨','🦄','🐸','🐙','🦋','🐢','🦖','🐧','🦜','🐝'];
 
   return (
     <div className="h-full overflow-y-auto">

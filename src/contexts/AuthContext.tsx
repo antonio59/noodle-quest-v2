@@ -4,9 +4,9 @@ import type { Player } from '@/types';
 interface AuthCtx {
   player: Player | null;
   login: (name: string, pin: string) => Promise<string | null>;
-  signup: (name: string, pin: string) => Promise<string | null>;
+  signup: (name: string, pin: string, avatar?: string) => Promise<string | null>;
   logout: () => void;
-  updateAvatar: (emoji: string) => void;
+  updateAvatar: (emoji: string) => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx>(null!);
@@ -41,14 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signup = async (name: string, pin: string): Promise<string | null> => {
+  const signup = async (name: string, pin: string, avatar?: string): Promise<string | null> => {
     if (name.length < 2) return 'Name needs at least 2 characters!';
     if (!/^\d{6,8}$/.test(pin)) return 'PIN should be 6-8 digits';
     try {
       const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-        body: JSON.stringify({ path: 'auth:signUp', format: 'convex_encoded_json', args: [{ name: name.trim(), pin }] }),
+        body: JSON.stringify({ path: 'auth:signUp', format: 'convex_encoded_json', args: [{ name: name.trim(), pin, avatar }] }),
       });
       const data = await res.json();
       if (data.status === 'error') return data.errorMessage;
@@ -63,8 +63,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => setPlayer(null);
 
-  const updateAvatar = (emoji: string) => {
+  const updateAvatar = async (emoji: string) => {
     setPlayer(prev => prev ? { ...prev, avatar: emoji } : null);
+    // Sync to Convex
+    if (player) {
+      try {
+        await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+          body: JSON.stringify({ path: 'auth:updateAvatar', format: 'convex_encoded_json', args: [{ playerId: player.playerId, avatar: emoji }] }),
+        });
+      } catch { /* offline — localStorage still works */ }
+    }
   };
 
   return <Ctx.Provider value={{ player, login, signup, logout, updateAvatar }}>{children}</Ctx.Provider>;

@@ -1,14 +1,21 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-const AVATARS = ["🦊","🐱","🐶","🦁","🐼","🐨","🦄","🐸","🐙","🦋","🐢","🦖","🐧","🦜","🐝"];
+// Expanded avatar pool — must stay in sync with src/lib/avatars.ts
+const AVATARS = [
+  "🦊","🐱","🐶","🦁","🐼","🐨","🦄","🐸","🐙","🦋","🐢","🦖","🐧","🦜","🐝",
+  "🐺","🦝","🐗","🦓","🦒","🐘","🦏","🐊","🦈","🐋","🦩","🐓","🦉","🦇","🐿️",
+  "🐲","👻","🤖","👽","🧙","🧛","🦸","🦹","🌵","🍄","🌻","⭐","🔥","💎","🎯","🍜",
+];
 
 export const signUp = mutation({
-  args: { name: v.string(), pin: v.string() },
+  args: { name: v.string(), pin: v.string(), avatar: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("players").withIndex("by_name", q => q.eq("name", args.name.trim())).unique();
     if (existing) return { error: "Name already taken!" };
-    const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    const avatar = args.avatar && AVATARS.includes(args.avatar)
+      ? args.avatar
+      : AVATARS[Math.floor(Math.random() * AVATARS.length)];
     const now = Date.now();
     const playerId = await ctx.db.insert("players", { name: args.name.trim(), pin: args.pin, avatar, createdAt: now, lastActive: now });
     return { playerId, avatar };

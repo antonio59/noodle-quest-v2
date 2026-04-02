@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
+import { AVATARS } from '@/lib/avatars';
 
 export function Auth({ onBack }: { onBack: () => void }) {
   const { login, signup } = useAuth();
@@ -10,14 +11,13 @@ export function Auth({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const AVATARS = ['🦊','🐱','🐶','🦁','🐼','🐨','🦄','🐸','🐙','🦋','🐢','🦖','🐧','🦜','🐝'];
   const [avatar, setAvatar] = useState(AVATARS[0]);
 
   const handleSubmit = async () => {
     setError('');
     if (!name.trim() || !pin.trim()) { setError('Fill in both fields!'); return; }
     setLoading(true);
-    const err = isSignup ? await signup(name.trim(), pin) : await login(name.trim(), pin);
+    const err = isSignup ? await signup(name.trim(), pin, avatar) : await login(name.trim(), pin);
     setLoading(false);
     if (err) setError(err);
   };

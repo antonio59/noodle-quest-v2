@@ -11,11 +11,13 @@ export function useAudioEngine() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<string | null>(null);
 
-  const getCtx = useCallback(() => {
+  const getCtx = useCallback(async (): Promise<AudioContext> => {
     if (!ctxRef.current) {
       ctxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    if (ctxRef.current.state === 'suspended') ctxRef.current.resume();
+    if (ctxRef.current.state === 'suspended') {
+      await ctxRef.current.resume();
+    }
     return ctxRef.current;
   }, []);
 
@@ -27,8 +29,8 @@ export function useAudioEngine() {
   }, []);
 
   // Lo-fi beat: detuned chords + vinyl crackle + slow hi-hat
-  const playLofi = useCallback((bpm = 75) => {
-    const ctx = getCtx();
+  const playLofi = useCallback(async (bpm = 75) => {
+    const ctx = await getCtx();
     const beatLen = 60 / bpm;
     const nodes: { stop: () => void }[] = [];
 
@@ -140,8 +142,8 @@ export function useAudioEngine() {
   }, [getCtx]);
 
   // Focus: slow evolving pad
-  const playFocus = useCallback(() => {
-    const ctx = getCtx();
+  const playFocus = useCallback(async () => {
+    const ctx = await getCtx();
     const nodes: { stop: () => void }[] = [];
     let running = true;
 
@@ -177,8 +179,8 @@ export function useAudioEngine() {
   }, [getCtx]);
 
   // Nature: filtered noise (rain/wind)
-  const playNature = useCallback(() => {
-    const ctx = getCtx();
+  const playNature = useCallback(async () => {
+    const ctx = await getCtx();
     const nodes: { stop: () => void }[] = [];
     let running = true;
 
@@ -220,8 +222,8 @@ export function useAudioEngine() {
   }, [getCtx]);
 
   // Meditation: slow breathing guide tones
-  const playMeditation = useCallback(() => {
-    const ctx = getCtx();
+  const playMeditation = useCallback(async () => {
+    const ctx = await getCtx();
     const nodes: { stop: () => void }[] = [];
     let running = true;
 
@@ -264,25 +266,25 @@ export function useAudioEngine() {
     return nodes;
   }, [getCtx]);
 
-  const play = useCallback((trackId: string, config: TrackConfig) => {
+  const play = useCallback(async (trackId: string, config: TrackConfig) => {
     stopAll();
     let nodes: { stop: () => void }[] = [];
     switch (config.type) {
-      case 'lofi': nodes = playLofi(config.bpm); break;
-      case 'focus': nodes = playFocus(); break;
-      case 'nature': nodes = playNature(); break;
-      case 'meditation': nodes = playMeditation(); break;
+      case 'lofi': nodes = await playLofi(config.bpm); break;
+      case 'focus': nodes = await playFocus(); break;
+      case 'nature': nodes = await playNature(); break;
+      case 'meditation': nodes = await playMeditation(); break;
     }
     nodesRef.current = nodes;
     setIsPlaying(true);
     setCurrentTrack(trackId);
   }, [stopAll, playLofi, playFocus, playNature, playMeditation]);
 
-  const toggle = useCallback((trackId: string, config: TrackConfig) => {
+  const toggle = useCallback(async (trackId: string, config: TrackConfig) => {
     if (isPlaying && currentTrack === trackId) {
       stopAll();
     } else {
-      play(trackId, config);
+      await play(trackId, config);
     }
   }, [isPlaying, currentTrack, stopAll, play]);
 

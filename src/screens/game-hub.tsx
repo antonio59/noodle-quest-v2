@@ -153,11 +153,26 @@ export function GameHub({ onPlay }: GameHubProps) {
       )}
 
       {tab === 'board' && (
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
-          <div>
-            <div className="text-5xl mb-4">🎲</div>
-            <h3 className="text-lg font-bold mb-2">Board Games</h3>
-            <p className="text-text-muted text-sm">Chess, Checkers, Ludo, and more — coming soon!</p>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 grid grid-cols-2 gap-3">
+            {allGames.filter(g => g.category === 'board').map(g => (
+              <button
+                key={g.id}
+                onClick={() => onPlay(g, g.id, 1)}
+                className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
+              >
+                <div className="text-3xl mb-2">{g.emoji}</div>
+                <div className="font-semibold text-sm mb-1">{g.name}</div>
+                <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
+              </button>
+            ))}
+            {allGames.filter(g => g.category === 'board').length === 0 && (
+              <div className="col-span-2 text-center text-text-muted text-sm py-12">
+                <div className="text-5xl mb-4">🎲</div>
+                <h3 className="text-lg font-bold mb-2 text-text">Board Games</h3>
+                <p>Board games loading...</p>
+              </div>
+            )}
           </div>
         </div>
       )}
