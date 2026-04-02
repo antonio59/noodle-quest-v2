@@ -33,7 +33,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
   const [gameOver, setGameOver] = useState(false);
   const [animating, setAnimating] = useState(false);
 
-  const targetWins = stage <= 2 ? 1 : stage <= 4 ? 2 : 3;
+  const targetWins = Math.min(stage, 10);
 
   const moveToken = (currentPos: number, steps: number, setter: (p: number) => void, name: string, onComplete: () => void) => {
     let target = currentPos + steps;
@@ -220,7 +220,7 @@ registerGame('snakes-ladders', {
   emoji: '🐍',
   description: 'Classic race game — climb ladders, dodge snakes!',
   category: 'board',
-  stages: 4,
+  stages: 10,
   component: SnakesLaddersGame,
 });
 

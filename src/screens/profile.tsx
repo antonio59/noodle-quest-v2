@@ -1,11 +1,22 @@
+import { useQuery } from 'convex/react';
 import { useAuth } from '@/contexts/AuthContext';
+import { client } from '@/lib/convex';
 import { getAllGames } from '@/lib/game-registry';
-import { LogOut, Star, Gamepad2 } from 'lucide-react';
 import { AVATARS } from '@/lib/avatars';
+import { LogOut, Star, Gamepad2 } from 'lucide-react';
 
 export function Profile() {
   const { player, logout, updateAvatar } = useAuth();
   const games = getAllGames();
+
+  // Fetch real stats
+  const stats = useQuery(
+    client && player ? 'games:getPlayerStats' : undefined as any,
+    player ? { playerId: player.playerId as any } : 'skip'
+  );
+
+  const totalStars = stats?.totalStars ?? 0;
+  const gamesPlayed = stats?.gamesPlayed ?? 0;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -16,7 +27,9 @@ export function Profile() {
             {player?.avatar || '🎮'}
           </button>
           <h2 className="text-xl font-bold">{player?.name}</h2>
-          <p className="text-text-muted text-sm">Member</p>
+          <p className="text-text-muted text-sm">
+            {gamesPlayed > 0 ? `${gamesPlayed} games played` : 'New player'}
+          </p>
         </div>
 
         {/* Avatar picker */}
@@ -41,7 +54,7 @@ export function Profile() {
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-card rounded-xl p-4 text-center">
             <Star className="mx-auto text-warning mb-1" size={20} />
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{totalStars}</div>
             <div className="text-text-muted text-xs">Total Stars</div>
           </div>
           <div className="bg-card rounded-xl p-4 text-center">

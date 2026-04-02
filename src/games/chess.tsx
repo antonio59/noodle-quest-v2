@@ -153,7 +153,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) 
   const [turn, setTurn] = useState<'w' | 'b'>('w');
   const [wins, setWins] = useState(0);
   const [captured, setCaptured] = useState<{ w: PieceType[]; b: PieceType[] }>({ w: [], b: [] });
-  const targetWins = stage <= 2 ? 1 : stage <= 4 ? 2 : 3;
+  const targetWins = Math.min(stage, 10);
 
   const handleCell = (r: number, c: number) => {
     if (turn !== 'w') return;
@@ -318,7 +318,7 @@ registerGame('chess', {
   emoji: '♔',
   description: 'The royal game — checkmate the AI king!',
   category: 'board',
-  stages: 5,
+  stages: 10,
   component: ChessGame,
 });
 

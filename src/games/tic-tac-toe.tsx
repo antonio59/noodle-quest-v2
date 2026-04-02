@@ -150,7 +150,7 @@ registerGame('tic-tac-toe', {
   emoji: '⭕',
   description: 'Classic X and O — beat the AI!',
   category: 'board',
-  stages: 5,
+  stages: 10,
   component: TicTacToeGame,
 });
 

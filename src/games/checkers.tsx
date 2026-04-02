@@ -104,7 +104,7 @@ function CheckersGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
   const [turn, setTurn] = useState<'red' | 'black'>('red');
   const [mustJump, setMustJump] = useState<Pos | null>(null);
   const [wins, setWins] = useState(0);
-  const targetWins = stage <= 3 ? stage : 2;
+  const targetWins = Math.min(stage + 1, 10);
 
   const doMove = useCallback((b: Board, from: Pos, to: Pos): { board: Board; wasJump: boolean } => {
     const nb = cloneBoard(b);
@@ -282,7 +282,7 @@ registerGame('checkers', {
   emoji: '🔴',
   description: 'Classic draughts — capture all enemy pieces!',
   category: 'board',
-  stages: 5,
+  stages: 10,
   component: CheckersGame,
 });
 

@@ -42,7 +42,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const [wins, setWins] = useState(0);
   const [gameOver, setGameOver] = useState(false);
 
-  const targetWins = stage <= 2 ? 1 : 2;
+  const targetWins = Math.min(stage, 10);
 
   const movePlayer = (pos: number, steps: number): number => {
     if (pos === -1) {
@@ -212,7 +212,7 @@ registerGame('ludo', {
   emoji: '🎲',
   description: 'Roll the dice and race your token home!',
   category: 'board',
-  stages: 4,
+  stages: 10,
   component: LudoGame,
 });
 
