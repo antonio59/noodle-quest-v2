@@ -11,7 +11,8 @@ interface LeaderboardEntry {
 }
 
 const MEDALS = ['🥇', '🥈', '🥉'];
-const HEIGHTS = ['h-20', 'h-28', 'h-16'];
+const HEIGHTS = ['h-28', 'h-20', 'h-16'];
+const BORDER_COLORS = ['border-warning', 'border-gray-300', 'border-orange-400'];
 
 export function Leaderboard() {
   const { player } = useAuth();
@@ -69,18 +70,18 @@ export function Leaderboard() {
         {top3.length >= 3 && (
           <div className="bg-gradient-to-b from-accent/5 to-transparent p-6">
             <div className="flex items-end justify-center gap-4">
-              {[1, 0, 2].map(idx => {
-                const e = top3[idx];
+              {[0, 1, 2].map(rank => {
+                const e = top3[rank];
                 if (!e) return null;
                 return (
-                  <div key={idx} className="flex flex-col items-center w-24">
-                    <div className={`text-4xl mb-1 ${idx === 0 ? 'animate-[celebrate_1s_ease_infinite]' : ''}`}>
+                  <div key={rank} className="flex flex-col items-center w-24">
+                    <div className={`text-4xl mb-1 ${rank === 0 ? 'animate-[celebrate_1s_ease_infinite]' : ''}`}>
                       {e.avatar}
                     </div>
                     <div className="text-xs font-bold truncate w-full text-center">{e.name}</div>
                     <div className="text-accent text-xs font-bold">{e.stars} ⭐</div>
-                    <div className={`w-20 ${HEIGHTS[idx]} bg-card-hover rounded-t-xl mt-3 flex items-start justify-center pt-2 border-t-2 ${idx === 0 ? 'border-warning' : idx === 1 ? 'border-gray-300' : 'border-orange-400'}`}>
-                      <span className="text-xl">{MEDALS[idx]}</span>
+                    <div className={`w-20 ${HEIGHTS[rank]} bg-card-hover rounded-t-xl mt-3 flex items-start justify-center pt-2 border-t-2 ${BORDER_COLORS[rank]}`}>
+                      <span className="text-xl">{MEDALS[rank]}</span>
                     </div>
                   </div>
                 );
