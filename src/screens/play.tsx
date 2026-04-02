@@ -16,6 +16,7 @@ export function PlayGame() {
   const stage = (location.state as any)?.stage ?? 1;
   const fromTab = (location.state as any)?.fromTab ?? 'brain';
   const isMultiplayer = (location.state as any)?.multiplayer ?? false;
+  const aiDifficulty = (location.state as any)?.aiDifficulty ?? 'medium';
 
   const [currentStage, setCurrentStage] = useState(stage);
   const [score, setScore] = useState(0);
@@ -165,12 +166,15 @@ export function PlayGame() {
 
       <div className="flex-1 overflow-hidden">
         <GameComponent
-          key={`${gameId}-${currentStage}`}
+          key={`${gameId}-${currentStage}-${aiDifficulty}`}
           stage={currentStage}
           onScore={pts => setScore(s => s + pts)}
           onProgress={setProgress}
           onMessage={setMessage}
           onEnd={handleEnd}
+          multiplayerState={isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' } : undefined}
+          onMultiplayerMove={(move) => {}}
+          aiDifficulty={aiDifficulty}
         />
       </div>
     </div>

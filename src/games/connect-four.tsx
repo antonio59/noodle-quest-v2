@@ -2,6 +2,13 @@ import { useState } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
+// Define AI difficulty levels
+const DIFFICULTY_LEVELS = {
+  easy: { winChance: 0.4, blockChance: 0.6, centerChance: 0.7 },
+  medium: { winChance: 0.8, blockChance: 0.95, centerChance: 0.9 },
+  hard: { winChance: 1.0, blockChance: 1.0, centerChance: 1.0 },
+};
+
 type Cell = 'red' | 'yellow' | null;
 type Board = Cell[][];
 
@@ -43,39 +50,57 @@ function isFull(b: Board): boolean {
   return b[0].every(c => c !== null);
 }
 
-function aiCol(b: Board): number {
+// Simple AI: try to win > block > center > random
+function aiCol(b: Board, difficulty: 'easy' | 'medium' | 'hard'): number {
+  const { winChance, blockChance, centerChance } = DIFFICULTY_LEVELS[difficulty];
   const enemy = 'red';
   const me = 'yellow';
-  // Try to win
-  for (let c = 0; c < COLS; c++) {
-    if (!b[0][c]) {
-      const nb = clone(b);
-      const r = dropPiece(nb, c, me);
-      if (r >= 0 && checkWin(nb, r, c, me)) return c;
+
+  // Try to win (with probability based on difficulty)
+  if (Math.random() < winChance) {
+    for (let c = 0; c < COLS; c++) {
+      if (!b[0][c]) {
+        const nb = clone(b);
+        const r = dropPiece(nb, c, me);
+        if (r >= 0 && checkWin(nb, r, c, me)) return c;
+      }
     }
   }
-  // Block
-  for (let c = 0; c < COLS; c++) {
-    if (!b[0][c]) {
-      const nb = clone(b);
-      const r = dropPiece(nb, c, enemy);
-      if (r >= 0 && checkWin(nb, r, c, enemy)) return c;
+
+  // Block opponent (with probability based on difficulty)
+  if (Math.random() < blockChance) {
+    for (let c = 0; c < COLS; c++) {
+      if (!b[0][c]) {
+        const nb = clone(b);
+        const r = dropPiece(nb, c, enemy);
+        if (r >= 0 && checkWin(nb, r, c, enemy)) return c;
+      }
     }
   }
-  // Center preference
-  const order = [3, 2, 4, 1, 5, 0, 6];
-  for (const c of order) {
-    if (!b[0][c]) return c;
+
+  // Center preference (with probability based on difficulty)
+  if (Math.random() < centerChance) {
+    const order = [3, 2, 4, 1, 5, 0, 6];
+    for (const c of order) {
+      if (!b[0][c]) return c;
+    }
   }
-  return 0;
+
+  // Random move
+  const emptyCols = [];
+  for (let c = 0; c < COLS; c++) {
+    if (!b[0][c]) emptyCols.push(c);
+  }
+  return emptyCols[Math.floor(Math.random() * emptyCols.length)];
 }
 
-function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const [board, setBoard] = useState<Board>(initBoard);
   const [turn, setTurn] = useState<'red' | 'yellow'>('red');
   const [winner, setWinner] = useState<string | null>(null);
   const [wins, setWins] = useState(0);
   const targetWins = Math.min(stage + 1, 10);
+  const difficulty = aiDifficulty || 'medium';
 
   const handleDrop = (col: number) => {
     if (winner || turn !== 'red' || board[0][col]) return;
@@ -105,7 +130,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     setTurn('yellow');
     onMessage('AI dropping...');
     setTimeout(() => {
-      const aiC = aiCol(nb);
+      const aiC = aiCol(nb, difficulty);
       const aiR = dropPiece(nb, aiC, 'yellow');
       setBoard([...nb]);
       if (checkWin(nb, aiR, aiC, 'yellow')) {
@@ -182,6 +207,7 @@ registerGame('connect-four', {
   category: 'board',
   stages: 10,
   component: ConnectFourGame,
+  aiDifficulty: 'medium',
 });
 
 export default ConnectFourGame;

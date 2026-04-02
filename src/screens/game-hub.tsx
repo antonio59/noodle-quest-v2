@@ -2,15 +2,67 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause, Users } from 'lucide-react';
+import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
 
 const TABS = [
-  { id: 'brain', label: '🧠 Brain', emoji: '🧠' },
-  { id: 'board', label: '🎲 Board', emoji: '🎲' },
-  { id: 'breathe', label: '🌬️ Breathe', emoji: '🌬️' },
-  { id: 'tracks', label: '🎵 Tracks', emoji: '🎵' },
+  { 
+    id: 'brain', 
+    label: '🧠 Brain', 
+    emoji: '🧠',
+    description: '21 brain games across 6 categories to train focus, memory, motor skills, flexibility, social awareness, and sequencing.',
+    benefits: [
+      'Improves concentration and attention span',
+      'Strengthens working memory',
+      'Enhances problem-solving abilities',
+      'Builds cognitive flexibility',
+      'Develops social-emotional skills',
+      'Boosts processing speed'
+    ]
+  },
+  { 
+    id: 'board', 
+    label: '🎲 Board', 
+    emoji: '🎲',
+    description: '6 classic board games to play solo against AI or with friends — Tic-Tac-Toe, Checkers, Chess, Connect Four, Ludo, and Snakes & Ladders.',
+    benefits: [
+      'Develops strategic thinking and planning',
+      'Improves decision-making under pressure',
+      'Builds patience and perseverance',
+      'Enhances pattern recognition',
+      'Teaches turn-taking and sportsmanship',
+      'Provides relaxing mental challenge'
+    ]
+  },
+  { 
+    id: 'breathe', 
+    label: '🌬️ Breathe', 
+    emoji: '🌬️',
+    description: '4 scientifically-backed breathing exercises to reduce stress, improve focus, and enhance emotional regulation.',
+    benefits: [
+      'Lowers heart rate and blood pressure',
+      'Reduces anxiety and stress hormones',
+      'Improves oxygen flow to the brain',
+      'Enhances mindfulness and presence',
+      'Supports better sleep quality',
+      'Increases energy and mental clarity'
+    ]
+  },
+  { 
+    id: 'tracks', 
+    label: '🎵 Tracks', 
+    emoji: '🎵',
+    description: '8 curated audio tracks designed to support different mental states — lo-fi beats, focus music, nature sounds, and meditation tones.',
+    benefits: [
+      'Blocks distracting background noise',
+      'Promotes deep focus and flow state',
+      'Creates calming atmosphere for relaxation',
+      'Supports creative thinking and brainstorming',
+      'Aids in mindfulness and meditation practice',
+      'Provides consistent audio environment'
+    ]
+  },
 ];
 
 export function GameHub() {
@@ -50,6 +102,10 @@ export function GameHub() {
     navigate(`/play/${gameId}`, { state: { stage: 1, fromTab: tab, multiplayer: true } });
   };
 
+  const navigateToAiDifficulty = (gameId: string, difficulty: 'easy' | 'medium' | 'hard') => {
+    navigate(`/play/${gameId}`, { state: { stage: 1, fromTab: tab, aiDifficulty: difficulty } });
+  };
+
   const toggleFav = (id: string) => {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -59,6 +115,8 @@ export function GameHub() {
       return next;
     });
   };
+
+  const currentTab = TABS.find(t => t.id === tab) || TABS[0];
 
   return (
     <div className="h-full flex flex-col">
@@ -76,6 +134,25 @@ export function GameHub() {
             {t.label}
           </button>
         ))}
+      </div>
+
+      {/* Tab description and benefits */}
+      <div className="p-4 pb-0 bg-card rounded-xl mx-4 mb-4">
+        <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
+          {currentTab.emoji} {currentTab.label}
+        </h2>
+        <p className="text-text-dim mb-3">{currentTab.description}</p>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold text-text-dim mb-2">Key Benefits</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {currentTab.benefits.map((benefit, i) => (
+              <div key={i} className="flex items-start gap-2 bg-card-hover rounded-lg p-2">
+                <span className="text-accent text-xs mt-0.5">•</span>
+                <span className="text-sm text-text">{benefit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {tab === 'brain' && (
@@ -178,6 +255,27 @@ export function GameHub() {
                 >
                   <Users size={14} /> Play with Friend
                 </button>
+                <div className="mt-3 text-xs text-text-muted">Play vs AI:</div>
+                <div className="flex gap-1 mt-1">
+                  <button
+                    onClick={() => navigateToAiDifficulty(g.id, 'easy')}
+                    className="flex-1 bg-card text-text-muted text-xs py-1.5 rounded-lg hover:bg-card-hover transition-colors"
+                  >
+                    Easy
+                  </button>
+                  <button
+                    onClick={() => navigateToAiDifficulty(g.id, 'medium')}
+                    className="flex-1 bg-accent/20 text-accent text-xs py-1.5 rounded-lg hover:bg-accent/30 transition-colors"
+                  >
+                    Medium
+                  </button>
+                  <button
+                    onClick={() => navigateToAiDifficulty(g.id, 'hard')}
+                    className="flex-1 bg-danger/20 text-danger text-xs py-1.5 rounded-lg hover:bg-danger/30 transition-colors"
+                  >
+                    Hard
+                  </button>
+                </div>
               </div>
             ))}
             {allGames.filter(g => g.category === 'board').length === 0 && (

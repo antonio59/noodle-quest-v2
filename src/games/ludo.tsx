@@ -2,11 +2,12 @@ import { useState } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
-// Simplified single-token Ludo
-// Board is a 15-segment track per player, first to get token home wins
-
-const TRACK_LENGTH = 28;
-const HOME_STRETCH = 5;
+// Define AI difficulty levels
+const DIFFICULTY_LEVELS = {
+  easy: { enterChance: 0.4, moveHomeChance: 0.6, captureChance: 0.5 },
+  medium: { enterChance: 0.8, moveHomeChance: 0.9, captureChance: 0.8 },
+  hard: { enterChance: 1.0, moveHomeChance: 1.0, captureChance: 1.0 },
+};
 
 type TokenPos = number; // -1 = in yard, 0-27 = on track, 28-32 = home stretch, 33 = finished
 
@@ -15,6 +16,9 @@ interface PlayerState {
   emoji: string;
   pos: TokenPos;
 }
+
+const TRACK_LENGTH = 28;
+const HOME_STRETCH = 5;
 
 function rollDie(): number {
   return Math.floor(Math.random() * 6) + 1;
@@ -27,7 +31,46 @@ function getTrackPos(index: number): { x: number; y: number } {
   return { x: 0.5 + Math.cos(angle) * r, y: 0.5 + Math.sin(angle) * r };
 }
 
-function LudoGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function movePlayer(pos: number, steps: number): number {
+  if (pos === -1) {
+    return steps === 6 ? 0 : -1; // need 6 to enter
+  }
+  const newPos = pos + steps;
+  if (newPos > TRACK_LENGTH + HOME_STRETCH) return pos; // can't overshoot
+  if (newPos > TRACK_LENGTH) return TRACK_LENGTH + (newPos - TRACK_LENGTH); // home stretch
+  if (newPos === TRACK_LENGTH + HOME_STRETCH) return TRACK_LENGTH + HOME_STRETCH; // finished
+  return newPos;
+}
+
+// Simple AI: prefer entering > moving toward home > capturing > random
+function aiMove(pPos: number, aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
+  const { enterChance, moveHomeChance, captureChance } = DIFFICULTY_LEVELS[difficulty];
+  
+  // Prefer entering (if in yard and dice is 6)
+  if (aiPos === -1 && Math.random() < enterChance) {
+    return 6;
+  }
+  
+  // Prefer moving toward home (if on track and close to home)
+  if (aiPos >= 0 && aiPos < TRACK_LENGTH && Math.random() < moveHomeChance) {
+    // Move more aggressively when close to home
+    const distanceToHome = TRACK_LENGTH + HOME_STRETCH - aiPos;
+    if (distanceToHome <= 3) return distanceToHome;
+    if (distanceToHome <= 6) return Math.min(distanceToHome, 6);
+  }
+  
+  // Prefer capturing player (if possible)
+  if (pPos >= 0 && pPos < TRACK_LENGTH && Math.random() < captureChance) {
+    // If player is ahead, try to land exactly on them
+    const distance = pPos - aiPos;
+    if (distance > 0 && distance <= 6) return distance;
+  }
+  
+  // Random move
+  return rollDie();
+}
+
+function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const players: PlayerState[] = [
     { color: '#ef4444', emoji: '🔴', pos: -1 },
     { color: '#3b82f6', emoji: '🔵', pos: -1 },
@@ -41,19 +84,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const [rolls, setRolls] = useState(0);
   const [wins, setWins] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-
   const targetWins = Math.min(stage, 10);
-
-  const movePlayer = (pos: number, steps: number): number => {
-    if (pos === -1) {
-      return steps === 6 ? 0 : -1; // need 6 to enter
-    }
-    const newPos = pos + steps;
-    if (newPos > TRACK_LENGTH + HOME_STRETCH) return pos; // can't overshoot
-    if (newPos > TRACK_LENGTH) return TRACK_LENGTH + (newPos - TRACK_LENGTH); // home stretch
-    if (newPos === TRACK_LENGTH + HOME_STRETCH) return TRACK_LENGTH + HOME_STRETCH; // finished
-    return newPos;
-  };
+  const difficulty = aiDifficulty || 'medium';
 
   const handleRoll = () => {
     if (gameOver || turn !== 'player') return;
@@ -90,7 +122,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   };
 
   const aiTurn = () => {
-    const d = rollDie();
+    const d = aiMove(pPos, aiPos, difficulty);
     const newPos = movePlayer(aiPos, d);
     setAiPos(newPos);
     onMessage(`AI rolled ${d}!`);
@@ -214,6 +246,7 @@ registerGame('ludo', {
   category: 'board',
   stages: 10,
   component: LudoGame,
+  aiDifficulty: 'medium',
 });
 
 export default LudoGame;

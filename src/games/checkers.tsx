@@ -2,6 +2,13 @@ import { useState, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
+// Define AI difficulty levels
+const DIFFICULTY_LEVELS = {
+  easy: { jumpChance: 0.5, moveForwardChance: 0.7, randomMoveChance: 0.8 },
+  medium: { jumpChance: 0.8, moveForwardChance: 0.9, randomMoveChance: 0.3 },
+  hard: { jumpChance: 1.0, moveForwardChance: 1.0, randomMoveChance: 0.0 },
+};
+
 type Piece = { color: 'red' | 'black'; king: boolean } | null;
 type Board = Piece[][];
 type Pos = [number, number];
@@ -76,7 +83,7 @@ function countPieces(b: Board, color: 'red' | 'black'): number {
 }
 
 // Simple AI: prefer jumps, then moves toward promotion, then random
-function aiGetMove(b: Board): { from: Pos; to: Pos } | null {
+function aiGetMove(b: Board, difficulty: 'easy' | 'medium' | 'hard'): { from: Pos; to: Pos } | null {
   const allMoves: { from: Pos; to: Pos; score: number }[] = [];
   for (let r = 0; r < SIZE; r++) {
     for (let c = 0; c < SIZE; c++) {
@@ -91,20 +98,37 @@ function aiGetMove(b: Board): { from: Pos; to: Pos } | null {
       }
     }
   }
+  
   if (allMoves.length === 0) return null;
+  
+  // Apply difficulty-based filtering
+  const { jumpChance, moveForwardChance, randomMoveChance } = DIFFICULTY_LEVELS[difficulty];
+  
+  // For easy: more random moves
+  if (difficulty === 'easy' && Math.random() < randomMoveChance) {
+    return allMoves[Math.floor(Math.random() * allMoves.length)];
+  }
+  
+  // For medium: mostly best moves but with some randomness
+  if (difficulty === 'medium') {
+    allMoves.sort((a, b) => b.score - a.score);
+    const top = allMoves.slice(0, Math.min(3, allMoves.length));
+    return top[Math.floor(Math.random() * top.length)];
+  }
+  
+  // For hard: always best move
   allMoves.sort((a, b) => b.score - a.score);
-  // Pick from top 3 with some randomness
-  const top = allMoves.slice(0, Math.min(3, allMoves.length));
-  return top[Math.floor(Math.random() * top.length)];
+  return allMoves[0];
 }
 
-function CheckersGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function CheckersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const [board, setBoard] = useState<Board>(initBoard);
   const [selected, setSelected] = useState<Pos | null>(null);
   const [turn, setTurn] = useState<'red' | 'black'>('red');
   const [mustJump, setMustJump] = useState<Pos | null>(null);
   const [wins, setWins] = useState(0);
   const targetWins = Math.min(stage + 1, 10);
+  const difficulty = aiDifficulty || 'medium';
 
   const doMove = useCallback((b: Board, from: Pos, to: Pos): { board: Board; wasJump: boolean } => {
     const nb = cloneBoard(b);
@@ -192,7 +216,7 @@ function CheckersGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
     if (nextTurn === 'black') {
       onMessage('AI thinking...');
       setTimeout(() => {
-        const aiM = aiGetMove(b);
+        const aiM = aiGetMove(b, difficulty);
         if (aiM) {
           const { board: nb } = doMove(b, aiM.from, aiM.to);
           setBoard(nb);
@@ -284,6 +308,7 @@ registerGame('checkers', {
   category: 'board',
   stages: 10,
   component: CheckersGame,
+  aiDifficulty: 'medium',
 });
 
 export default CheckersGame;
