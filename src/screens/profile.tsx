@@ -14,7 +14,7 @@ export function Profile() {
   const { player, logout, updateAvatar } = useAuth();
   const games = getAllGames();
   const [takenAvatars, setTakenAvatars] = useState<Set<string>>(new Set());
-  const [stats, setStats] = useState({ stars: 0, streak: 0 });
+  const [stats, _setStats] = useState({ stars: 0, streak: 0 });
 
   useEffect(() => {
     // Fetch other players' avatars to block duplicates

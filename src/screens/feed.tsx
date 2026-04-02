@@ -38,7 +38,10 @@ export function Feed() {
     } catch { /* offline */ }
   };
 
-  useEffect(() => { fetchPosts(); }, []);
+  useEffect(() => {
+    const timer = setTimeout(fetchPosts, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const chatPosts = posts.filter(p => p.type !== 'score').reverse();
   const activityPosts = [...posts.filter(p => p.type === 'score')];

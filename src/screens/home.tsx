@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
@@ -11,13 +12,13 @@ export function Home({ onPlay }: HomeProps) {
   const { player } = useAuth();
   const games = getAllGames();
   const recentGames = games.slice(0, 6);
-
-  const handleRandomPlay = () => {
+  const handleRandomPlay = useCallback(() => {
     if (games.length === 0) return;
-    const game = games[Math.floor(Math.random() * games.length)];
+    const idx = Math.floor(Math.random() * games.length);
+    const game = games[idx];
     const stage = Math.floor(Math.random() * game.stages) + 1;
     onPlay(game, game.id, stage);
-  };
+  }, [games, onPlay]);
 
   const dailyGame = games[new Date().getDate() % games.length];
 
