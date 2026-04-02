@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity */
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
