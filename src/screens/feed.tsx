@@ -11,7 +11,6 @@ export function Feed() {
   const [message, setMessage] = useState('');
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [sending, setSending] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
 
   const fetchPosts = async () => {
     try {
@@ -125,7 +124,7 @@ export function Feed() {
         ))}
       </div>
 
-      <div ref={listRef} className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {displayedPosts.length === 0 ? (
           <div className="text-center text-text-muted text-sm py-12">
             {tab === 'chat' ? 'No messages yet — say hello! 💬' : 'No activity yet — play some games! 🎮'}

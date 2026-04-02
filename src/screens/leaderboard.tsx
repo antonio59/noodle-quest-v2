@@ -10,7 +10,6 @@ interface LeaderboardEntry {
   games: number;
 }
 
-const PODIUM_ORDER = [1, 0, 2]; // silver, gold, bronze display order
 const MEDALS = ['🥇', '🥈', '🥉'];
 const HEIGHTS = ['h-20', 'h-28', 'h-16'];
 
@@ -70,7 +69,7 @@ export function Leaderboard() {
         {top3.length >= 3 && (
           <div className="bg-gradient-to-b from-accent/5 to-transparent p-6">
             <div className="flex items-end justify-center gap-4">
-              {PODMIUM_ORDER.map(idx => {
+              {[1, 0, 2].map(idx => {
                 const e = top3[idx];
                 if (!e) return null;
                 return (
