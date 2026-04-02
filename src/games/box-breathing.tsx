@@ -1,20 +1,34 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
+import { Clock, Heart, Brain, Shield } from 'lucide-react';
 
 // Box Breathing: inhale 4s, hold 4s, exhale 4s, hold 4s
 // Stages increase number of rounds
 
-type Phase = 'inhale' | 'hold1' | 'exhale' | 'hold2' | 'idle' | 'done';
+type Phase = 'inhale' | 'hold1' | 'exhale' | 'hold2' | 'idle' | 'info' | 'done';
+
+const BENEFITS = [
+  { icon: Brain, label: 'Reduces stress & anxiety', color: 'text-accent' },
+  { icon: Heart, label: 'Lowers heart rate & blood pressure', color: 'text-danger' },
+  { icon: Shield, label: 'Improves emotional regulation', color: 'text-success' },
+  { icon: Clock, label: 'Used by Navy SEALs for calm under pressure', color: 'text-warning' },
+];
+
+const BEST_FOR = [
+  'Before stressful situations (exams, presentations)',
+  'When feeling overwhelmed or anxious',
+  'To improve focus before work or study',
+  'As a daily mindfulness practice',
+];
 
 function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const totalRounds = 3 + stage; // 4 rounds stage 1, 13 rounds stage 10
-  const [phase, setPhase] = useState<Phase>('idle');
+  const totalRounds = 3 + stage;
+  const [phase, setPhase] = useState<Phase>('info');
   const [round, setRound] = useState(0);
-  const [progress2, setProgress2] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const phaseRef = useRef<Phase>('idle');
+  const phaseRef = useRef<Phase>('info');
   const roundRef = useRef(0);
 
   const phaseLabels: Record<string, string> = {
@@ -58,23 +72,20 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
   }, [onMessage]);
 
   useEffect(() => {
-    if (phase === 'idle' || phase === 'done') return;
+    if (phase === 'idle' || phase === 'done' || phase === 'info') return;
 
     timerRef.current = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
-          // Move to next phase
           const current = phaseRef.current;
           const next = nextPhase(current);
           phaseRef.current = next;
           setPhase(next);
 
           if (current === 'hold2') {
-            // Completed a round
             const newRound = roundRef.current + 1;
             roundRef.current = newRound;
             setRound(newRound);
-            setProgress2(newRound / totalRounds);
             onScore(10);
             onProgress(newRound / totalRounds);
             onMessage(`Round ${newRound}/${totalRounds}`);
@@ -83,8 +94,7 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
               setPhase('done');
               phaseRef.current = 'done';
               if (timerRef.current) clearInterval(timerRef.current);
-              const stars = totalRounds >= 10 ? 3 : totalRounds >= 6 ? 2 : 1;
-              onEnd({ score: totalRounds * 10, stars, summary: `Completed ${totalRounds} rounds of box breathing!` });
+              onEnd({ score: totalRounds * 10, stars: totalRounds >= 10 ? 3 : totalRounds >= 6 ? 2 : 1, summary: `Completed ${totalRounds} rounds of box breathing!` });
               return 0;
             }
           }
@@ -98,6 +108,85 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [phase, totalRounds, nextPhase, onScore, onProgress, onMessage, onEnd]);
 
+  const estimatedMinutes = Math.ceil(totalRounds * 16 / 60);
+
+  if (phase === 'info') {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="p-6 max-w-md mx-auto">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-3">📦</div>
+            <h2 className="text-2xl font-bold text-accent">Box Breathing</h2>
+            <p className="text-text-dim text-sm mt-1">4-4-4-4 breathing pattern</p>
+          </div>
+
+          {/* Pattern visualization */}
+          <div className="bg-card rounded-2xl p-4 mb-5">
+            <div className="text-xs font-semibold text-text-muted mb-3 text-center">THE PATTERN</div>
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <span className="bg-accent/20 text-accent px-3 py-1.5 rounded-lg font-semibold">In 4s</span>
+              <span className="text-text-muted">→</span>
+              <span className="bg-warning/20 text-warning px-3 py-1.5 rounded-lg font-semibold">Hold 4s</span>
+              <span className="text-text-muted">→</span>
+              <span className="bg-success/20 text-success px-3 py-1.5 rounded-lg font-semibold">Out 4s</span>
+              <span className="text-text-muted">→</span>
+              <span className="bg-primary/20 text-primary px-3 py-1.5 rounded-lg font-semibold">Hold 4s</span>
+            </div>
+          </div>
+
+          {/* Session info */}
+          <div className="bg-card rounded-2xl p-4 mb-5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-text-muted">Rounds</span>
+              <span className="font-semibold text-text">{totalRounds}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-text-muted">Estimated time</span>
+              <span className="font-semibold text-text">~{estimatedMinutes} min</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-text-muted">Stage</span>
+              <span className="font-semibold text-accent">{stage}/10</span>
+            </div>
+          </div>
+
+          {/* Benefits */}
+          <div className="mb-5">
+            <h3 className="text-sm font-bold text-text-dim mb-3">Benefits</h3>
+            <div className="space-y-2">
+              {BENEFITS.map((b, i) => (
+                <div key={i} className="flex items-center gap-3 bg-card rounded-xl p-3">
+                  <b.icon size={18} className={b.color} />
+                  <span className="text-sm text-text">{b.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Best for */}
+          <div className="mb-6">
+            <h3 className="text-sm font-bold text-text-dim mb-3">Best For</h3>
+            <div className="space-y-2">
+              {BEST_FOR.map((item, i) => (
+                <div key={i} className="flex items-start gap-2 bg-card rounded-xl p-3">
+                  <span className="text-accent text-xs mt-0.5">◆</span>
+                  <span className="text-sm text-text-muted">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setPhase('idle')}
+            className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+          >
+            Start Session
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (phase === 'idle') {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
@@ -106,6 +195,9 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
         <p className="text-text-dim mb-4 max-w-xs">
           Inhale 4s → Hold 4s → Exhale 4s → Hold 4s. Repeat {totalRounds} rounds.
         </p>
+        <div className="text-text-muted text-sm mb-2">
+          ~{estimatedMinutes} min · Stage {stage}/10
+        </div>
         <div className="text-text-muted text-sm mb-6">
           Calms the nervous system and improves focus.
         </div>
@@ -142,8 +234,6 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
   return (
     <div className="h-full flex flex-col items-center justify-center p-6">
       <div className="text-sm text-text-muted mb-4">Round {round}/{totalRounds}</div>
-
-      {/* Breathing circle */}
       <div className="relative w-48 h-48 mb-6">
         <div
           className={`absolute inset-0 rounded-full transition-all duration-1000 ${phaseColors[phase]}`}
@@ -162,7 +252,6 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
         </div>
       </div>
 
-      {/* Progress dots */}
       <div className="flex gap-1 flex-wrap justify-center max-w-xs">
         {Array.from({ length: totalRounds }, (_, i) => (
           <div
@@ -182,6 +271,9 @@ registerGame('box-breathing', {
   category: 'breathe',
   stages: 10,
   component: BoxBreathingGame,
+  benefits: ['Reduces stress', 'Lowers heart rate', 'Improves focus', 'Used by Navy SEALs'],
+  duration: '3-13 min',
+  bestFor: ['Stress relief', 'Pre-exam calm', 'Daily mindfulness'],
 });
 
 export default BoxBreathingGame;

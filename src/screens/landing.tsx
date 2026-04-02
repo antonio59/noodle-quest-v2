@@ -1,8 +1,8 @@
-interface LandingProps {
-  onLogin: () => void;
-}
+import { useNavigate } from 'react-router-dom';
 
-export function Landing({ onLogin }: LandingProps) {
+export function Landing() {
+  const navigate = useNavigate();
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
       <div className="text-7xl mb-6">🍜</div>
@@ -12,7 +12,7 @@ export function Landing({ onLogin }: LandingProps) {
         Train your focus, memory, and flexibility with fun games. Play board games with friends. Vibe to lo-fi beats.
       </p>
       <button
-        onClick={onLogin}
+        onClick={() => navigate('/auth')}
         className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 transition-opacity active:scale-95"
       >
         Get Started

@@ -5,6 +5,9 @@ export interface GameDefinition {
   category: GameCategory;
   stages: number;
   component: React.ComponentType<GameProps>;
+  benefits?: string[];
+  duration?: string;
+  bestFor?: string[];
 }
 
 export interface GameProps {
@@ -13,12 +16,25 @@ export interface GameProps {
   onProgress: (pct: number) => void;
   onMessage: (msg: string) => void;
   onEnd: (result: GameResult) => void;
+  multiplayerState?: MultiplayerState;
+  onMultiplayerMove?: (move: any) => void;
 }
 
 export interface GameResult {
   score: number;
   stars: number;
   summary: string;
+}
+
+export interface MultiplayerState {
+  sessionId: string;
+  playerNumber: 1 | 2;
+  currentPlayer: 1 | 2;
+  boardState: any;
+  opponentName: string;
+  opponentAvatar: string;
+  status: 'waiting' | 'playing' | 'finished';
+  winner?: 1 | 2 | 'draw';
 }
 
 export type GameCategory =
@@ -70,6 +86,38 @@ export interface FeedPost {
   stage?: number;
   stars?: number;
   createdAt: number;
+}
+
+export interface MultiplayerInvite {
+  _id: string;
+  gameId: string;
+  fromId: string;
+  fromName: string;
+  fromAvatar: string;
+  toId?: string;
+  toName?: string;
+  inviteCode: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  createdAt: number;
+  expiresAt: number;
+}
+
+export interface MultiplayerSession {
+  _id: string;
+  gameId: string;
+  player1Id: string;
+  player1Name: string;
+  player1Avatar: string;
+  player2Id?: string;
+  player2Name?: string;
+  player2Avatar?: string;
+  boardState: any;
+  currentPlayer: number;
+  status: 'waiting' | 'playing' | 'finished';
+  winner?: number;
+  moves: any[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 export const GAME_CATEGORIES: { id: GameCategory; label: string; emoji: string }[] = [

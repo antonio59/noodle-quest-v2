@@ -1,13 +1,10 @@
 import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllGames } from '@/lib/game-registry';
-import { GAME_CATEGORIES, type GameDefinition, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause } from 'lucide-react';
+import { GAME_CATEGORIES, type GameCategory } from '@/types';
+import { Heart, Search, Play, Pause, Users } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
-
-interface GameHubProps {
-  onPlay: (game: GameDefinition, id: string, stage: number) => void;
-}
 
 const TABS = [
   { id: 'brain', label: '🧠 Brain', emoji: '🧠' },
@@ -16,8 +13,11 @@ const TABS = [
   { id: 'tracks', label: '🎵 Tracks', emoji: '🎵' },
 ];
 
-export function GameHub({ onPlay }: GameHubProps) {
-  const [tab, setTab] = useState('brain');
+export function GameHub() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'brain';
+  const [tab, setTab] = useState(initialTab);
   const audio = useAudioEngine();
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -37,6 +37,19 @@ export function GameHub({ onPlay }: GameHubProps) {
 
   const favGames = brainGames.filter(g => favorites.has(g.id));
 
+  const handleTabChange = (newTab: string) => {
+    setTab(newTab);
+    setSearchParams(newTab === 'brain' ? {} : { tab: newTab });
+  };
+
+  const navigateToGame = (gameId: string, stage: number = 1) => {
+    navigate(`/play/${gameId}`, { state: { stage, fromTab: tab } });
+  };
+
+  const navigateToMultiplayer = (gameId: string) => {
+    navigate(`/play/${gameId}`, { state: { stage: 1, fromTab: tab, multiplayer: true } });
+  };
+
   const toggleFav = (id: string) => {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -49,12 +62,11 @@ export function GameHub({ onPlay }: GameHubProps) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Tab Bar — scrollable on small screens */}
       <div className="flex border-b border-white/5 flex-shrink-0 overflow-x-auto scrollbar-none">
         {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => handleTabChange(t.id)}
             className={`flex-1 min-w-[80px] py-3 text-xs sm:text-sm font-semibold text-center transition-colors border-b-2 whitespace-nowrap ${
               tab === t.id
                 ? 'text-accent border-accent'
@@ -68,7 +80,6 @@ export function GameHub({ onPlay }: GameHubProps) {
 
       {tab === 'brain' && (
         <div className="flex-1 overflow-y-auto">
-          {/* Search */}
           <div className="p-4 pb-0">
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -82,7 +93,6 @@ export function GameHub({ onPlay }: GameHubProps) {
             </div>
           </div>
 
-          {/* Favorites */}
           {favGames.length > 0 && !search && (
             <div className="p-4 pb-0">
               <h3 className="text-sm font-bold text-text-dim mb-3 flex items-center gap-1.5">
@@ -92,7 +102,7 @@ export function GameHub({ onPlay }: GameHubProps) {
                 {favGames.map(g => (
                   <button
                     key={g.id}
-                    onClick={() => onPlay(g, g.id, 1)}
+                    onClick={() => navigateToGame(g.id)}
                     className="bg-card hover:bg-card-hover rounded-xl p-3 text-center transition-all active:scale-95"
                   >
                     <div className="text-2xl mb-1">{g.emoji}</div>
@@ -103,7 +113,6 @@ export function GameHub({ onPlay }: GameHubProps) {
             </div>
           )}
 
-          {/* Category Filter */}
           <div className="p-4 pb-0">
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
               <button
@@ -128,7 +137,6 @@ export function GameHub({ onPlay }: GameHubProps) {
             </div>
           </div>
 
-          {/* Game Grid */}
           <div className="p-4 grid grid-cols-2 gap-3">
             {filteredGames.map(g => (
               <div key={g.id} className="bg-card rounded-xl p-4 relative group">
@@ -142,7 +150,7 @@ export function GameHub({ onPlay }: GameHubProps) {
                     fill={favorites.has(g.id) ? 'currentColor' : 'none'}
                   />
                 </button>
-                <button onClick={() => onPlay(g, g.id, 1)} className="text-left w-full">
+                <button onClick={() => navigateToGame(g.id)} className="text-left w-full">
                   <div className="text-3xl mb-2">{g.emoji}</div>
                   <div className="font-semibold text-sm mb-1">{g.name}</div>
                   <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
@@ -158,15 +166,19 @@ export function GameHub({ onPlay }: GameHubProps) {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 grid grid-cols-2 gap-3">
             {allGames.filter(g => g.category === 'board').map(g => (
-              <button
-                key={g.id}
-                onClick={() => onPlay(g, g.id, 1)}
-                className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
-              >
-                <div className="text-3xl mb-2">{g.emoji}</div>
-                <div className="font-semibold text-sm mb-1">{g.name}</div>
-                <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-              </button>
+              <div key={g.id} className="bg-card rounded-xl p-4">
+                <button onClick={() => navigateToGame(g.id)} className="text-left w-full">
+                  <div className="text-3xl mb-2">{g.emoji}</div>
+                  <div className="font-semibold text-sm mb-1">{g.name}</div>
+                  <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
+                </button>
+                <button
+                  onClick={() => navigateToMultiplayer(g.id)}
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 bg-accent/10 text-accent text-xs font-semibold py-2 rounded-lg hover:bg-accent/20 transition-colors"
+                >
+                  <Users size={14} /> Play with Friend
+                </button>
+              </div>
             ))}
             {allGames.filter(g => g.category === 'board').length === 0 && (
               <div className="col-span-2 text-center text-text-muted text-sm py-12">
@@ -185,7 +197,7 @@ export function GameHub({ onPlay }: GameHubProps) {
             {allGames.filter(g => g.category === 'breathe').map(g => (
               <button
                 key={g.id}
-                onClick={() => onPlay(g, g.id, 1)}
+                onClick={() => navigateToGame(g.id)}
                 className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
               >
                 <div className="text-3xl mb-2">{g.emoji}</div>

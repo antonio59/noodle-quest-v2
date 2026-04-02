@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom';
 import { Home } from '@/screens/home';
 import { GameHub } from '@/screens/game-hub';
 import { PlayGame } from '@/screens/play';
@@ -7,45 +7,53 @@ import { Profile } from '@/screens/profile';
 import { Leaderboard } from '@/screens/leaderboard';
 import { Landing } from '@/screens/landing';
 import { Auth } from '@/screens/auth';
+import { InvitePage } from '@/screens/invite';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/NavBar';
-import type { GameDefinition } from '@/types';
 
-export type Screen = 'home' | 'games' | 'leaderboard' | 'feed' | 'profile';
+function AppLayout() {
+  return (
+    <div className="h-full flex flex-col">
+      <main className="flex-1 overflow-hidden">
+        <Outlet />
+      </main>
+      <NavBar />
+    </div>
+  );
+}
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { player } = useAuth();
+  if (!player) return <Landing />;
+  return <>{children}</>;
+}
 
 export function AppRouter() {
-  const { player } = useAuth();
-  const [screen, setScreen] = useState<Screen>('home');
-  const [playing, setPlaying] = useState<{ game: GameDefinition; id: string; stage: number } | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
-
-  if (!player) {
-    if (showAuth) return <Auth onBack={() => setShowAuth(false)} />;
-    return <Landing onLogin={() => setShowAuth(true)} />;
-  }
-
-  if (playing) {
-    return (
-      <PlayGame
-        game={playing.game}
-        gameId={playing.id}
-        stage={playing.stage}
-        onBack={() => setPlaying(null)}
-        onNextStage={() => setPlaying(prev => prev ? { ...prev, stage: Math.min(prev.stage + 1, prev.game.stages) } : null)}
-      />
-    );
-  }
-
   return (
-    <>
-      <main className="flex-1 overflow-hidden">
-        {screen === 'home' && <Home onPlay={(g, id, s) => setPlaying({ game: g, id, stage: s })} />}
-        {screen === 'games' && <GameHub onPlay={(g, id, s) => setPlaying({ game: g, id, stage: s })} />}
-        {screen === 'leaderboard' && <Leaderboard />}
-        {screen === 'feed' && <Feed />}
-        {screen === 'profile' && <Profile />}
-      </main>
-      <NavBar current={screen} onChange={setScreen} />
-    </>
+    <BrowserRouter>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/welcome" element={<Landing />} />
+        <Route path="/auth" element={<Auth />} />
+
+        {/* Invite links (public — redirects to auth if needed) */}
+        <Route path="/invite/:code" element={<InvitePage />} />
+
+        {/* App routes with navbar */}
+        <Route element={<AuthGate><AppLayout /></AuthGate>}>
+          <Route index element={<Home />} />
+          <Route path="games" element={<GameHub />} />
+          <Route path="leaderboard" element={<Leaderboard />} />
+          <Route path="chat" element={<Feed />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
+
+        {/* Full-screen game (no navbar) */}
+        <Route path="play/:gameId" element={<AuthGate><PlayGame /></AuthGate>} />
+
+        {/* Fallback */}
+        <Route path="*" element={<AuthGate><Home /></AuthGate>} />
+      </Routes>
+    </BrowserRouter>
   );
 }

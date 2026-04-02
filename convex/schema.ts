@@ -75,4 +75,42 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_player", ["playerId"]),
+
+  // Multiplayer tables
+  multiplayer_invites: defineTable({
+    gameId: v.string(),
+    fromId: v.id("players"),
+    fromName: v.string(),
+    fromAvatar: v.string(),
+    toId: v.optional(v.id("players")),
+    toName: v.optional(v.string()),
+    inviteCode: v.string(),
+    sessionId: v.optional(v.id("multiplayer_sessions")),
+    status: v.string(), // 'pending' | 'accepted' | 'declined' | 'expired'
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_code", ["inviteCode"])
+    .index("by_from", ["fromId"])
+    .index("by_to", ["toId", "status"]),
+
+  multiplayer_sessions: defineTable({
+    gameId: v.string(),
+    player1Id: v.id("players"),
+    player1Name: v.string(),
+    player1Avatar: v.string(),
+    player2Id: v.optional(v.id("players")),
+    player2Name: v.optional(v.string()),
+    player2Avatar: v.optional(v.string()),
+    boardState: v.any(),
+    currentPlayer: v.number(), // 1 or 2
+    status: v.string(), // 'waiting' | 'playing' | 'finished'
+    winner: v.optional(v.number()), // 1, 2, or 0 for draw
+    moves: v.array(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_player1", ["player1Id", "status"])
+    .index("by_player2", ["player2Id", "status"])
+    .index("by_status", ["status"]),
 });
