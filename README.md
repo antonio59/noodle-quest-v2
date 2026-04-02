@@ -2,8 +2,6 @@
 
 Brain games and board games for the whole family. Train your focus, memory, and flexibility with fun mini-games, then challenge yourself with classic board games — all while vibing to lo-fi beats.
 
-**Live:** [noodle-quest.netlify.app](https://noodle-quest.netlify.app)
-
 ## Features
 
 ### 21 Brain Games (6 categories)
