@@ -31,6 +31,7 @@ export function AppRouter() {
         gameId={playing.id}
         stage={playing.stage}
         onBack={() => setPlaying(null)}
+        onNextStage={() => setPlaying(prev => prev ? { ...prev, stage: Math.min(prev.stage + 1, prev.game.stages) } : null)}
       />
     );
   }

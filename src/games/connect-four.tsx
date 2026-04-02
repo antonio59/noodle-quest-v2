@@ -75,7 +75,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const [turn, setTurn] = useState<'red' | 'yellow'>('red');
   const [winner, setWinner] = useState<string | null>(null);
   const [wins, setWins] = useState(0);
-  const targetWins = stage <= 3 ? stage : 2;
+  const targetWins = Math.min(stage + 1, 10);
 
   const handleDrop = (col: number) => {
     if (winner || turn !== 'red' || board[0][col]) return;
@@ -180,7 +180,7 @@ registerGame('connect-four', {
   emoji: '🟡',
   description: 'Drop discs to connect four in a row!',
   category: 'board',
-  stages: 5,
+  stages: 10,
   component: ConnectFourGame,
 });
 

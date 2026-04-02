@@ -19,6 +19,31 @@ export const saveScore = mutation({
   },
 });
 
+export const getPlayerStats = query({
+  args: { playerId: v.id("players") },
+  handler: async (ctx, args) => {
+    const scores = await ctx.db.query("scores").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
+    let totalStars = 0;
+    let totalScore = 0;
+    const gameIds = new Set<string>();
+    for (const s of scores) {
+      totalStars += s.stars;
+      totalScore += s.score;
+      gameIds.add(s.gameId);
+    }
+    // Get progress for best stage info
+    const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
+    const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number }> = {};
+    for (const p of progress) {
+      const key = `${p.gameId}:${p.stage}`;
+      if (!gameStages[p.gameId] || p.highScore > gameStages[p.gameId].highScore) {
+        gameStages[p.gameId] = { highScore: p.highScore, starsEarned: p.starsEarned, timesPlayed: p.timesPlayed };
+      }
+    }
+    return { totalStars, totalScore, gamesPlayed: gameIds.size, totalGames: scores.length, gameStages };
+  },
+});
+
 export const getLeaderboard = query({
   args: { gameId: v.optional(v.string()) },
   handler: async (ctx, args) => {

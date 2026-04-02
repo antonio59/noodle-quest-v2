@@ -28,7 +28,8 @@ export type GameCategory =
   | 'flexibility'
   | 'social'
   | 'sequence'
-  | 'board';
+  | 'board'
+  | 'breathe';
 
 export interface Player {
   playerId: string;
@@ -79,4 +80,5 @@ export const GAME_CATEGORIES: { id: GameCategory; label: string; emoji: string }
   { id: 'social', label: 'Social', emoji: '💛' },
   { id: 'sequence', label: 'Sequence', emoji: '🔢' },
   { id: 'board', label: 'Board', emoji: '🎲' },
+  { id: 'breathe', label: 'Breathe', emoji: '🌬️' },
 ];

@@ -10,8 +10,9 @@ interface GameHubProps {
 }
 
 const TABS = [
-  { id: 'brain', label: '🧠 Brain Games', emoji: '🧠' },
-  { id: 'board', label: '🎲 Board Games', emoji: '🎲' },
+  { id: 'brain', label: '🧠 Brain', emoji: '🧠' },
+  { id: 'board', label: '🎲 Board', emoji: '🎲' },
+  { id: 'breathe', label: '🌬️ Breathe', emoji: '🌬️' },
   { id: 'tracks', label: '🎵 Tracks', emoji: '🎵' },
 ];
 
@@ -27,13 +28,14 @@ export function GameHub({ onPlay }: GameHubProps) {
   });
 
   const allGames = getAllGames();
-  const filteredGames = allGames.filter(g => {
+  const brainGames = allGames.filter(g => g.category !== 'board' && g.category !== 'breathe');
+  const filteredGames = brainGames.filter(g => {
     if (category !== 'all' && g.category !== category) return false;
     if (search && !g.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const favGames = allGames.filter(g => favorites.has(g.id));
+  const favGames = brainGames.filter(g => favorites.has(g.id));
 
   const toggleFav = (id: string) => {
     setFavorites(prev => {
@@ -47,13 +49,13 @@ export function GameHub({ onPlay }: GameHubProps) {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Tab Bar */}
-      <div className="flex border-b border-white/5 flex-shrink-0">
+      {/* Tab Bar — scrollable on small screens */}
+      <div className="flex border-b border-white/5 flex-shrink-0 overflow-x-auto scrollbar-none">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 py-3 text-sm font-semibold text-center transition-colors border-b-2 ${
+            className={`flex-1 min-w-[80px] py-3 text-xs sm:text-sm font-semibold text-center transition-colors border-b-2 whitespace-nowrap ${
               tab === t.id
                 ? 'text-accent border-accent'
                 : 'text-text-muted border-transparent hover:text-text'
@@ -173,6 +175,25 @@ export function GameHub({ onPlay }: GameHubProps) {
                 <p>Board games loading...</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'breathe' && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 grid grid-cols-2 gap-3">
+            {allGames.filter(g => g.category === 'breathe').map(g => (
+              <button
+                key={g.id}
+                onClick={() => onPlay(g, g.id, 1)}
+                className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
+              >
+                <div className="text-3xl mb-2">{g.emoji}</div>
+                <div className="font-semibold text-sm mb-1">{g.name}</div>
+                <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
+                <div className="text-text-muted text-xs mt-2">{g.stages} stages</div>
+              </button>
+            ))}
           </div>
         </div>
       )}

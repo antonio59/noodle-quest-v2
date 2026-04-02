@@ -37,6 +37,12 @@ import '@/games/connect-four';
 import '@/games/ludo';
 import '@/games/snakes-ladders';
 
+// Register breathing exercises
+import '@/games/box-breathing';
+import '@/games/calm-breathing';
+import '@/games/triangle-breathing';
+import '@/games/coherent-breathing';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConvexClientProvider>

@@ -1,4 +1,6 @@
+import { useQuery } from 'convex/react';
 import { useAuth } from '@/contexts/AuthContext';
+import { client } from '@/lib/convex';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
 import { Star, Zap, Trophy } from 'lucide-react';
@@ -10,7 +12,17 @@ interface HomeProps {
 export function Home({ onPlay }: HomeProps) {
   const { player } = useAuth();
   const games = getAllGames();
+
+  // Fetch real stats from Convex
+  const stats = useQuery(
+    client && player ? 'games:getPlayerStats' : undefined as any,
+    player ? { playerId: player.playerId as any } : 'skip'
+  );
+
   const recentGames = games.slice(0, 4);
+
+  const totalStars = stats?.totalStars ?? 0;
+  const gamesPlayed = stats?.gamesPlayed ?? 0;
 
   return (
     <div className="h-full overflow-y-auto">
@@ -29,9 +41,9 @@ export function Home({ onPlay }: HomeProps) {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { icon: Star, label: 'Stars', value: '0', color: 'text-warning' },
-            { icon: Zap, label: 'Streak', value: '0', color: 'text-success' },
-            { icon: Trophy, label: 'Games', value: String(games.length), color: 'text-accent' },
+            { icon: Star, label: 'Stars', value: String(totalStars), color: 'text-warning' },
+            { icon: Zap, label: 'Games', value: String(gamesPlayed), color: 'text-success' },
+            { icon: Trophy, label: 'Available', value: String(games.length), color: 'text-accent' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-xl p-3 text-center">
               <s.icon className={`mx-auto mb-1 ${s.color}`} size={20} />

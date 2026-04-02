@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Star, ChevronRight } from 'lucide-react';
+import { useMutation } from 'convex/react';
+import { useAuth } from '@/contexts/AuthContext';
+import { client } from '@/lib/convex';
 import type { GameDefinition, GameResult } from '@/types';
 
 interface PlayGameProps {
@@ -7,19 +10,46 @@ interface PlayGameProps {
   gameId: string;
   stage: number;
   onBack: () => void;
+  onNextStage: () => void;
 }
 
-export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
+export function PlayGame({ game, gameId, stage, onBack, onNextStage }: PlayGameProps) {
+  const { player } = useAuth();
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [ended, setEnded] = useState<GameResult | null>(null);
-  const areaRef = useRef<HTMLDivElement>(null);
+  const [saving, setSaving] = useState(false);
+  const [nextStage, setNextStage] = useState<number | null>(null);
+
+  const saveScore = useMutation(client ? 'games:saveScore' : undefined as any);
 
   const GameComponent = game.component;
 
-  const handleEnd = (result: GameResult) => {
+  const handleEnd = async (result: GameResult) => {
     setEnded(result);
+    setSaving(true);
+
+    // Save to Convex
+    if (player && saveScore) {
+      try {
+        await saveScore({
+          playerId: player.playerId as any,
+          gameId,
+          stage,
+          score: result.score,
+          stars: result.stars,
+        });
+      } catch (err) {
+        console.error('Failed to save score:', err);
+      }
+    }
+    setSaving(false);
+
+    // Determine next stage
+    if (result.stars > 0 && stage < game.stages) {
+      setNextStage(stage + 1);
+    }
   };
 
   const renderStars = (count: number) => (
@@ -45,15 +75,29 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
           {ended.stars === 3 ? 'Amazing!' : ended.stars === 2 ? 'Great Job!' : 'Good Effort!'}
         </h2>
         {renderStars(ended.stars)}
-        <p className="text-accent text-xl font-bold mb-2">Score: {ended.score}</p>
+        <p className="text-accent text-xl font-bold mb-1">Score: {ended.score}</p>
+        {saving && <p className="text-text-muted text-xs mb-2">Saving...</p>}
         <p className="text-text-muted text-sm mb-6 max-w-xs">{ended.summary}</p>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap justify-center">
           <button
-            onClick={() => { setEnded(null); setScore(0); setProgress(0); }}
+            onClick={() => {
+              setEnded(null);
+              setScore(0);
+              setProgress(0);
+              setNextStage(null);
+            }}
             className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95"
           >
             Play Again
           </button>
+          {nextStage && (
+            <button
+              onClick={onNextStage}
+              className="bg-success text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 flex items-center gap-1"
+            >
+              Stage {nextStage} <ChevronRight size={16} />
+            </button>
+          )}
           <button
             onClick={onBack}
             className="bg-card text-text font-bold px-6 py-2.5 rounded-xl hover:bg-card-hover active:scale-95"
@@ -74,7 +118,7 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
         </button>
         <div className="text-center">
           <div className="font-semibold text-sm">{game.emoji} {game.name}</div>
-          <div className="text-text-muted text-xs">Stage {stage}</div>
+          <div className="text-text-muted text-xs">Stage {stage}/{game.stages}</div>
         </div>
         <div className="text-accent font-bold min-w-[60px] text-right pr-2">{score}</div>
       </div>
@@ -92,9 +136,10 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
         <div className="text-center text-text-dim text-sm py-2 px-4">{message}</div>
       )}
 
-      {/* Game area */}
-      <div ref={areaRef} className="flex-1 overflow-hidden">
+      {/* Game area — key forces re-mount on stage change */}
+      <div className="flex-1 overflow-hidden">
         <GameComponent
+          key={`${gameId}-${stage}`}
           stage={stage}
           onScore={pts => setScore(s => s + pts)}
           onProgress={setProgress}
