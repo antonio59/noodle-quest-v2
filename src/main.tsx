@@ -5,7 +5,7 @@ import { ConvexClientProvider } from '@/lib/convex';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AppRouter } from './App';
 
-// Register games
+// Register brain games
 import '@/games/copy-cat';
 import '@/games/memory-match';
 import '@/games/number-ninja';
@@ -28,6 +28,14 @@ import '@/games/feelings-faces';
 import '@/games/story-builder';
 import '@/games/routine-roadmap';
 import '@/games/just-right';
+
+// Register board games
+import '@/games/tic-tac-toe';
+import '@/games/checkers';
+import '@/games/chess';
+import '@/games/connect-four';
+import '@/games/ludo';
+import '@/games/snakes-ladders';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

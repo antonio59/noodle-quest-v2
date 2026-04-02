@@ -27,7 +27,8 @@ export type GameCategory =
   | 'motor'
   | 'flexibility'
   | 'social'
-  | 'sequence';
+  | 'sequence'
+  | 'board';
 
 export interface Player {
   playerId: string;
@@ -77,4 +78,5 @@ export const GAME_CATEGORIES: { id: GameCategory; label: string; emoji: string }
   { id: 'flexibility', label: 'Flexibility', emoji: '🔄' },
   { id: 'social', label: 'Social', emoji: '💛' },
   { id: 'sequence', label: 'Sequence', emoji: '🔢' },
+  { id: 'board', label: 'Board', emoji: '🎲' },
 ];
