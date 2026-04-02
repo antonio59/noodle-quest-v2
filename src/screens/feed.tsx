@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { client } from '@/lib/convex';
 import { Send, Smile, Image, AtSign, X } from 'lucide-react';
 
 // Quick emoji set for the picker
@@ -41,14 +41,11 @@ export function Feed() {
   const feedEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch feed from Convex
-  const feedPosts = useQuery(client ? 'feed:getFeed' : undefined as any, { limit: 100 });
+  const feedPosts = useQuery(api.feed.getFeed, { limit: 100 });
   // Search players for @mention
-  const searchResults = useQuery(
-    client && mentionQuery.length >= 2 ? 'auth:searchPlayers' : undefined as any,
-    mentionQuery.length >= 2 && player ? { query: mentionQuery, currentPlayerId: player.playerId } : 'skip'
-  );
+  const searchResults = useQuery(api.auth.searchPlayers as any, mentionQuery.length >= 2 && player ? { query: mentionQuery, currentPlayerId: player.playerId } : 'skip' as any);
   // Mutations
-  const createPost = useMutation(client ? 'feed:createPost' : undefined as any);
+  const createPost = useMutation(api.feed.createPost);
 
   // Update mention suggestions when search results change
   useEffect(() => {

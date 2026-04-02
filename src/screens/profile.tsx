@@ -1,6 +1,6 @@
 import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { client } from '@/lib/convex';
 import { getAllGames } from '@/lib/game-registry';
 import { AVATARS } from '@/lib/avatars';
 import { LogOut, Star, Gamepad2 } from 'lucide-react';
@@ -10,10 +10,7 @@ export function Profile() {
   const games = getAllGames();
 
   // Fetch real stats
-  const stats = useQuery(
-    client && player ? 'games:getPlayerStats' : undefined as any,
-    player ? { playerId: player.playerId as any } : 'skip'
-  );
+  const stats = useQuery(api.games.getPlayerStats, player ? { playerId: player.playerId as any } : 'skip' as any);
 
   const totalStars = stats?.totalStars ?? 0;
   const gamesPlayed = stats?.gamesPlayed ?? 0;

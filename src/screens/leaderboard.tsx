@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { client } from '@/lib/convex';
 import { getAllGames } from '@/lib/game-registry';
 import { Trophy, Star } from 'lucide-react';
 
@@ -20,14 +20,8 @@ export function Leaderboard() {
   const [selectedGame, setSelectedGame] = useState<string>('');
   const games = getAllGames();
 
-  const overallData = useQuery(
-    client ? 'games:getLeaderboard' : undefined as any,
-    client ? {} : 'skip'
-  );
-  const gameData = useQuery(
-    client && selectedGame ? 'games:getLeaderboard' : undefined as any,
-    client && selectedGame ? { gameId: selectedGame } : 'skip'
-  );
+  const overallData = useQuery(api.games.getLeaderboard, {});
+  const gameData = useQuery(api.games.getLeaderboard, selectedGame ? { gameId: selectedGame } : 'skip' as any);
 
   const isLoading = tab === 'overall' ? overallData === undefined : selectedGame ? gameData === undefined : false;
   const entries: LeaderboardEntry[] = (tab === 'overall' ? overallData : gameData) ?? [];

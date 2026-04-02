@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { client } from '@/lib/convex';
 import { getAllGames } from '@/lib/game-registry';
 import { Star, Zap, Trophy } from 'lucide-react';
 
@@ -10,10 +10,7 @@ export function Home() {
   const { player } = useAuth();
   const games = getAllGames();
 
-  const stats = useQuery(
-    client && player ? 'games:getPlayerStats' : undefined as any,
-    player ? { playerId: player.playerId as any } : 'skip'
-  );
+  const stats = useQuery(api.games.getPlayerStats, player ? { playerId: player.playerId as any } : 'skip' as any);
 
   const recentGames = games.slice(0, 4);
   const totalStars = stats?.totalStars ?? 0;

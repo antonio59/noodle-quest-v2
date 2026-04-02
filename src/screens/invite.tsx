@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { client } from '@/lib/convex';
 import { getGame } from '@/lib/game-registry';
 import { Users, Loader2, AlertCircle } from 'lucide-react';
 
@@ -13,12 +13,9 @@ export function InvitePage() {
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState('');
 
-  const invite = useQuery(
-    client && code ? 'multiplayer:getInvite' : undefined as any,
-    client && code ? { inviteCode: code } : 'skip'
-  );
+  const invite = useQuery((api as any).multiplayer?.getInvite, code ? { inviteCode: code } : 'skip' as any);
 
-  const joinSession = useMutation(client ? 'multiplayer:joinSession' : undefined as any);
+  const joinSession = useMutation((api as any).multiplayer?.joinSession);
 
   const game = invite?.gameId ? getGame(invite.gameId) : undefined;
   const isExpired = invite && invite.expiresAt < Date.now();
