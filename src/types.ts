@@ -21,6 +21,7 @@ export interface GameProps {
   onEnd: (result: GameResult) => void;
   multiplayerState?: MultiplayerState;
   onMultiplayerMove?: (move: any) => void;
+  aiDifficulty?: 'easy' | 'medium' | 'hard';
 }
 
 export interface GameResult {

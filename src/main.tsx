@@ -36,6 +36,8 @@ import '@/games/chess';
 import '@/games/connect-four';
 import '@/games/ludo';
 import '@/games/snakes-ladders';
+import '@/games/crossword';
+import '@/games/wordsearch';
 
 // Register breathing exercises
 import '@/games/box-breathing';

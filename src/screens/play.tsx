@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, ChevronRight, ArrowRight } from 'lucide-react';
 import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { client } from '@/lib/convex';
 import { getGame } from '@/lib/game-registry';
 import type { GameResult } from '@/types';
 
@@ -26,7 +26,7 @@ export function PlayGame() {
   const [saving, setSaving] = useState(false);
   const [nextStage, setNextStage] = useState<number | null>(null);
 
-  const saveScore = useMutation(client ? 'games:saveScore' : undefined as any);
+  const saveScore = useMutation(api.games.saveScore);
 
   // Look up the game from the registry
   const gameEntry = gameId ? getGame(gameId) : undefined;

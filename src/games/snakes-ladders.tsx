@@ -83,7 +83,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
   const targetWins = Math.min(stage, 10);
   const difficulty = aiDifficulty || 'medium';
 
-  const moveToken=*** number, steps: number, setter: (p: number) => void, name: string, onComplete: () => void) => {
+  const moveToken = (currentPos: number, steps: number, setter: (p: number) => void, name: string, onComplete: () => void) => {
     let target = currentPos + steps;
     if (target > BOARD_SIZE) target = currentPos; // can't overshoot
 
