@@ -1,16 +1,17 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 import { AVATARS } from '@/lib/avatars';
 
-export function Auth({ onBack }: { onBack: () => void }) {
+export function Auth() {
+  const navigate = useNavigate();
   const { login, signup } = useAuth();
   const [isSignup, setIsSignup] = useState(false);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
   const [avatar, setAvatar] = useState(AVATARS[0]);
 
   const handleSubmit = async () => {
@@ -19,13 +20,17 @@ export function Auth({ onBack }: { onBack: () => void }) {
     setLoading(true);
     const err = isSignup ? await signup(name.trim(), pin, avatar) : await login(name.trim(), pin);
     setLoading(false);
-    if (err) setError(err);
+    if (err) {
+      setError(err);
+    } else {
+      navigate('/', { replace: true });
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex items-center p-4">
-        <button onClick={onBack} className="text-text-muted hover:text-text p-2 -ml-2">
+        <button onClick={() => navigate('/welcome')} className="text-text-muted hover:text-text p-2 -ml-2">
           <ArrowLeft size={20} />
         </button>
       </div>

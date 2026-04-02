@@ -1,33 +1,27 @@
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { useAuth } from '@/contexts/AuthContext';
 import { client } from '@/lib/convex';
 import { getAllGames } from '@/lib/game-registry';
-import type { GameDefinition } from '@/types';
 import { Star, Zap, Trophy } from 'lucide-react';
 
-interface HomeProps {
-  onPlay: (game: GameDefinition, id: string, stage: number) => void;
-}
-
-export function Home({ onPlay }: HomeProps) {
+export function Home() {
+  const navigate = useNavigate();
   const { player } = useAuth();
   const games = getAllGames();
 
-  // Fetch real stats from Convex
   const stats = useQuery(
     client && player ? 'games:getPlayerStats' : undefined as any,
     player ? { playerId: player.playerId as any } : 'skip'
   );
 
   const recentGames = games.slice(0, 4);
-
   const totalStars = stats?.totalStars ?? 0;
   const gamesPlayed = stats?.gamesPlayed ?? 0;
 
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-5">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <p className="text-text-muted text-sm">Welcome back,</p>
@@ -38,7 +32,6 @@ export function Home({ onPlay }: HomeProps) {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
             { icon: Star, label: 'Stars', value: String(totalStars), color: 'text-warning' },
@@ -53,7 +46,6 @@ export function Home({ onPlay }: HomeProps) {
           ))}
         </div>
 
-        {/* Quick Play */}
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
           <Zap size={18} className="text-accent" /> Quick Play
         </h2>
@@ -61,7 +53,7 @@ export function Home({ onPlay }: HomeProps) {
           {recentGames.map(g => (
             <button
               key={g.id}
-              onClick={() => onPlay(g, g.id, 1)}
+              onClick={() => navigate(`/play/${g.id}`, { state: { stage: 1 } })}
               className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
             >
               <div className="text-3xl mb-2">{g.emoji}</div>
@@ -71,9 +63,8 @@ export function Home({ onPlay }: HomeProps) {
           ))}
         </div>
 
-        {/* All Games CTA */}
         <button
-          onClick={() => {}}
+          onClick={() => navigate('/games')}
           className="w-full bg-accent-soft text-accent font-semibold py-3 rounded-xl hover:bg-accent/20 transition-colors"
         >
           Browse All Games →
