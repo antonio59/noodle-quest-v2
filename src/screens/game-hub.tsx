@@ -12,21 +12,15 @@ interface GameHubProps {
 }
 
 const TABS = [
-  { id: 'brain', label: '🧠 Brain', emoji: '🧠' },
-  { id: 'board', label: '🎲 Board', emoji: '🎲' },
+  { id: 'all', label: '🎮 All Games', emoji: '🎮' },
   { id: 'breathe', label: '🫧 Breathe', emoji: '🫧' },
   { id: 'tracks', label: '🎵 Tracks', emoji: '🎵' },
 ];
 
 const TAB_BENEFITS: Record<string, { title: string; desc: string; icon: typeof Brain }> = {
-  brain: {
-    title: 'Brain Games',
-    desc: 'Train focus, memory, and problem-solving skills. Each game has 20 stages that get harder as you improve!',
-    icon: Brain,
-  },
-  board: {
-    title: 'Board Games',
-    desc: 'Classic games with AI opponents — play Snakes & Ladders, Checkers, Connect 4, and more!',
+  all: {
+    title: 'All Games',
+    desc: '40+ games to train focus, memory, problem-solving, and more. Board games included!',
     icon: Brain,
   },
   breathe: {
@@ -143,7 +137,7 @@ export function GameHub({ onPlay }: GameHubProps) {
         </div>
       )}
 
-      {tab === 'brain' && (
+      {tab === 'all' && (
         <div className="flex-1 overflow-y-auto">
           {/* Search */}
           <div className="p-4 pb-0">
@@ -180,7 +174,7 @@ export function GameHub({ onPlay }: GameHubProps) {
             </div>
           )}
 
-          {/* Category Filter */}
+          {/* Category Filter — includes board */}
           <div className="p-4 pb-0">
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
               <button
@@ -189,7 +183,15 @@ export function GameHub({ onPlay }: GameHubProps) {
                   category === 'all' ? 'bg-accent text-bg' : 'bg-card text-text-muted hover:text-text'
                 }`}
               >
-                All
+                All ({allGames.length})
+              </button>
+              <button
+                onClick={() => setCategory('board' as GameCategory)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                  category === 'board' ? 'bg-accent text-bg' : 'bg-card text-text-muted hover:text-text'
+                }`}
+              >
+                🎲 Board
               </button>
               {GAME_CATEGORIES.map(c => (
                 <button
@@ -225,38 +227,12 @@ export function GameHub({ onPlay }: GameHubProps) {
                   <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
                   <div className="flex items-center gap-1 mt-2">
                     <span className="text-text-muted text-xs">{g.stages} stages</span>
+                    {g.category === 'board' && <span className="text-primary text-xs">🤖 AI</span>}
                     {playedGames.has(g.id) && <span className="text-success text-xs">✓</span>}
                   </div>
                 </button>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {tab === 'board' && (
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-5">
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-3">🎲</div>
-              <h2 className="text-lg font-bold mb-1">Board Games</h2>
-              <p className="text-text-muted text-sm">Classic games with AI opponents — play anytime!</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {allGames.filter(g => g.category === 'board').map(g => (
-                <button
-                  key={g.id}
-                  onClick={() => onPlay(g, g.id, 1)}
-                  className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
-                >
-                  <div className="text-3xl mb-2">{g.emoji}</div>
-                  <div className="font-bold text-sm">{g.name}</div>
-                  <div className="text-text-muted text-xs mt-1">{g.description}</div>
-                  <div className="text-text-muted text-xs mt-2">{g.stages} stages • vs AI</div>
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       )}
