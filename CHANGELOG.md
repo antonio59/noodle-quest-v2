@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Combined emoji picker (60 emojis) + GIF search (kid-safe rating=g)
 
 ### Fixed
+- @mention autocomplete now shows all players when typing @ (not just 2+ chars)
+- GIF search now works with VITE_GIPHY_API_KEY from Netlify env vars
+- Home page stars, streak, and games played now fetch real data from Convex
 - Squish Lab stage 8+ blank screen (game now ends properly)
 - Lint errors resolved before every deploy
 - Duplicate emoji/sticker pickers merged into one
