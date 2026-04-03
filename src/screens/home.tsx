@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
 import { Star, Zap, Shuffle, Play, Heart } from 'lucide-react';
@@ -15,7 +15,7 @@ export function Home({ onPlay }: HomeProps) {
     const shuffled = [...games].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 6);
   })[0];
-  const [favorites, setFavorites] = useState<Set<string>>(() => {
+  const [favorites] = useState<Set<string>>(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
     } catch { return new Set(); }

@@ -74,7 +74,7 @@ function countPieces(board: Board, color: CellState): number {
 
 function evaluateBoard(board: Board, aiColor: CellState): number {
   let score = 0;
-  const playerColor = aiColor === 'red' ? 'black' : 'red';
+  const _playerColor = aiColor === 'red' ? 'black' : 'red';
   for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
       const piece = board[r][c];

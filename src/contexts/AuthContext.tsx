@@ -1,15 +1,6 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import type { Player } from '@/types';
-
-interface AuthCtx {
-  player: Player | null;
-  login: (name: string, pin: string) => Promise<string | null>;
-  signup: (name: string, pin: string) => Promise<string | null>;
-  logout: () => void;
-  updateAvatar: (emoji: string) => void;
-}
-
-const Ctx = createContext<AuthCtx>(null!);
+import { Ctx } from './auth-types';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [player, setPlayer] = useState<Player | null>(() => {
@@ -69,5 +60,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return <Ctx.Provider value={{ player, login, signup, logout, updateAvatar }}>{children}</Ctx.Provider>;
 }
-
-export const useAuth = () => useContext(Ctx);

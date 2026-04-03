@@ -39,10 +39,10 @@ function MemoryBoardGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [phase, setPhase] = useState<Phase>('intro');
   const [subPhase, setSubPhase] = useState<'peek' | 'playing'>('peek');
   const [cards, setCards] = useState<Card[]>([]);
-  const [flippedIds, setFlippedIds] = useState<number[]>([]);
+  const [_flippedIds, setFlippedIds] = useState<number[]>([]);
   const [moves, setMoves] = useState(0);
   const [matchedCount, setMatchedCount] = useState(0);
-  const [score, setScore] = useState(0);
+  const [_score, setScore] = useState(0);
   const [peekTimeLeft, setPeekTimeLeft] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [timeLeft, setTimeLeft] = useState(0);

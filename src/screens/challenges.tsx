@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { getAllGames } from '@/lib/game-registry';
 import { Trophy, Clock, Zap } from 'lucide-react';
 
@@ -134,7 +134,7 @@ export function Challenges() {
 
             <div className="space-y-2">
               {DUEL_GAMES.map(g => {
-                const fullGame = games.find(gg => gg.id === g.id);
+                const _fullGame = games.find(gg => gg.id === g.id);
                 return (
                   <div key={g.id} className="bg-card rounded-xl p-3 flex items-center gap-3">
                     <div className="text-2xl">{g.emoji}</div>

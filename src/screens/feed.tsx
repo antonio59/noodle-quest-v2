@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Send, Smile, Image as ImageIcon, Search, X, Reply } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import type { FeedPost } from '@/types';
 
 const NOW = Date.now();
@@ -38,7 +38,6 @@ export function Feed() {
   const [gifResults, setGifResults] = useState<GiphyResult[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null);
-  const [mentionQuery, setMentionQuery] = useState('');
   const [mentionList, setMentionList] = useState<MentionedPlayer[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -153,7 +152,6 @@ export function Feed() {
         : players.slice(0, 8);
       setMentionList(filtered);
       setShowMentions(filtered.length > 0);
-      setMentionQuery(query);
     } else {
       setShowMentions(false);
     }

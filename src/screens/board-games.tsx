@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { getAllGames } from '@/lib/game-registry';
 import { Lock, Play, Users } from 'lucide-react';
 

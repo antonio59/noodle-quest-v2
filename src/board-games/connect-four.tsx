@@ -132,7 +132,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [hoverCol, setHoverCol] = useState<number | null>(null);
   const [lastDrop, setLastDrop] = useState<{ row: number; col: number } | null>(null);
   const [winningCells, setWinningCells] = useState<Set<string>>(new Set());
-  const [score, setScore] = useState(0);
+  const [_score, setScore] = useState(0);
   const [moves, setMoves] = useState(0);
   const boardRef = useRef<Board>(createBoard());
   const isPlayerTurnRef = useRef(true);

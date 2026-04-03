@@ -4,7 +4,7 @@ import { GAME_CATEGORIES, type GameDefinition, type GameCategory } from '@/types
 import { Heart, Search, Play, Pause, Brain, Zap, Target } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { Breathe } from '@/screens/breathe';
 
 interface GameHubProps {

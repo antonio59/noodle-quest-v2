@@ -9,7 +9,7 @@ import { Challenges } from '@/screens/challenges';
 import { Notifications } from '@/screens/notifications';
 import { Landing } from '@/screens/landing';
 import { Auth } from '@/screens/auth';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { NavBar } from '@/components/NavBar';
 import type { GameDefinition } from '@/types';
 

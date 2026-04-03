@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { getAllGames } from '@/lib/game-registry';
 import { LogOut, Star, Gamepad2, Zap, Trophy, Medal } from 'lucide-react';
 

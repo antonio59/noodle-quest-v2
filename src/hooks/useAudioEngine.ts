@@ -13,7 +13,7 @@ export function useAudioEngine() {
 
   const getCtx = useCallback(async () => {
     if (!ctxRef.current) {
-      ctxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      ctxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
     if (ctxRef.current.state === 'suspended') {
       await ctxRef.current.resume();

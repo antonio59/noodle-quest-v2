@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ArrowLeft, Star, ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import type { GameDefinition, GameResult } from '@/types';
 
 interface PlayGameProps {
@@ -39,7 +39,7 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
 
   const GameComponent = game.component;
   const stageName = STAGE_NAMES[currentStage - 1] || `Stage ${currentStage}`;
-  const allComplete = currentStage >= game.stages;
+  const _allComplete = currentStage >= game.stages;
 
   const saveScore = useCallback(async (result: GameResult) => {
     if (!player || savedRef.current) return;
