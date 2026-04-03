@@ -27,6 +27,16 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; speed: numbe
   8: { spawnRate: 1000, duration: 38000, speed: 5.5, move: true, decoyChance: 0.5 },
   9: { spawnRate: 900, duration: 40000, speed: 6, move: true, decoyChance: 0.5 },
   10: { spawnRate: 800, duration: 45000, speed: 7, move: true, decoyChance: 0.55 },
+  11: { spawnRate: 750, duration: 46000, speed: 7.5, move: true, decoyChance: 0.57 },
+  12: { spawnRate: 700, duration: 47000, speed: 8, move: true, decoyChance: 0.59 },
+  13: { spawnRate: 650, duration: 48000, speed: 8.5, move: true, decoyChance: 0.61 },
+  14: { spawnRate: 600, duration: 49000, speed: 9, move: true, decoyChance: 0.63 },
+  15: { spawnRate: 550, duration: 50000, speed: 9.5, move: true, decoyChance: 0.65 },
+  16: { spawnRate: 500, duration: 51000, speed: 10, move: true, decoyChance: 0.67 },
+  17: { spawnRate: 480, duration: 52000, speed: 10.5, move: true, decoyChance: 0.69 },
+  18: { spawnRate: 450, duration: 53000, speed: 11, move: true, decoyChance: 0.71 },
+  19: { spawnRate: 420, duration: 54000, speed: 11.5, move: true, decoyChance: 0.73 },
+  20: { spawnRate: 400, duration: 55000, speed: 12, move: true, decoyChance: 0.75 },
 };
 
 const TARGET_COLORS = ['#ff6e6c', '#c084fc', '#4ade80'];
@@ -261,7 +271,7 @@ registerGame('attention-archery', {
   emoji: '🏹',
   description: 'Hit the right targets! Watch out for sneaky decoys.',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: AttentionArcheryGame,
 });
 

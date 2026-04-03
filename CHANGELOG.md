@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Stage progression: Next Stage, Previous Stage, Random Stage buttons on end screen
+- Stage selector (← →) in game header during gameplay
+- 20 stage names: Rookie → Beginner → ... → Cosmic
+- Replay Stage button (replaces generic "Play Again")
+- Game component remounts on stage change for clean resets
+- Endless play: navigate to any stage from the end screen
+- 20 stages for all 27 games (up from 10), with smooth difficulty curves
 - 4 new cognitive games: Sudoku (4x4→9x9), Tetris Drop, Word Search, Boggle Rush
 - My Favourite Games section on Home screen (star games from any tab)
 - Notifications system with @mention alerts and badge achievement posts

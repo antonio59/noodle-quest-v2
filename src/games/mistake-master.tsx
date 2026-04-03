@@ -204,6 +204,551 @@ const ALL_CHALLENGES: Record<number, Challenge[]> = {
       lesson: 'Mistakes are just practice for success!',
     },
   ],
+  11: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+  ],
+  12: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+  ],
+  13: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+  ],
+  14: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+  ],
+  15: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+    {
+      task: 'Be the best at everything you try',
+      impossibleReason: 'There are billions of people in the world!',
+      lesson: 'Being YOUR best is the only competition that matters!',
+    },
+  ],
+  16: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+    {
+      task: 'Be the best at everything you try',
+      impossibleReason: 'There are billions of people in the world!',
+      lesson: 'Being YOUR best is the only competition that matters!',
+    },
+    {
+      task: 'Never ask for help',
+      impossibleReason: 'Asking for help is how everyone learns!',
+      lesson: 'The smartest people know when to ask for help!',
+    },
+  ],
+  17: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+    {
+      task: 'Be the best at everything you try',
+      impossibleReason: 'There are billions of people in the world!',
+      lesson: 'Being YOUR best is the only competition that matters!',
+    },
+    {
+      task: 'Never ask for help',
+      impossibleReason: 'Asking for help is how everyone learns!',
+      lesson: 'The smartest people know when to ask for help!',
+    },
+    {
+      task: 'Never feel bored',
+      impossibleReason: 'Boredom is your brain asking for something new!',
+      lesson: 'Boredom is normal! It pushes you to explore and create!',
+    },
+  ],
+  18: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+    {
+      task: 'Be the best at everything you try',
+      impossibleReason: 'There are billions of people in the world!',
+      lesson: 'Being YOUR best is the only competition that matters!',
+    },
+    {
+      task: 'Never ask for help',
+      impossibleReason: 'Asking for help is how everyone learns!',
+      lesson: 'The smartest people know when to ask for help!',
+    },
+    {
+      task: 'Never feel bored',
+      impossibleReason: 'Boredom is your brain asking for something new!',
+      lesson: 'Boredom is normal! It pushes you to explore and create!',
+    },
+    {
+      task: 'Never feel confused',
+      impossibleReason: 'Confusion means your brain is processing new information!',
+      lesson: 'Confusion is the first step to understanding!',
+    },
+  ],
+  19: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+    {
+      task: 'Be the best at everything you try',
+      impossibleReason: 'There are billions of people in the world!',
+      lesson: 'Being YOUR best is the only competition that matters!',
+    },
+    {
+      task: 'Never ask for help',
+      impossibleReason: 'Asking for help is how everyone learns!',
+      lesson: 'The smartest people know when to ask for help!',
+    },
+    {
+      task: 'Never feel bored',
+      impossibleReason: 'Boredom is your brain asking for something new!',
+      lesson: 'Boredom is normal! It pushes you to explore and create!',
+    },
+    {
+      task: 'Never feel confused',
+      impossibleReason: 'Confusion means your brain is processing new information!',
+      lesson: 'Confusion is the first step to understanding!',
+    },
+    {
+      task: 'Never feel tired',
+      impossibleReason: 'Your body and brain need rest to function!',
+      lesson: 'Rest is not laziness — it is how you recharge!',
+    },
+  ],
+  20: [
+    {
+      task: 'Be perfect at everything',
+      impossibleReason: 'Nobody is perfect at everything — or anything!',
+      lesson: 'Perfection is impossible. Growth is what matters!',
+    },
+    {
+      task: 'Never feel nervous',
+      impossibleReason: 'Nervousness is your body helping you!',
+      lesson: "Emotions aren't mistakes — they're information!",
+    },
+    {
+      task: 'Please everyone all the time',
+      impossibleReason: 'People want different things!',
+      lesson: "You can't control others' feelings. Being kind is enough!",
+    },
+    {
+      task: 'Know everything before trying',
+      impossibleReason: 'Learning happens BY trying!',
+      lesson: 'Not knowing is the starting point of ALL learning!',
+    },
+    {
+      task: 'Succeed without any failures',
+      impossibleReason: 'Every success story includes failures!',
+      lesson: 'Mistakes are just practice for success!',
+    },
+    {
+      task: 'Never change your mind',
+      impossibleReason: 'Changing your mind means you learned something new!',
+      lesson: 'Adapting your opinion is a sign of intelligence, not weakness!',
+    },
+    {
+      task: 'Always know what to say',
+      impossibleReason: 'Even the best speakers sometimes freeze up!',
+      lesson: 'It is okay to pause and think. Silence is not failure!',
+    },
+    {
+      task: 'Make everyone happy at once',
+      impossibleReason: 'Different people want opposite things!',
+      lesson: 'You can be fair without making everyone equally happy!',
+    },
+    {
+      task: 'Never feel jealous',
+      impossibleReason: 'Jealousy is a natural human emotion!',
+      lesson: 'Feeling jealous does not make you bad. What you do with it matters!',
+    },
+    {
+      task: 'Be the best at everything you try',
+      impossibleReason: 'There are billions of people in the world!',
+      lesson: 'Being YOUR best is the only competition that matters!',
+    },
+    {
+      task: 'Never ask for help',
+      impossibleReason: 'Asking for help is how everyone learns!',
+      lesson: 'The smartest people know when to ask for help!',
+    },
+    {
+      task: 'Never feel bored',
+      impossibleReason: 'Boredom is your brain asking for something new!',
+      lesson: 'Boredom is normal! It pushes you to explore and create!',
+    },
+    {
+      task: 'Never feel confused',
+      impossibleReason: 'Confusion means your brain is processing new information!',
+      lesson: 'Confusion is the first step to understanding!',
+    },
+    {
+      task: 'Never feel tired',
+      impossibleReason: 'Your body and brain need rest to function!',
+      lesson: 'Rest is not laziness — it is how you recharge!',
+    },
+    {
+      task: 'Never feel frustrated',
+      impossibleReason: 'Frustration means you care about doing well!',
+      lesson: 'Frustration is energy — channel it into trying again!',
+    },
+  ],
 };
 
 const TIPS = [
@@ -370,7 +915,7 @@ registerGame('mistake-master', {
   emoji: '🌱',
   description: 'Learn from mistakes and grow! Every oops is a chance to learn.',
   category: 'flexibility',
-  stages: 10,
+  stages: 20,
   component: MistakeMasterGame,
 });
 

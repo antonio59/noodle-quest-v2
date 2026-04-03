@@ -28,6 +28,16 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; waitMin: num
   8: { spawnRate: 1000, duration: 38000, waitMin: 700, waitMax: 1800, trapChance: 0.3, sizeMin: 40, sizeMax: 70 },
   9: { spawnRate: 900, duration: 40000, waitMin: 600, waitMax: 1600, trapChance: 0.35, sizeMin: 38, sizeMax: 68 },
   10: { spawnRate: 800, duration: 45000, waitMin: 500, waitMax: 1400, trapChance: 0.4, sizeMin: 35, sizeMax: 65 },
+  11: { spawnRate: 750, duration: 46000, waitMin: 450, waitMax: 1300, trapChance: 0.42, sizeMin: 33, sizeMax: 63 },
+  12: { spawnRate: 700, duration: 47000, waitMin: 400, waitMax: 1200, trapChance: 0.44, sizeMin: 31, sizeMax: 61 },
+  13: { spawnRate: 650, duration: 48000, waitMin: 350, waitMax: 1100, trapChance: 0.46, sizeMin: 30, sizeMax: 58 },
+  14: { spawnRate: 600, duration: 49000, waitMin: 300, waitMax: 1000, trapChance: 0.48, sizeMin: 28, sizeMax: 55 },
+  15: { spawnRate: 550, duration: 50000, waitMin: 280, waitMax: 900, trapChance: 0.5, sizeMin: 27, sizeMax: 52 },
+  16: { spawnRate: 500, duration: 51000, waitMin: 250, waitMax: 800, trapChance: 0.52, sizeMin: 25, sizeMax: 50 },
+  17: { spawnRate: 480, duration: 52000, waitMin: 220, waitMax: 700, trapChance: 0.54, sizeMin: 24, sizeMax: 48 },
+  18: { spawnRate: 450, duration: 53000, waitMin: 200, waitMax: 600, trapChance: 0.56, sizeMin: 22, sizeMax: 45 },
+  19: { spawnRate: 420, duration: 54000, waitMin: 180, waitMax: 500, trapChance: 0.58, sizeMin: 20, sizeMax: 42 },
+  20: { spawnRate: 400, duration: 55000, waitMin: 150, waitMax: 400, trapChance: 0.6, sizeMin: 18, sizeMax: 40 },
 };
 
 const TIPS = [
@@ -305,7 +315,7 @@ registerGame('patience-pop', {
   emoji: '🫧',
   description: 'Wait for the bubbles to turn green, then pop them!',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: PatiencePopGame,
 });
 

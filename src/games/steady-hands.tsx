@@ -20,6 +20,16 @@ const CONFIG: Record<number, { pathWidth: number; obstacles: boolean; checkpoint
   8: { pathWidth: 35, obstacles: true, checkpointCount: 5 },
   9: { pathWidth: 32, obstacles: true, checkpointCount: 6 },
   10: { pathWidth: 28, obstacles: true, checkpointCount: 6 },
+  11: { pathWidth: 26, obstacles: true, checkpointCount: 7 },
+  12: { pathWidth: 24, obstacles: true, checkpointCount: 7 },
+  13: { pathWidth: 22, obstacles: true, checkpointCount: 8 },
+  14: { pathWidth: 20, obstacles: true, checkpointCount: 8 },
+  15: { pathWidth: 19, obstacles: true, checkpointCount: 9 },
+  16: { pathWidth: 18, obstacles: true, checkpointCount: 9 },
+  17: { pathWidth: 17, obstacles: true, checkpointCount: 10 },
+  18: { pathWidth: 16, obstacles: true, checkpointCount: 10 },
+  19: { pathWidth: 15, obstacles: true, checkpointCount: 11 },
+  20: { pathWidth: 14, obstacles: true, checkpointCount: 12 },
 };
 
 const TIPS = [
@@ -416,7 +426,7 @@ registerGame('steady-hands', {
   emoji: '🎯',
   description: 'Guide the ball through the winding path without touching the walls!',
   category: 'motor',
-  stages: 10,
+  stages: 20,
   component: SteadyHandsGame,
 });
 

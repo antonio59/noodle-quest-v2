@@ -22,6 +22,16 @@ const CONFIG: Record<number, { pairs: number; cols: number; time: number }> = {
   8: { pairs: 12, cols: 6, time: 95 },
   9: { pairs: 12, cols: 6, time: 85 },
   10: { pairs: 15, cols: 6, time: 80 },
+  11: { pairs: 15, cols: 6, time: 75 },
+  12: { pairs: 16, cols: 6, time: 70 },
+  13: { pairs: 16, cols: 7, time: 65 },
+  14: { pairs: 18, cols: 7, time: 60 },
+  15: { pairs: 18, cols: 7, time: 55 },
+  16: { pairs: 18, cols: 7, time: 50 },
+  17: { pairs: 20, cols: 7, time: 48 },
+  18: { pairs: 20, cols: 7, time: 45 },
+  19: { pairs: 20, cols: 7, time: 42 },
+  20: { pairs: 20, cols: 7, time: 40 },
 };
 
 const EMOJIS = ['🦄', '🚀', '🌈', '🍕', '🐙', '🎸', '🌺', '🎨', '🦋', '🍦', '🎪', '🌟', '🎯', '🐶', '🌻'];
@@ -267,7 +277,7 @@ registerGame('memory-match', {
   emoji: '🃏',
   description: 'Flip cards and find the matching pairs!',
   category: 'memory',
-  stages: 10,
+  stages: 20,
   component: MemoryMatchGame,
 });
 

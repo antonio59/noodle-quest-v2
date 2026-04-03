@@ -13,6 +13,16 @@ const CONFIG: Record<number, { beats: number; tolerance: number; bpm: number }> 
   8: { beats: 7, tolerance: 240, bpm: 110 },
   9: { beats: 7, tolerance: 220, bpm: 115 },
   10: { beats: 8, tolerance: 200, bpm: 120 },
+  11: { beats: 8, tolerance: 185, bpm: 125 },
+  12: { beats: 9, tolerance: 170, bpm: 130 },
+  13: { beats: 9, tolerance: 155, bpm: 135 },
+  14: { beats: 10, tolerance: 140, bpm: 140 },
+  15: { beats: 10, tolerance: 125, bpm: 145 },
+  16: { beats: 10, tolerance: 115, bpm: 150 },
+  17: { beats: 11, tolerance: 105, bpm: 152 },
+  18: { beats: 11, tolerance: 95, bpm: 155 },
+  19: { beats: 12, tolerance: 88, bpm: 158 },
+  20: { beats: 12, tolerance: 80, bpm: 160 },
 };
 
 const TIPS = [
@@ -402,7 +412,7 @@ registerGame('echo-tap', {
   emoji: '🥁',
   description: 'Tap the buttons to match the rhythm pattern!',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: EchoTapGame,
 });
 

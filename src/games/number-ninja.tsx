@@ -15,6 +15,16 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
   8: { minLen: 6, maxLen: 8, showTime: 3500, maxRounds: 5 },
   9: { minLen: 7, maxLen: 9, showTime: 4000, maxRounds: 5 },
   10: { minLen: 8, maxLen: 10, showTime: 4500, maxRounds: 5 },
+  11: { minLen: 9, maxLen: 11, showTime: 5000, maxRounds: 5 },
+  12: { minLen: 9, maxLen: 12, showTime: 5500, maxRounds: 6 },
+  13: { minLen: 10, maxLen: 13, showTime: 6000, maxRounds: 6 },
+  14: { minLen: 10, maxLen: 14, showTime: 6500, maxRounds: 6 },
+  15: { minLen: 11, maxLen: 15, showTime: 7000, maxRounds: 7 },
+  16: { minLen: 12, maxLen: 16, showTime: 7500, maxRounds: 7 },
+  17: { minLen: 12, maxLen: 17, showTime: 8000, maxRounds: 7 },
+  18: { minLen: 13, maxLen: 18, showTime: 8500, maxRounds: 8 },
+  19: { minLen: 14, maxLen: 19, showTime: 9000, maxRounds: 8 },
+  20: { minLen: 15, maxLen: 20, showTime: 10000, maxRounds: 8 },
 };
 
 const TIPS = [
@@ -258,7 +268,7 @@ registerGame('number-ninja', {
   emoji: '🔢',
   description: 'Memorize the numbers, then type them back!',
   category: 'memory',
-  stages: 10,
+  stages: 20,
   component: NumberNinjaGame,
 });
 

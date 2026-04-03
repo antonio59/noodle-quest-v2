@@ -15,6 +15,16 @@ const CONFIG: Record<number, { bubbles: number; targetMin: number; targetMax: nu
   8: { bubbles: 6, targetMin: 28, targetMax: 48, time: 45 },
   9: { bubbles: 7, targetMin: 25, targetMax: 45, time: 42 },
   10: { bubbles: 8, targetMin: 22, targetMax: 42, time: 40 },
+  11: { bubbles: 9, targetMin: 20, targetMax: 40, time: 38 },
+  12: { bubbles: 9, targetMin: 18, targetMax: 38, time: 36 },
+  13: { bubbles: 10, targetMin: 16, targetMax: 36, time: 34 },
+  14: { bubbles: 10, targetMin: 15, targetMax: 34, time: 32 },
+  15: { bubbles: 11, targetMin: 14, targetMax: 32, time: 30 },
+  16: { bubbles: 11, targetMin: 13, targetMax: 30, time: 28 },
+  17: { bubbles: 12, targetMin: 12, targetMax: 28, time: 26 },
+  18: { bubbles: 12, targetMin: 11, targetMax: 26, time: 24 },
+  19: { bubbles: 13, targetMin: 10, targetMax: 24, time: 22 },
+  20: { bubbles: 14, targetMin: 10, targetMax: 22, time: 20 },
 };
 
 const TIPS = [
@@ -289,7 +299,7 @@ registerGame('breath-bubbles', {
   emoji: '🫧',
   description: 'Blow perfect bubbles by breathing slow and steady!',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: BreathBubblesGame,
 });
 

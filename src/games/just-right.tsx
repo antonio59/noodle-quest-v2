@@ -13,6 +13,16 @@ const CONFIG: Record<number, { target: number; time: number; tolerance: number }
   8: { target: 22, time: 30, tolerance: 4 },
   9: { target: 25, time: 28, tolerance: 4 },
   10: { target: 30, time: 25, tolerance: 4 },
+  11: { target: 35, time: 22, tolerance: 4 },
+  12: { target: 40, time: 20, tolerance: 5 },
+  13: { target: 45, time: 18, tolerance: 5 },
+  14: { target: 50, time: 17, tolerance: 5 },
+  15: { target: 55, time: 15, tolerance: 5 },
+  16: { target: 60, time: 14, tolerance: 5 },
+  17: { target: 65, time: 13, tolerance: 4 },
+  18: { target: 70, time: 12, tolerance: 4 },
+  19: { target: 80, time: 10, tolerance: 3 },
+  20: { target: 100, time: 8, tolerance: 3 },
 };
 
 const colors = ['#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24', '#f472b6'];
@@ -276,7 +286,7 @@ registerGame('just-right', {
   emoji: '🎨',
   description: 'Splatter paint and stop when it looks just right!',
   category: 'flexibility',
-  stages: 10,
+  stages: 20,
   component: JustRightGame,
 });
 

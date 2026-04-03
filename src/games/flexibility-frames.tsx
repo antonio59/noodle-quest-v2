@@ -45,6 +45,16 @@ const STAGE_CONFIG: Record<number, { spawnRate: number; ruleChange: number; dura
   8: { spawnRate: 750, ruleChange: 8000, duration: 42000 },
   9: { spawnRate: 700, ruleChange: 7000, duration: 44000 },
   10: { spawnRate: 650, ruleChange: 6000, duration: 45000 },
+  11: { spawnRate: 620, ruleChange: 5500, duration: 46000 },
+  12: { spawnRate: 600, ruleChange: 5000, duration: 47000 },
+  13: { spawnRate: 580, ruleChange: 4800, duration: 48000 },
+  14: { spawnRate: 560, ruleChange: 4500, duration: 49000 },
+  15: { spawnRate: 540, ruleChange: 4200, duration: 50000 },
+  16: { spawnRate: 520, ruleChange: 4000, duration: 51000 },
+  17: { spawnRate: 500, ruleChange: 3800, duration: 52000 },
+  18: { spawnRate: 480, ruleChange: 3500, duration: 53000 },
+  19: { spawnRate: 460, ruleChange: 3200, duration: 54000 },
+  20: { spawnRate: 440, ruleChange: 3000, duration: 55000 },
 };
 
 const COLORS = ['#ff6e6c', '#c084fc', '#67e8f9', '#4ade80'];
@@ -331,7 +341,7 @@ registerGame('flexibility-frames', {
   emoji: '🔄',
   description: 'The rules keep changing! Stay flexible and adapt!',
   category: 'flexibility',
-  stages: 10,
+  stages: 20,
   component: FlexibilityFramesGame,
 });
 

@@ -28,6 +28,16 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; distractors:
   8: { spawnRate: 750, duration: 38000, distractors: 0.55, fadeTime: 1000, speed: 1.5 },
   9: { spawnRate: 700, duration: 40000, distractors: 0.6, fadeTime: 800, speed: 1.6 },
   10: { spawnRate: 600, duration: 45000, distractors: 0.65, fadeTime: 600, speed: 1.8 },
+  11: { spawnRate: 580, duration: 46000, distractors: 0.67, fadeTime: 550, speed: 1.9 },
+  12: { spawnRate: 560, duration: 47000, distractors: 0.69, fadeTime: 500, speed: 2.0 },
+  13: { spawnRate: 540, duration: 48000, distractors: 0.71, fadeTime: 450, speed: 2.1 },
+  14: { spawnRate: 520, duration: 49000, distractors: 0.73, fadeTime: 400, speed: 2.2 },
+  15: { spawnRate: 500, duration: 50000, distractors: 0.75, fadeTime: 350, speed: 2.3 },
+  16: { spawnRate: 480, duration: 51000, distractors: 0.77, fadeTime: 300, speed: 2.4 },
+  17: { spawnRate: 460, duration: 52000, distractors: 0.79, fadeTime: 250, speed: 2.5 },
+  18: { spawnRate: 440, duration: 53000, distractors: 0.81, fadeTime: 200, speed: 2.6 },
+  19: { spawnRate: 420, duration: 54000, distractors: 0.83, fadeTime: 150, speed: 2.7 },
+  20: { spawnRate: 400, duration: 55000, distractors: 0.85, fadeTime: 100, speed: 2.8 },
 };
 
 const TIPS = [
@@ -251,7 +261,7 @@ registerGame('focus-frenzy', {
   emoji: '🔮',
   description: 'Tap the glowing orbs, but ignore the tricky distractions!',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: FocusFrenzyGame,
 });
 

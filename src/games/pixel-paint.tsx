@@ -15,6 +15,16 @@ const CONFIG: Record<number, { size: number; time: number }> = {
   8: { size: 12, time: 75 },
   9: { size: 12, time: 70 },
   10: { size: 14, time: 65 },
+  11: { size: 14, time: 60 },
+  12: { size: 14, time: 55 },
+  13: { size: 16, time: 55 },
+  14: { size: 16, time: 50 },
+  15: { size: 16, time: 45 },
+  16: { size: 18, time: 45 },
+  17: { size: 18, time: 40 },
+  18: { size: 18, time: 35 },
+  19: { size: 20, time: 35 },
+  20: { size: 20, time: 30 },
 };
 
 const TIPS = [
@@ -280,7 +290,7 @@ registerGame('pixel-paint', {
   emoji: '🟦',
   description: 'Tap the squares to match the pixel art picture!',
   category: 'motor',
-  stages: 10,
+  stages: 20,
   component: PixelPaintGame,
 });
 

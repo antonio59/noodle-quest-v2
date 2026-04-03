@@ -15,6 +15,16 @@ const CONFIG: Record<number, { gridSize: number; diffs: number; showTime: number
   8: { gridSize: 5, diffs: 3, showTime: 2800, rounds: 6 },
   9: { gridSize: 5, diffs: 4, showTime: 3000, rounds: 6 },
   10: { gridSize: 5, diffs: 4, showTime: 2500, rounds: 6 },
+  11: { gridSize: 5, diffs: 5, showTime: 2300, rounds: 6 },
+  12: { gridSize: 5, diffs: 5, showTime: 2100, rounds: 7 },
+  13: { gridSize: 5, diffs: 6, showTime: 2000, rounds: 7 },
+  14: { gridSize: 5, diffs: 6, showTime: 1800, rounds: 7 },
+  15: { gridSize: 5, diffs: 7, showTime: 1700, rounds: 8 },
+  16: { gridSize: 5, diffs: 7, showTime: 1600, rounds: 8 },
+  17: { gridSize: 5, diffs: 8, showTime: 1500, rounds: 8 },
+  18: { gridSize: 5, diffs: 8, showTime: 1400, rounds: 9 },
+  19: { gridSize: 5, diffs: 9, showTime: 1300, rounds: 9 },
+  20: { gridSize: 5, diffs: 10, showTime: 1200, rounds: 10 },
 };
 
 const TIPS = [
@@ -313,7 +323,7 @@ registerGame('mirror-match', {
   emoji: '🪞',
   description: 'Two grids flash — spot the differences before they vanish!',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: MirrorMatchGame,
 });
 

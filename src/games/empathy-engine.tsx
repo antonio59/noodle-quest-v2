@@ -235,6 +235,601 @@ const allScenarios: Record<number, Scenario[]> = {
       { text: "That wasn't a big deal", score: 0 },
     ]},
   ],
+  11: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+  ],
+  12: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+  ],
+  13: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+  ],
+  14: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+  ],
+  15: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+    { friend: 'Jade', emoji: '😰', situation: "Jade doesn't feel like they belong anywhere.", options: [
+      { text: "You belong with me. You matter and you're valued here.", score: 3 },
+      { text: 'You just need to find your people', score: 2 },
+      { text: 'Everyone feels that way sometimes', score: 1 },
+    ]},
+  ],
+  16: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+    { friend: 'Jade', emoji: '😰', situation: "Jade doesn't feel like they belong anywhere.", options: [
+      { text: "You belong with me. You matter and you're valued here.", score: 3 },
+      { text: 'You just need to find your people', score: 2 },
+      { text: 'Everyone feels that way sometimes', score: 1 },
+    ]},
+    { friend: 'Maple', emoji: '😢', situation: "Maple's friendship ended and they don't know why.", options: [
+      { text: "That's really painful. Want to talk about it? I'm here to listen.", score: 3 },
+      { text: 'Maybe they changed', score: 2 },
+      { text: 'There are other friends out there', score: 1 },
+    ]},
+  ],
+  17: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+    { friend: 'Jade', emoji: '😰', situation: "Jade doesn't feel like they belong anywhere.", options: [
+      { text: "You belong with me. You matter and you're valued here.", score: 3 },
+      { text: 'You just need to find your people', score: 2 },
+      { text: 'Everyone feels that way sometimes', score: 1 },
+    ]},
+    { friend: 'Maple', emoji: '😢', situation: "Maple's friendship ended and they don't know why.", options: [
+      { text: "That's really painful. Want to talk about it? I'm here to listen.", score: 3 },
+      { text: 'Maybe they changed', score: 2 },
+      { text: 'There are other friends out there', score: 1 },
+    ]},
+    { friend: 'Willow', emoji: '😟', situation: "Willow is scared they'll never be good enough.", options: [
+      { text: "You're already enough just as you are. I see how amazing you are.", score: 3 },
+      { text: 'You just need more practice', score: 1 },
+      { text: 'Nobody is good at everything', score: 2 },
+    ]},
+  ],
+  18: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+    { friend: 'Jade', emoji: '😰', situation: "Jade doesn't feel like they belong anywhere.", options: [
+      { text: "You belong with me. You matter and you're valued here.", score: 3 },
+      { text: 'You just need to find your people', score: 2 },
+      { text: 'Everyone feels that way sometimes', score: 1 },
+    ]},
+    { friend: 'Maple', emoji: '😢', situation: "Maple's friendship ended and they don't know why.", options: [
+      { text: "That's really painful. Want to talk about it? I'm here to listen.", score: 3 },
+      { text: 'Maybe they changed', score: 2 },
+      { text: 'There are other friends out there', score: 1 },
+    ]},
+    { friend: 'Willow', emoji: '😟', situation: "Willow is scared they'll never be good enough.", options: [
+      { text: "You're already enough just as you are. I see how amazing you are.", score: 3 },
+      { text: 'You just need more practice', score: 1 },
+      { text: 'Nobody is good at everything', score: 2 },
+    ]},
+    { friend: 'Fern', emoji: '😔', situation: "Fern's dream seems impossible to reach.", options: [
+      { text: "Dreams take time. I believe in you and I'll support you every step.", score: 3 },
+      { text: 'Maybe try a different dream', score: 0 },
+      { text: 'Lots of people have impossible dreams', score: 1 },
+    ]},
+  ],
+  19: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+    { friend: 'Jade', emoji: '😰', situation: "Jade doesn't feel like they belong anywhere.", options: [
+      { text: "You belong with me. You matter and you're valued here.", score: 3 },
+      { text: 'You just need to find your people', score: 2 },
+      { text: 'Everyone feels that way sometimes', score: 1 },
+    ]},
+    { friend: 'Maple', emoji: '😢', situation: "Maple's friendship ended and they don't know why.", options: [
+      { text: "That's really painful. Want to talk about it? I'm here to listen.", score: 3 },
+      { text: 'Maybe they changed', score: 2 },
+      { text: 'There are other friends out there', score: 1 },
+    ]},
+    { friend: 'Willow', emoji: '😟', situation: "Willow is scared they'll never be good enough.", options: [
+      { text: "You're already enough just as you are. I see how amazing you are.", score: 3 },
+      { text: 'You just need more practice', score: 1 },
+      { text: 'Nobody is good at everything', score: 2 },
+    ]},
+    { friend: 'Fern', emoji: '😔', situation: "Fern's dream seems impossible to reach.", options: [
+      { text: "Dreams take time. I believe in you and I'll support you every step.", score: 3 },
+      { text: 'Maybe try a different dream', score: 0 },
+      { text: 'Lots of people have impossible dreams', score: 1 },
+    ]},
+    { friend: 'Bramble', emoji: '😤', situation: "Bramble feels like nobody takes them seriously.", options: [
+      { text: "I take you seriously. Your thoughts and feelings are important to me.", score: 3 },
+      { text: 'You need to prove yourself', score: 0 },
+      { text: 'People will come around', score: 2 },
+    ]},
+  ],
+  20: [
+    { friend: 'Eden', emoji: '😔', situation: 'Eden trusted someone who shared their secret.', options: [
+      { text: "I'm so sorry. That's a real betrayal. I'm always safe to talk to.", score: 3 },
+      { text: "You shouldn't have told them", score: 0 },
+      { text: 'What was the secret?', score: 0 },
+    ]},
+    { friend: 'Sage', emoji: '😤', situation: 'Sage is always compared to their "perfect" sibling.', options: [
+      { text: "You're amazing in your own way. Comparing isn't fair.", score: 3 },
+      { text: 'Try to do better', score: 0 },
+      { text: "At least you're not the worst", score: 0 },
+    ]},
+    { friend: 'Ocean', emoji: '😟', situation: "Ocean is being pressured to do something they don't want to.", options: [
+      { text: 'Your boundaries matter. It\'s okay to say no. I support you.', score: 3 },
+      { text: 'Just do it to fit in', score: 0 },
+      { text: "What's the big deal?", score: 0 },
+    ]},
+    { friend: 'Winter', emoji: '😢', situation: 'Winter failed after trying their very best.', options: [
+      { text: "I'm proud you tried. Failure is part of growth. What's next?", score: 3 },
+      { text: 'At least you tried', score: 2 },
+      { text: "Maybe this isn't for you", score: 0 },
+    ]},
+    { friend: 'Storm', emoji: '😰', situation: 'Storm is scared to stand up to a bully.', options: [
+      { text: "Let's talk to an adult together. You don't have to face this alone.", score: 3 },
+      { text: 'Just ignore them', score: 1 },
+      { text: 'Stand up for yourself', score: 1 },
+    ]},
+    { friend: 'Sky', emoji: '😊', situation: 'Sky finally conquered their biggest fear!', options: [
+      { text: "That took SO much courage! I'm incredibly proud of you!", score: 3 },
+      { text: 'What was your fear?', score: 1 },
+      { text: "That wasn't a big deal", score: 0 },
+    ]},
+    { friend: 'Amber', emoji: '😔', situation: "Amber's family is going through financial trouble.", options: [
+      { text: "I'm here for you. Money doesn't change how I see you.", score: 3 },
+      { text: 'Things will get better', score: 2 },
+      { text: 'At least you have each other', score: 1 },
+    ]},
+    { friend: 'Coral', emoji: '😟', situation: "Coral's friend group is splitting into cliques.", options: [
+      { text: "That's tough. You don't have to pick a side. Stay true to yourself.", score: 3 },
+      { text: 'Just go with the popular group', score: 0 },
+      { text: 'Cliques are normal', score: 1 },
+    ]},
+    { friend: 'Hazel', emoji: '😢', situation: "Hazel's pet passed away and they're devastated.", options: [
+      { text: "I'm so sorry. They were so lucky to have you. Want to talk about them?", score: 3 },
+      { text: 'You can always get another pet', score: 0 },
+      { text: 'It was just a pet', score: 0 },
+    ]},
+    { friend: 'Ivy', emoji: '😤', situation: "Ivy's work is being constantly criticized unfairly.", options: [
+      { text: "That sounds really frustrating. Your effort matters, even if they don't see it.", score: 3 },
+      { text: 'Maybe they have a point', score: 1 },
+      { text: 'Just ignore the criticism', score: 1 },
+    ]},
+    { friend: 'Jade', emoji: '😰', situation: "Jade doesn't feel like they belong anywhere.", options: [
+      { text: "You belong with me. You matter and you're valued here.", score: 3 },
+      { text: 'You just need to find your people', score: 2 },
+      { text: 'Everyone feels that way sometimes', score: 1 },
+    ]},
+    { friend: 'Maple', emoji: '😢', situation: "Maple's friendship ended and they don't know why.", options: [
+      { text: "That's really painful. Want to talk about it? I'm here to listen.", score: 3 },
+      { text: 'Maybe they changed', score: 2 },
+      { text: 'There are other friends out there', score: 1 },
+    ]},
+    { friend: 'Willow', emoji: '😟', situation: "Willow is scared they'll never be good enough.", options: [
+      { text: "You're already enough just as you are. I see how amazing you are.", score: 3 },
+      { text: 'You just need more practice', score: 1 },
+      { text: 'Nobody is good at everything', score: 2 },
+    ]},
+    { friend: 'Fern', emoji: '😔', situation: "Fern's dream seems impossible to reach.", options: [
+      { text: "Dreams take time. I believe in you and I'll support you every step.", score: 3 },
+      { text: 'Maybe try a different dream', score: 0 },
+      { text: 'Lots of people have impossible dreams', score: 1 },
+    ]},
+    { friend: 'Bramble', emoji: '😤', situation: "Bramble feels like nobody takes them seriously.", options: [
+      { text: "I take you seriously. Your thoughts and feelings are important to me.", score: 3 },
+      { text: 'You need to prove yourself', score: 0 },
+      { text: 'People will come around', score: 2 },
+    ]},
+    { friend: 'Aspen', emoji: '😰', situation: "Aspen is overwhelmed and doesn't know who to turn to.", options: [
+      { text: "Turn to me. You don't have to carry this alone. Let's figure it out together.", score: 3 },
+      { text: 'Just take it one day at a time', score: 2 },
+      { text: 'Everyone gets overwhelmed', score: 1 },
+    ]},
+  ],
 };
 
 const tips = [
@@ -387,7 +982,7 @@ registerGame('empathy-engine', {
   emoji: '💝',
   description: 'Help your friends by choosing the best response!',
   category: 'social',
-  stages: 10,
+  stages: 20,
   component: EmpathyEngineGame,
 });
 
