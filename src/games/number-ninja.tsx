@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
+
+type Phase = 'intro' | 'showing' | 'input' | 'result' | 'done';
 
 const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number; maxRounds: number }> = {
   1: { minLen: 2, maxLen: 3, showTime: 2500, maxRounds: 4 },
@@ -16,161 +18,188 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
 };
 
 const TIPS = [
-  '💡 Tip: Group numbers in pairs: \'42-87-31\' is easier than \'428731\'!',
-  '💡 Tip: Say the numbers OUT LOUD while memorizing — hearing helps!',
-  '💡 Tip: Create a rhythm: \'four-two, eight-seven, three-one\'.',
-  '💡 Tip: Visualize the numbers on a phone keypad position.',
-  '💡 Tip: Each round adds more digits. Focus on the NEW ones!',
+  "💡 Tip: Group numbers in pairs: '42-87-31' is easier than '428731'!",
+  "💡 Tip: Say the numbers OUT LOUD while memorizing — hearing helps!",
+  "💡 Tip: Create a rhythm: 'four-two, eight-seven, three-one'.",
+  "💡 Tip: Visualize the numbers on a phone keypad position.",
+  "💡 Tip: Each round adds more digits. Focus on the NEW ones!",
 ];
 
-type Phase = 'intro' | 'memorize' | 'input' | 'result' | 'done';
+function generateSequence(minLen: number, maxLen: number): string {
+  const baseLen = minLen;
+  const len = Math.min(maxLen, baseLen + Math.floor(Math.random() * 2));
+  let seq = '';
+  for (let i = 0; i < len; i++) {
+    seq += Math.floor(Math.random() * 10);
+  }
+  return seq;
+}
 
-function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
-
   const [phase, setPhase] = useState<Phase>('intro');
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
-  const [sequence, setSequence] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [feedback, setFeedback] = useState('');
-  const [feedbackColor, setFeedbackColor] = useState('#a78bfa');
-  const [message, setMessage] = useState('🧠 Memorize!');
-  const [messageColor, setMessageColor] = useState('#67e8f9');
+  const [currentSequence, setCurrentSequence] = useState('');
+  const [displayText, setDisplayText] = useState('');
   const [displayColor, setDisplayColor] = useState('#ff6e6c');
-
+  const [inputValue, setInputValue] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageColor, setMessageColor] = useState('#67e8f9');
+  const [feedback, setFeedback] = useState('');
+  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+  const gameActiveRef = useRef(false);
+  const scoreRef = useRef(0);
+  const roundRef = useRef(1);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const generateSequence = useCallback((roundNum: number) => {
-    const baseLen = config.minLen + Math.floor(roundNum / 2);
-    const len = Math.min(config.maxLen, baseLen + Math.floor(Math.random() * 2));
-    return Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join('');
-  }, [config]);
-
-  const showNextSequence = useCallback(() => {
-    const seq = generateSequence(round);
-    setSequence(seq);
-    setInputValue('');
-    setDisplayColor('#ff6e6c');
-    setMessage('🧠 Memorize!');
-    setMessageColor('#67e8f9');
-    setFeedback(`${seq.length} digits — group them in pairs!`);
-    setFeedbackColor('#a78bfa');
-    setPhase('memorize');
-
-    const showDuration = config.showTime + (round * 150);
-    setTimeout(() => {
-      setPhase('input');
-      setDisplayColor('#6b7280');
-      setMessage('⌨️ Type the numbers!');
-      setMessageColor('#4ade80');
-      setFeedback('');
-      setTimeout(() => inputRef.current?.focus(), 50);
-    }, showDuration);
-  }, [round, generateSequence, config.showTime]);
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const startGame = useCallback(() => {
+    gameActiveRef.current = true;
+    scoreRef.current = 0;
+    roundRef.current = 1;
     setScore(0);
     setRound(1);
-    setPhase('memorize');
-    setTimeout(showNextSequence, 600);
-  }, [showNextSequence]);
+    setPhase('showing');
+    runRound(1);
+  }, []);
 
-  // Reset sequence when round changes during gameplay
-  useEffect(() => {
-    if (phase !== 'intro' && phase !== 'done') {
-      showNextSequence();
-    }
+  const runRound = useCallback(
+    (r: number) => {
+      if (!gameActiveRef.current) return;
+
+      const seq = generateSequence(config.minLen, config.maxLen);
+      setCurrentSequence(seq);
+      const formatted = seq.split('').join(' ');
+      setDisplayText(formatted);
+      setDisplayColor('#ff6e6c');
+      setInputValue('');
+      setPhase('showing');
+      setMessage('🧠 Memorize!');
+      setMessageColor('#67e8f9');
+      setFeedback(`${seq.length} digits — group them in pairs!`);
+
+      const showDuration = config.showTime + (r * 150);
+      showTimerRef.current = setTimeout(() => {
+        if (!gameActiveRef.current) return;
+        setDisplayText('? '.repeat(seq.length).trim());
+        setDisplayColor('#6b7280');
+        setPhase('input');
+        setMessage('⌨️ Type the numbers!');
+        setMessageColor('#4ade80');
+        setFeedback('');
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
+      }, showDuration);
+    },
+    [config]
+  );
 
   const checkAnswer = useCallback(() => {
-    if (phase === 'done') return;
+    if (phase !== 'input') return;
+
     const answer = inputValue.trim();
     setDisplayColor('#ff6e6c');
 
-    if (answer === sequence) {
-      const points = 20 + (sequence.length * 5);
-      const newScore = score + points;
-      setScore(newScore);
+    if (answer === currentSequence) {
+      const points = 20 + currentSequence.length * 5;
+      scoreRef.current += points;
+      setScore(scoreRef.current);
       onScore(points);
+      setDisplayText(currentSequence.split('').join(' '));
       setDisplayColor('#4ade80');
       setMessage('✅ Correct!');
       setMessageColor('#4ade80');
       setFeedback(`+${points} points!`);
-      setFeedbackColor('#4ade80');
 
-      if (round >= config.maxRounds) {
+      if (roundRef.current >= config.maxRounds) {
         setTimeout(() => {
-          setPhase('done');
-          const stars = newScore > 200 ? 3 : newScore > 100 ? 2 : 1;
+          gameActiveRef.current = false;
+          const stars = scoreRef.current > 200 ? 3 : scoreRef.current > 100 ? 2 : 1;
           onEnd({
-            score: newScore + 50,
+            score: scoreRef.current + 50,
             stars,
             summary: `Number Ninja Master! You completed all ${config.maxRounds} rounds! Your number memory is incredible! 🏆`,
           });
         }, 1200);
       } else {
-        onProgress(round / config.maxRounds);
-        setTimeout(() => setRound(r => r + 1), 1500);
+        roundRef.current++;
+        setRound(roundRef.current);
+        onProgress((roundRef.current - 1) / config.maxRounds);
+        setTimeout(() => runRound(roundRef.current), 1500);
       }
     } else {
-      setDisplayColor('#ff6e6c');
+      setDisplayText(currentSequence.split('').join(' '));
       setMessage('❌ Not quite!');
       setMessageColor('#ff6e6c');
 
       let wrongIdx = -1;
-      for (let i = 0; i < Math.max(answer.length, sequence.length); i++) {
-        if (answer[i] !== sequence[i]) {
+      for (let i = 0; i < Math.max(answer.length, currentSequence.length); i++) {
+        if (answer[i] !== currentSequence[i]) {
           wrongIdx = i;
           break;
         }
       }
 
       if (wrongIdx >= 0) {
-        setFeedback(`Mistake at position ${wrongIdx + 1}. You typed "${answer[wrongIdx] || '?'}" instead of "${sequence[wrongIdx]}"`);
+        setFeedback(
+          `Mistake at position ${wrongIdx + 1}. You typed "${answer[wrongIdx] || '?'}" instead of "${currentSequence[wrongIdx]}"`
+        );
       } else {
-        setFeedback(`The sequence was: ${sequence}`);
+        setFeedback(`The sequence was: ${currentSequence}`);
       }
-      setFeedbackColor('#ff6e6c');
 
       setTimeout(() => {
-        setPhase('done');
-        const stars = round > Math.floor(config.maxRounds * 0.7) ? 3 : round > Math.floor(config.maxRounds * 0.4) ? 2 : 1;
-        let summary = `You made it to round ${round}! `;
-        if (stars === 3) summary += 'So close to perfect! Your number memory is great!';
-        else if (stars === 2) summary += 'Good effort! Try grouping numbers in pairs to remember better.';
-        else summary += 'Keep practicing! Say the numbers out loud as you memorize.';
-        onEnd({ score, stars, summary });
+        gameActiveRef.current = false;
+        const stars =
+          roundRef.current > Math.floor(config.maxRounds * 0.7)
+            ? 3
+            : roundRef.current > Math.floor(config.maxRounds * 0.4)
+              ? 2
+              : 1;
+        let summary = `You made it to round ${roundRef.current}! `;
+        if (stars === 3) {
+          summary += 'So close to perfect! Your number memory is great!';
+        } else if (stars === 2) {
+          summary += 'Good effort! Try grouping numbers in pairs to remember better.';
+        } else {
+          summary += 'Keep practicing! Say the numbers out loud as you memorize.';
+        }
+        onEnd({ score: scoreRef.current, stars, summary });
       }, 2500);
     }
-  }, [phase, inputValue, sequence, score, round, config, onScore, onProgress, onEnd]);
+  }, [phase, inputValue, currentSequence, config, onScore, onProgress, onEnd]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') checkAnswer();
-  }, [checkAnswer]);
+  useEffect(() => {
+    return () => {
+      gameActiveRef.current = false;
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
+    };
+  }, []);
 
   if (phase === 'intro') {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
         <div className="text-6xl mb-4">🔢</div>
-        <h2 className="text-2xl font-bold text-error mb-2">Number Ninja</h2>
-        <p className="text-text-dim mb-6 max-w-xs">Memorize numbers, then type them back!</p>
+        <h2 className="text-2xl font-bold text-red-400 mb-2">Number Ninja</h2>
+        <p className="text-red-300 mb-4 max-w-xs">Memorize numbers, then type them back!</p>
 
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="text-2xl text-error font-mono mb-2">4 2 8 7 ?</div>
-          <div className="text-info">Starting with {config.minLen}-{config.maxLen} digits</div>
-          <div className="text-warning mt-1">{config.maxRounds} rounds to beat!</div>
+        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+          <div className="text-3xl text-red-400 font-mono mb-2">4 2 8 7 ?</div>
+          <div className="text-cyan-300">Starting with {config.minLen}-{config.maxLen} digits</div>
+          <div className="text-yellow-400 mt-1">{config.maxRounds} rounds to beat!</div>
         </div>
 
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-success text-sm">👀 See → 🧠 Remember → ⌨️ Type!</div>
+        <div className="bg-[#1a1833] rounded-lg p-3 mb-4 max-w-xs">
+          <div className="text-green-400 text-sm">👀 See → 🧠 Remember → ⌨️ Type!</div>
         </div>
 
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
+        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
 
         <button
           onClick={startGame}
-          className="bg-error text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+          className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
         >
           Start Game! 🥷
         </button>
@@ -179,57 +208,47 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   }
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4">
-      <div className="flex gap-4 mb-4 bg-card rounded-xl px-4 py-2">
-        <span className="text-warning font-bold">Round: {round}/{config.maxRounds}</span>
-        <span className="text-accent">Score: {score}</span>
+    <div className="flex flex-col h-full min-h-[350px] items-center justify-center p-4">
+      <div className="flex gap-4 px-4 py-2 bg-[#232146] rounded-xl mb-4">
+        <span className="text-yellow-400 font-bold">Round: {round}/{config.maxRounds}</span>
+        <span className="text-purple-400">Score: {score}</span>
       </div>
 
       <div
-        className="text-4xl font-bold font-mono mb-4 tracking-widest min-h-[4.5rem] flex items-center justify-center"
+        className="text-5xl font-bold tracking-widest min-h-[4.5rem] flex items-center justify-center font-mono"
         style={{ color: displayColor }}
       >
-        {phase === 'memorize' && sequence.split('').join(' ')}
-        {(phase === 'input' || phase === 'result') && '? '.repeat(sequence.length).trim()}
+        {displayText}
       </div>
 
       {phase === 'input' && (
-        <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+        <div className="flex flex-col items-center gap-3 w-full max-w-xs mt-4">
           <input
             ref={inputRef}
             type="text"
             inputMode="numeric"
             autoComplete="off"
-            pattern="[0-9]*"
             value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') checkAnswer();
+            }}
+            className="w-full py-3.5 text-3xl text-center bg-[#232146] border-[3px] border-purple-400 rounded-xl text-white font-mono tracking-widest outline-none"
             placeholder="Type numbers..."
-            className="w-full px-4 py-3 text-2xl text-center bg-card border-2 border-accent rounded-xl text-white font-mono tracking-wider"
           />
           <button
             onClick={checkAnswer}
-            className="bg-success text-bg font-bold px-8 py-3 rounded-xl hover:opacity-90 active:scale-95"
+            className="bg-green-400 hover:bg-green-300 text-black font-bold px-8 py-3 rounded-xl active:scale-95 transition-transform"
           >
             Submit! ✓
           </button>
         </div>
       )}
 
-      <div
-        className="text-lg mt-3 min-h-[28px] text-center"
-        style={{ color: messageColor }}
-      >
+      <div className="text-cyan-300 text-lg min-h-[28px] mt-3 text-center" style={{ color: messageColor }}>
         {message}
       </div>
-      {feedback && (
-        <div
-          className="text-sm mt-1 min-h-[22px]"
-          style={{ color: feedbackColor }}
-        >
-          {feedback}
-        </div>
-      )}
+      <div className="text-purple-300 text-sm min-h-[22px] mt-1">{feedback}</div>
     </div>
   );
 }

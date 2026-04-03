@@ -1,8 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
-const EMOJIS = ['🦄', '🚀', '🌈', '🍕', '🐙', '🎸', '🌺', '🎨', '🦋', '🍦', '🎪', '🌟', '🎯', '🐶', '🌻'];
+interface Card {
+  id: number;
+  emoji: string;
+  flipped: boolean;
+  matched: boolean;
+}
+
+type Phase = 'intro' | 'playing' | 'done';
 
 const CONFIG: Record<number, { pairs: number; cols: number; time: number }> = {
   1: { pairs: 3, cols: 3, time: 0 },
@@ -17,24 +24,19 @@ const CONFIG: Record<number, { pairs: number; cols: number; time: number }> = {
   10: { pairs: 15, cols: 6, time: 80 },
 };
 
+const EMOJIS = ['🦄', '🚀', '🌈', '🍕', '🐙', '🎸', '🌺', '🎨', '🦋', '🍦', '🎪', '🌟', '🎯', '🐶', '🌻'];
+
 const TIPS = [
-  '💡 Tip: Focus on ONE row at a time. Remember what\'s in that row before moving on.',
-  '💡 Tip: When you flip a card, try to remember WHERE it is, not just WHAT it is.',
-  '💡 Tip: Create mental stories — \'🦄 is next to 🚀\' helps you remember!',
-  '💡 Tip: Don\'t rush! Take a second to look at each card before flipping another.',
-  '💡 Tip: If you find a match, try to remember cards you saw near it.',
+  "💡 Tip: Focus on ONE row at a time. Remember what's in that row before moving on.",
+  "💡 Tip: When you flip a card, try to remember WHERE it is, not just WHAT it is.",
+  "💡 Tip: Create mental stories — '🦄 is next to 🚀' helps you remember!",
+  "💡 Tip: Don't rush! Take a second to look at each card before flipping another.",
+  "💡 Tip: If you find a match, try to remember cards you saw near it.",
 ];
 
-type Phase = 'intro' | 'playing' | 'done';
+const MATCH_FEEDBACKS = ["Great memory! 🧠", "You're on fire! 🔥", "Excellent! ⭐"];
 
-interface Card {
-  id: number;
-  emoji: string;
-  flipped: boolean;
-  matched: boolean;
-}
-
-function shuffle<T>(arr: T[]): T[] {
+function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -43,170 +45,174 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
-
   const [phase, setPhase] = useState<Phase>('intro');
   const [cards, setCards] = useState<Card[]>([]);
-  const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
-  const [matched, setMatched] = useState(0);
+  const [flippedIds, setFlippedIds] = useState<number[]>([]);
   const [moves, setMoves] = useState(0);
+  const [matchedCount, setMatchedCount] = useState(0);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(config.time);
   const [feedback, setFeedback] = useState('');
-
+  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+  const gameActiveRef = useRef(false);
+  const flippedRef = useRef<number[]>([]);
+  const scoreRef = useRef(0);
+  const matchedRef = useRef(0);
+  const movesRef = useRef(0);
   const checkingRef = useRef(false);
 
-  const finishGame = useCallback((won: boolean, finalMatched: number, finalMoves: number, finalScore: number) => {
-    setPhase('done');
-    const efficiency = config.pairs > 0 ? finalMoves / config.pairs : 99;
-    let stars: number;
-    let summary: string;
+  const cardSize = config.pairs >= 12 ? 52 : config.pairs >= 8 ? 62 : 72;
 
-    if (won) {
-      if (efficiency < 1.4) {
-        stars = 3;
-        summary = `Amazing memory! All ${config.pairs} pairs in just ${finalMoves} moves! Your brain is incredible! 🌟`;
-      } else if (efficiency < 2) {
-        stars = 2;
-        summary = `Great job! ${finalMoves} moves for ${config.pairs} pairs. Try to remember card positions to use fewer moves!`;
-      } else {
-        stars = 1;
-        summary = `You found all pairs in ${finalMoves} moves! Focus on one row at a time to remember better.`;
-      }
-      const bonus = config.time > 0 ? timeLeft * 3 : 50;
-      setScore(s => s + bonus);
-      onEnd({ score: finalScore + bonus, stars, summary });
-    } else {
-      stars = 1;
-      summary = `Time's up! You found ${finalMatched} pairs. Take a mental snapshot of each row to remember faster!`;
-      onEnd({ score: finalScore, stars, summary });
-    }
-  }, [config, timeLeft, onEnd]);
+  const startGame = useCallback(() => {
+    const selectedEmojis = EMOJIS.slice(0, config.pairs);
+    const cardPairs = selectedEmojis.flatMap((emoji) => [emoji, emoji]);
+    const shuffled = shuffleArray(cardPairs);
+    const newCards: Card[] = shuffled.map((emoji, i) => ({
+      id: i,
+      emoji,
+      flipped: false,
+      matched: false,
+    }));
+    setCards(newCards);
+    setFlippedIds([]);
+    setMoves(0);
+    setMatchedCount(0);
+    setScore(0);
+    setTimeLeft(config.time);
+    setFeedback('');
+    flippedRef.current = [];
+    scoreRef.current = 0;
+    matchedRef.current = 0;
+    movesRef.current = 0;
+    checkingRef.current = false;
+    gameActiveRef.current = true;
+    setPhase('playing');
+  }, [config]);
 
-  // Timer
   useEffect(() => {
     if (phase !== 'playing' || config.time <= 0) return;
-    const id = setInterval(() => {
-      setTimeLeft(prev => {
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(id);
-          finishGame(false, matched, moves, score);
+          clearInterval(timer);
+          gameActiveRef.current = false;
+          const efficiency = config.pairs > 0 ? movesRef.current / config.pairs : 99;
+          const stars = efficiency < 1.4 ? 3 : efficiency < 2 ? 2 : 1;
+          const summary = `Time's up! You found ${matchedRef.current} pairs. Take a mental snapshot of each row to remember faster!`;
+          onEnd({ score: scoreRef.current, stars, summary });
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(id);
 
-  const startGame = useCallback(() => {
-    const deck: Card[] = [];
-    for (let i = 0; i < config.pairs; i++) {
-      const emoji = EMOJIS[i];
-      deck.push({ id: i * 2, emoji, flipped: false, matched: false });
-      deck.push({ id: i * 2 + 1, emoji, flipped: false, matched: false });
-    }
-    setCards(shuffle(deck));
-    setFlippedIndices([]);
-    setMatched(0);
-    setMoves(0);
-    setScore(0);
-    setTimeLeft(config.time);
-    setFeedback('');
-    setPhase('playing');
-  }, [config]);
+    return () => clearInterval(timer);
+  }, [phase, config, onEnd]);
 
-  const flipCard = useCallback((index: number) => {
-    if (phase !== 'playing' || checkingRef.current) return;
-    const card = cards[index];
-    if (card.flipped || card.matched) return;
-    if (flippedIndices.length >= 2) return;
+  const flipCard = useCallback(
+    (cardId: number) => {
+      if (!gameActiveRef.current || checkingRef.current) return;
+      if (flippedRef.current.length >= 2) return;
 
-    const newCards = [...cards];
-    newCards[index] = { ...card, flipped: true };
-    const newFlipped = [...flippedIndices, index];
-    setCards(newCards);
-    setFlippedIndices(newFlipped);
+      const card = cards.find((c) => c.id === cardId);
+      if (!card || card.flipped || card.matched) return;
 
-    if (newFlipped.length === 2) {
-      checkingRef.current = true;
-      const newMoves = moves + 1;
-      setMoves(newMoves);
+      setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, flipped: true } : c)));
+      flippedRef.current.push(cardId);
+      setFlippedIds([...flippedRef.current]);
 
-      const [i1, i2] = newFlipped;
-      const c1 = newCards[i1];
-      const c2 = newCards[i2];
+      if (flippedRef.current.length === 2) {
+        checkingRef.current = true;
+        movesRef.current++;
+        setMoves(movesRef.current);
 
-      if (c1.emoji === c2.emoji) {
+        const [id1, id2] = flippedRef.current;
+        const c1 = cards.find((c) => c.id === id1)!;
+        const c2 = cards.find((c) => c.id === id2)!;
+        const isMatch = c1.emoji === c2.emoji;
+
         setTimeout(() => {
-          const updated = [...newCards];
-          updated[i1] = { ...c1, matched: true };
-          updated[i2] = { ...c2, matched: true };
-          setCards(updated);
+          if (isMatch) {
+            setCards((prev) =>
+              prev.map((c) =>
+                c.id === id1 || c.id === id2 ? { ...c, matched: true } : c
+              )
+            );
+            matchedRef.current++;
+            setMatchedCount(matchedRef.current);
+            scoreRef.current += 50;
+            setScore(scoreRef.current);
+            onScore(50);
+            onProgress(matchedRef.current / config.pairs);
 
-          const newMatched = matched + 1;
-          const newScore = score + 50;
-          setMatched(newMatched);
-          setScore(newScore);
-          onScore(50);
-          onProgress(newMatched / config.pairs);
+            if (matchedRef.current % 3 === 0) {
+              setFeedback(MATCH_FEEDBACKS[Math.floor(Math.random() * MATCH_FEEDBACKS.length)]);
+            } else {
+              setFeedback('✨ Match found! +50');
+            }
 
-          if (newMatched % 3 === 0) {
-            setFeedback(['Great memory! 🧠', 'You\'re on fire! 🔥', 'Excellent! ⭐'][Math.floor(Math.random() * 3)]);
+            flippedRef.current = [];
+            setFlippedIds([]);
+            checkingRef.current = false;
+
+            if (matchedRef.current >= config.pairs) {
+              gameActiveRef.current = false;
+              const efficiency = config.pairs > 0 ? movesRef.current / config.pairs : 99;
+              const stars = efficiency < 1.4 ? 3 : efficiency < 2 ? 2 : 1;
+              const summary = efficiency < 1.4
+                ? `Amazing memory! All ${config.pairs} pairs in just ${movesRef.current} moves! Your brain is incredible! 🌟`
+                : efficiency < 2
+                  ? `Great job! ${movesRef.current} moves for ${config.pairs} pairs. Try to remember card positions to use fewer moves!`
+                  : `You found all pairs in ${movesRef.current} moves! Focus on one row at a time to remember better.`;
+              scoreRef.current += config.time > 0 ? timeLeft * 3 : 50;
+              onEnd({ score: scoreRef.current, stars, summary });
+            }
           } else {
-            setFeedback('✨ Match found! +50');
+            setFeedback('💡 Remember where those cards are!');
+            setCards((prev) =>
+              prev.map((c) =>
+                c.id === id1 || c.id === id2 ? { ...c, flipped: false } : c
+              )
+            );
+            flippedRef.current = [];
+            setFlippedIds([]);
+            checkingRef.current = false;
           }
-
-          setFlippedIndices([]);
-          checkingRef.current = false;
-
-          if (newMatched >= config.pairs) {
-            finishGame(true, newMatched, newMoves, newScore);
-          }
-        }, 700);
-      } else {
-        setTimeout(() => {
-          const updated = [...newCards];
-          updated[i1] = { ...c1, flipped: false };
-          updated[i2] = { ...c2, flipped: false };
-          setCards(updated);
-          setFlippedIndices([]);
-          setFeedback('💡 Remember where those cards are!');
-          checkingRef.current = false;
         }, 700);
       }
-    }
-  }, [phase, cards, flippedIndices, matched, moves, score, config, onScore, onProgress]);
-
-  const cardSize = config.pairs >= 12 ? 52 : config.pairs >= 8 ? 62 : 72;
+    },
+    [cards, config, onScore, onProgress, onEnd, timeLeft]
+  );
 
   if (phase === 'intro') {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
         <div className="text-6xl mb-4">🃏</div>
-        <h2 className="text-2xl font-bold text-accent mb-2">Memory Match</h2>
-        <p className="text-text-dim mb-6 max-w-xs">Find all the matching pairs by flipping cards!</p>
+        <h2 className="text-2xl font-bold text-purple-400 mb-2">Memory Match</h2>
+        <p className="text-purple-300 mb-4 max-w-xs">Find all the matching pairs by flipping cards!</p>
 
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="text-xl mb-2">🎯 {config.pairs} pairs to find</div>
+        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+          <div className="text-3xl mb-2">🎯 {config.pairs} pairs to find</div>
           {config.time > 0 ? (
-            <div className="text-warning">⏱️ Time limit: {config.time} seconds</div>
+            <div className="text-yellow-400">⏱️ Time limit: {config.time} seconds</div>
           ) : (
-            <div className="text-success">✓ No time limit — take your time!</div>
+            <div className="text-green-400">✓ No time limit - take your time!</div>
           )}
         </div>
 
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-info text-sm">How to play:</div>
-          <div className="text-text-dim text-sm mt-1">Flip 2 cards → Match = stay → No match = flip back</div>
+        <div className="bg-[#1a1833] rounded-lg p-3 mb-4 max-w-xs">
+          <div className="text-cyan-300 text-sm">How to play:</div>
+          <div className="text-purple-300 text-sm mt-1">Flip 2 cards → Match = stay → No match = flip back</div>
         </div>
 
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
+        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
 
         <button
           onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+          className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
         >
           Start Game! 🃏
         </button>
@@ -215,43 +221,43 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   }
 
   return (
-    <div className="h-full flex flex-col items-center p-4">
-      <div className="flex gap-4 mb-3 bg-card rounded-xl px-4 py-2">
-        <span className="text-accent font-bold">Moves: {moves}</span>
-        <span className="text-success">Pairs: {matched}/{config.pairs}</span>
+    <div className="flex flex-col h-full min-h-[350px] items-center">
+      <div className="flex gap-4 px-4 py-2 bg-[#232146] rounded-xl mb-3 w-full justify-center">
+        <span className="text-purple-400 font-bold">Moves: {moves}</span>
+        <span className="text-green-400">Pairs: {matchedCount}/{config.pairs}</span>
         {config.time > 0 && (
-          <span className={`font-bold ${timeLeft <= 10 ? 'text-error' : 'text-warning'}`}>
+          <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-red-400'}`}>
             ⏱️ {timeLeft}
           </span>
         )}
       </div>
 
       <div
-        className="grid gap-1.5 p-3 bg-card rounded-xl"
+        className="grid gap-1.5 p-3 bg-[#232146] rounded-xl"
         style={{ gridTemplateColumns: `repeat(${config.cols}, 1fr)` }}
       >
-        {cards.map((card, i) => (
-          <button
+        {cards.map((card) => (
+          <div
             key={card.id}
-            onPointerDown={() => flipCard(i)}
-            className="rounded-lg flex items-center justify-center select-none transition-all duration-200"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              flipCard(card.id);
+            }}
+            className="flex items-center justify-center rounded-lg select-none cursor-pointer transition-all duration-200"
             style={{
               width: cardSize,
               height: cardSize,
               fontSize: cardSize * 0.5,
               background: card.matched ? '#ff6e6c' : card.flipped ? '#4ade80' : '#c084fc',
-              cursor: card.matched ? 'default' : 'pointer',
               boxShadow: card.matched ? '0 0 15px #ff6e6c' : '0 3px 0 rgba(0,0,0,0.3)',
             }}
           >
             {card.flipped || card.matched ? card.emoji : '❓'}
-          </button>
+          </div>
         ))}
       </div>
 
-      {feedback && (
-        <div className="text-info text-sm mt-3 text-center">{feedback}</div>
-      )}
+      <div className="text-center py-2 text-cyan-300 text-sm min-h-[24px]">{feedback}</div>
     </div>
   );
 }
