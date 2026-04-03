@@ -1,11 +1,9 @@
-import { Home, Gamepad2, MessageCircle, Trophy, Swords, User, Wind, LayoutGrid } from 'lucide-react';
+import { Home, Gamepad2, MessageCircle, Trophy, Swords, User } from 'lucide-react';
 import type { Screen } from '@/App';
 
 const tabs: { id: Screen; icon: typeof Home; label: string }[] = [
   { id: 'home', icon: Home, label: 'Home' },
   { id: 'games', icon: Gamepad2, label: 'Games' },
-  { id: 'board', icon: LayoutGrid, label: 'Board' },
-  { id: 'breathe', icon: Wind, label: 'Breathe' },
   { id: 'challenges', icon: Swords, label: 'Duel' },
   { id: 'leaderboard', icon: Trophy, label: 'Ranks' },
   { id: 'feed', icon: MessageCircle, label: 'Chat' },

@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/NavBar';
 import type { GameDefinition } from '@/types';
 
-export type Screen = 'home' | 'games' | 'board' | 'breathe' | 'challenges' | 'leaderboard' | 'feed' | 'profile';
+export type Screen = 'home' | 'games' | 'challenges' | 'leaderboard' | 'feed' | 'profile';
 
 export function AppRouter() {
   const { player } = useAuth();
@@ -43,8 +43,6 @@ export function AppRouter() {
       <main className="flex-1 overflow-hidden">
         {screen === 'home' && <Home onPlay={(g, id, s) => setPlaying({ game: g, id, stage: s })} />}
         {screen === 'games' && <GameHub onPlay={(g, id, s) => setPlaying({ game: g, id, stage: s })} />}
-        {screen === 'board' && <BoardGames />}
-        {screen === 'breathe' && <Breathe />}
         {screen === 'challenges' && <Challenges />}
         {screen === 'leaderboard' && <Leaderboard />}
         {screen === 'feed' && <Feed />}

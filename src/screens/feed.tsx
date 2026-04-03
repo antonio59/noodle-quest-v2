@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Smile, Image as ImageIcon, Sticker, Search, X } from 'lucide-react';
+import { Send, Smile, Image as ImageIcon, Search, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FeedPost } from '@/types';
 
 const NOW = Date.now();
 const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY || '';
 
-const EMOJIS = ['😀','😂','🤣','😍','🥰','😎','🤔','👍','👏','🙌','❤️','🔥','⭐','🎉','🎮','🏆','💪','🧠','🎯','✨','💯','🚀','🌟','🎊','🥳','😋','🤩','😏','🫡','🤝'];
-
-const STICKER_EMOJIS = ['🎈','🎁','🎀','🎊','🎉','🎵','🎶','🌈','🦄','🐱','🐶','🐼','🦊','🐸','🐙','🦋','🌸','🌺','🍕','🍩','🧁','🍦','🎂','🍰','🍭','🍬','🍫','🍪','🧸','⭐','💫','✨','🌟','💖','💝','💗','💕','💞','💓','💘'];
+const EMOJIS = [
+  '😀','😂','🤣','😍','🥰','😎','🤔','👍','👏','🙌',
+  '❤️','🔥','⭐','🎉','🎮','🏆','💪','🧠','🎯','✨',
+  '💯','🚀','🌟','🎊','🥳','😋','🤩','😏','🫡','🤝',
+  '🎈','🎁','🎀','🌈','🦄','🐱','🐶','🐼','🦊','🐸',
+  '🐙','🦋','🌸','🌺','🍕','🍩','🧁','🍦','🎂','🍰',
+  '🍭','🍬','🍫','🍪','🧸','💖','💝','💗','💕','💞',
+];
 
 interface GiphyResult {
   id: string;
@@ -24,7 +29,6 @@ export function Feed() {
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
-  const [showSticker, setShowSticker] = useState(false);
   const [gifSearch, setGifSearch] = useState('');
   const [gifResults, setGifResults] = useState<GiphyResult[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
@@ -110,7 +114,6 @@ export function Feed() {
     setSending(true);
     setShowEmoji(false);
     setShowGif(false);
-    setShowSticker(false);
     try {
       await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
         method: 'POST',
@@ -158,8 +161,6 @@ export function Feed() {
             </div>
           ) : post.type === 'gif' ? (
             <img src={post.content} alt="GIF" className="mt-2 rounded-lg max-w-[240px]" loading="lazy" />
-          ) : post.type === 'sticker' ? (
-            <div className="text-5xl mt-1">{post.content}</div>
           ) : post.type === 'emoji' ? (
             <div className="text-4xl mt-1">{post.content}</div>
           ) : (
@@ -219,21 +220,6 @@ export function Feed() {
             </div>
           )}
 
-          {/* Sticker picker */}
-          {showSticker && (
-            <div className="p-3 border-b border-white/5 flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
-              {STICKER_EMOJIS.map(e => (
-                <button
-                  key={e}
-                  onClick={() => handleSend('sticker', e)}
-                  className="text-2xl hover:scale-125 transition-transform active:scale-90"
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* GIF picker with search */}
           {showGif && (
             <div className="p-3 border-b border-white/5">
@@ -283,19 +269,13 @@ export function Feed() {
           <div className="p-3">
             <div className="flex gap-1.5 items-center">
               <button
-                onClick={() => { setShowEmoji(!showEmoji); setShowGif(false); setShowSticker(false); }}
+                onClick={() => { setShowEmoji(!showEmoji); setShowGif(false); }}
                 className={`p-2 rounded-lg transition-colors ${showEmoji ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'}`}
               >
                 <Smile size={18} />
               </button>
               <button
-                onClick={() => { setShowSticker(!showSticker); setShowGif(false); setShowEmoji(false); }}
-                className={`p-2 rounded-lg transition-colors ${showSticker ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'}`}
-              >
-                <Sticker size={18} />
-              </button>
-              <button
-                onClick={() => { setShowGif(!showGif); setShowEmoji(false); setShowSticker(false); }}
+                onClick={() => { setShowGif(!showGif); setShowEmoji(false); }}
                 className={`p-2 rounded-lg transition-colors ${showGif ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'}`}
               >
                 <ImageIcon size={18} />

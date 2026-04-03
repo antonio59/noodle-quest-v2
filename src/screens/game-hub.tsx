@@ -1,21 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameDefinition, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause } from 'lucide-react';
+import { Heart, Search, Play, Pause, Lock, Zap, Target, Brain, Hand, Users, Shuffle } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
+import { useAuth } from '@/contexts/AuthContext';
+import { Breathe } from '@/screens/breathe';
 
 interface GameHubProps {
   onPlay: (game: GameDefinition, id: string, stage: number) => void;
 }
 
 const TABS = [
-  { id: 'brain', label: '🧠 Brain Games', emoji: '🧠' },
-  { id: 'board', label: '🎲 Board Games', emoji: '🎲' },
+  { id: 'brain', label: '🧠 Brain', emoji: '🧠' },
+  { id: 'board', label: '🎲 Board', emoji: '🎲' },
+  { id: 'breathe', label: '🫧 Breathe', emoji: '🫧' },
   { id: 'tracks', label: '🎵 Tracks', emoji: '🎵' },
 ];
 
+const TAB_BENEFITS: Record<string, { title: string; desc: string; icon: typeof Brain }> = {
+  brain: {
+    title: 'Brain Games',
+    desc: 'Train focus, memory, and problem-solving skills. Each game has 10-20 stages that get harder as you improve!',
+    icon: Brain,
+  },
+  board: {
+    title: 'Board Games',
+    desc: 'Classic multiplayer games for 2 players. Play all brain games to unlock these fun challenges!',
+    icon: Lock,
+  },
+  breathe: {
+    title: 'Breathe & Relax',
+    desc: 'Simple breathing exercises to help you calm down, focus, and feel better. Great before bed or when stressed!',
+    icon: Zap,
+  },
+  tracks: {
+    title: 'Focus Tracks',
+    desc: 'Lo-fi beats and calming sounds to help you concentrate while playing or studying.',
+    icon: Target,
+  },
+};
+
+const BOARD_GAMES = [
+  { id: 'snakes', emoji: '🐍', name: 'Snakes & Ladders', desc: 'Race to 100! Climb ladders, avoid snakes!' },
+  { id: 'ludo', emoji: '🎯', name: 'Ludo', desc: 'Race your 4 pieces home first!' },
+  { id: 'checkers', emoji: '⚫', name: 'Checkers', desc: 'Jump and capture all opponent pieces!' },
+  { id: 'dominoes', emoji: '🁣', name: 'Dominoes', desc: 'Match tiles and empty your hand!' },
+  { id: 'chess', emoji: '♟️', name: 'Chess', desc: 'Checkmate your opponent\'s king!' },
+];
+
 export function GameHub({ onPlay }: GameHubProps) {
+  const { player } = useAuth();
   const [tab, setTab] = useState('brain');
   const audio = useAudioEngine();
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
@@ -25,6 +60,7 @@ export function GameHub({ onPlay }: GameHubProps) {
       return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
     } catch { return new Set(); }
   });
+  const [playedGames, setPlayedGames] = useState<Set<string>>(new Set());
 
   const allGames = getAllGames();
   const filteredGames = allGames.filter(g => {
@@ -34,6 +70,9 @@ export function GameHub({ onPlay }: GameHubProps) {
   });
 
   const favGames = allGames.filter(g => favorites.has(g.id));
+  const unplayedGames = allGames.filter(g => !playedGames.has(g.id));
+  const boardUnlocked = unplayedGames.length === 0;
+  const percent = allGames.length > 0 ? Math.round((playedGames.size / allGames.length) * 100) : 0;
 
   const toggleFav = (id: string) => {
     setFavorites(prev => {
@@ -44,6 +83,35 @@ export function GameHub({ onPlay }: GameHubProps) {
       return next;
     });
   };
+
+  // Fetch played games
+  const fetchPlayed = useCallback(async () => {
+    if (!player) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'games:getPlayerStats',
+          format: 'convex_encoded_json',
+          args: [{ playerId: player.playerId }],
+        }),
+      });
+      const data = await res.json();
+      if (data.value?.playedGameIds) {
+        setPlayedGames(new Set(data.value.playedGameIds));
+      }
+    } catch { /* offline */ }
+  }, [player]);
+
+  useEffect(() => {
+    if (!player) return;
+    const timer = setTimeout(fetchPlayed, 0);
+    return () => clearTimeout(timer);
+  }, [player, fetchPlayed]);
+
+  const benefit = TAB_BENEFITS[tab];
+  const BenefitIcon = benefit?.icon || Brain;
 
   return (
     <div className="h-full flex flex-col">
@@ -63,6 +131,17 @@ export function GameHub({ onPlay }: GameHubProps) {
           </button>
         ))}
       </div>
+
+      {/* Benefit description */}
+      {benefit && (
+        <div className="bg-accent-soft/30 border-b border-accent/10 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+          <BenefitIcon size={20} className="text-accent flex-shrink-0" />
+          <div>
+            <div className="text-sm font-bold text-text">{benefit.title}</div>
+            <div className="text-xs text-text-muted">{benefit.desc}</div>
+          </div>
+        </div>
+      )}
 
       {tab === 'brain' && (
         <div className="flex-1 overflow-y-auto">
@@ -144,7 +223,10 @@ export function GameHub({ onPlay }: GameHubProps) {
                   <div className="text-3xl mb-2">{g.emoji}</div>
                   <div className="font-semibold text-sm mb-1">{g.name}</div>
                   <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-                  <div className="text-text-muted text-xs mt-2">{g.stages} stages</div>
+                  <div className="flex items-center gap-1 mt-2">
+                    <span className="text-text-muted text-xs">{g.stages} stages</span>
+                    {playedGames.has(g.id) && <span className="text-success text-xs">✓</span>}
+                  </div>
                 </button>
               </div>
             ))}
@@ -153,12 +235,108 @@ export function GameHub({ onPlay }: GameHubProps) {
       )}
 
       {tab === 'board' && (
-        <div className="flex-1 flex items-center justify-center p-8 text-center">
-          <div>
-            <div className="text-5xl mb-4">🎲</div>
-            <h3 className="text-lg font-bold mb-2">Board Games</h3>
-            <p className="text-text-muted text-sm">Chess, Checkers, Ludo, and more — coming soon!</p>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-5">
+            {!boardUnlocked ? (
+              <div>
+                <div className="text-center mb-6">
+                  <div className="text-4xl mb-3">🔒</div>
+                  <h2 className="text-lg font-bold mb-1">Board Games Locked</h2>
+                  <p className="text-text-muted text-sm">
+                    Play all {allGames.length} brain games to unlock {BOARD_GAMES.length} multiplayer classics
+                  </p>
+                </div>
+
+                {/* Progress */}
+                <div className="bg-card rounded-xl p-4 mb-6">
+                  <div className="flex justify-between text-xs text-text-muted mb-2">
+                    <span>{playedGames.size} / {allGames.length} played</span>
+                    <span>{percent}%</span>
+                  </div>
+                  <div className="h-3 bg-surface rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Remaining games with shortcuts */}
+                {unplayedGames.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-bold text-text-dim mb-3 flex items-center gap-2">
+                      <Target size={14} /> Play these to unlock ({unplayedGames.length} left)
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      {unplayedGames.slice(0, 8).map(g => (
+                        <button
+                          key={g.id}
+                          onClick={() => onPlay(g, g.id, 1)}
+                          className="bg-card hover:bg-card-hover rounded-xl p-3 text-left transition-all active:scale-95 flex items-center gap-2"
+                        >
+                          <span className="text-xl">{g.emoji}</span>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold truncate">{g.name}</div>
+                            <div className="text-[10px] text-text-muted">{g.stages} stages</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                    {unplayedGames.length > 8 && (
+                      <p className="text-text-muted text-xs text-center mt-3">
+                        +{unplayedGames.length - 8} more games
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Board games preview */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-bold text-text-dim mb-3">Coming soon:</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {BOARD_GAMES.map(g => (
+                      <div key={g.id} className="bg-card rounded-xl p-3 text-center opacity-40 border border-dashed border-text-muted/30">
+                        <div className="text-2xl mb-1">{g.emoji}</div>
+                        <div className="text-[10px] font-semibold truncate">{g.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="bg-gradient-to-r from-success/20 to-accent/20 rounded-xl p-4 mb-6 border border-success/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-bold text-success">🎉 Unlocked!</span>
+                  </div>
+                  <p className="text-text-muted text-xs">All brain games completed — board games are yours!</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {BOARD_GAMES.map(g => (
+                    <div
+                      key={g.id}
+                      className="bg-card rounded-xl p-4 text-center opacity-60"
+                    >
+                      <div className="text-3xl mb-2">{g.emoji}</div>
+                      <div className="font-bold text-sm">{g.name}</div>
+                      <div className="text-text-muted text-xs mt-1">{g.desc}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-card rounded-xl p-4 text-center text-text-muted text-sm">
+                  Board games require 2 players. Multiplayer coming soon!
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {tab === 'breathe' && (
+        <div className="flex-1 overflow-hidden">
+          <Breathe />
         </div>
       )}
 

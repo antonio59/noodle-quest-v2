@@ -60,6 +60,6 @@ export const getPlayerStats = query({
       uniqueGames.add(p.gameId);
     }
 
-    return { totalStars, gamesPlayed, maxStage, threeStars, uniqueGames: uniqueGames.size };
+    return { totalStars, gamesPlayed, maxStage, threeStars, uniqueGames: uniqueGames.size, playedGameIds: [...uniqueGames] };
   },
 });
