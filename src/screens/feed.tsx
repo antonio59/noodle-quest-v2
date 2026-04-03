@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Smile, Image as ImageIcon, Search, X } from 'lucide-react';
+import { Send, Smile, Image as ImageIcon, Search, X, Reply } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FeedPost } from '@/types';
 
@@ -21,6 +21,11 @@ interface GiphyResult {
   title: string;
 }
 
+interface MentionedPlayer {
+  name: string;
+  avatar: string;
+}
+
 export function Feed() {
   const { player } = useAuth();
   const [tab, setTab] = useState<'chat' | 'activity'>('chat');
@@ -32,7 +37,12 @@ export function Feed() {
   const [gifSearch, setGifSearch] = useState('');
   const [gifResults, setGifResults] = useState<GiphyResult[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionList, setMentionList] = useState<MentionedPlayer[]>([]);
+  const [showMentions, setShowMentions] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const msgRef = useRef<HTMLInputElement>(null);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -61,9 +71,34 @@ export function Feed() {
   }, []);
 
   useEffect(() => {
+    if (!player) return;
     const timer = setTimeout(fetchPosts, 0);
     return () => clearTimeout(timer);
-  }, [fetchPosts]);
+  }, [player, fetchPosts]);
+
+  // Fetch all players for @mention autocomplete
+  const fetchPlayers = useCallback(async (): Promise<MentionedPlayer[]> => {
+    if (!player) return [];
+    try {
+      const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'auth:searchPlayers',
+          format: 'convex_encoded_json',
+          args: [{ query: 'a', currentPlayerId: player.playerId }],
+        }),
+      });
+      const data = await res.json();
+      if (data.value) {
+        return data.value.map((p: Record<string, unknown>) => ({
+          name: p.name as string,
+          avatar: p.avatar as string,
+        }));
+      }
+    } catch { /* offline */ }
+    return [];
+  }, [player]);
 
   // Search GIPHY with kid-safe rating
   const searchGifs = useCallback(async (query: string) => {
@@ -89,9 +124,10 @@ export function Feed() {
   // Auto-search trending when GIF panel opens
   useEffect(() => {
     if (showGif && gifResults.length === 0) {
-      searchGifs('');
+      const timer = setTimeout(() => searchGifs(''), 0);
+      return () => clearTimeout(timer);
     }
-  }, [showGif]);
+  }, [showGif, gifResults.length, searchGifs]);
 
   // Focus search input when GIF panel opens
   useEffect(() => {
@@ -105,8 +141,35 @@ export function Feed() {
     searchGifs(gifSearch);
   };
 
-  const chatPosts = posts.filter(p => p.type !== 'score').reverse();
-  const activityPosts = [...posts.filter(p => p.type === 'score')];
+  // Handle @mention in message input
+  const handleMessageInput = async (val: string) => {
+    setMessage(val);
+    const atMatch = val.match(/@(\w*)$/);
+    if (atMatch) {
+      const query = atMatch[1].toLowerCase();
+      if (query.length >= 1) {
+        const players = await fetchPlayers();
+        const filtered = players.filter(p => p.name.toLowerCase().includes(query)).slice(0, 5);
+        setMentionList(filtered);
+        setShowMentions(filtered.length > 0);
+        setMentionQuery(query);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  const insertMention = (name: string) => {
+    const beforeAt = message.substring(0, message.lastIndexOf('@'));
+    setMessage(beforeAt + `@${name} `);
+    setShowMentions(false);
+    if (msgRef.current) msgRef.current.focus();
+  };
+
+  const chatPosts = posts.filter(p => p.type !== 'score' && p.type !== 'badge').reverse();
+  const activityPosts = [...posts.filter(p => p.type === 'score' || p.type === 'badge')];
 
   const handleSend = async (type = 'message', content?: string) => {
     const msg = content || message.trim();
@@ -114,8 +177,19 @@ export function Feed() {
     setSending(true);
     setShowEmoji(false);
     setShowGif(false);
+    setShowMentions(false);
+
+    // Check for @mentions and create notifications
+    const mentionMatches = msg.matchAll(/@(\w+)/g);
+    const mentionedNames = [...mentionMatches].map(m => m[1].toLowerCase());
+
     try {
-      await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
+      // Fetch all players to resolve mentions
+      const allPlayers = await fetchPlayers();
+      const mentionedPlayers = allPlayers.filter(p => mentionedNames.includes(p.name.toLowerCase()));
+
+      // Send the post
+      const postRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
         body: JSON.stringify({
@@ -124,10 +198,54 @@ export function Feed() {
           args: [{ authorId: player.playerId, type, content: msg }],
         }),
       });
+      const postData = await postRes.json();
+      const newPostId = postData.value?.postId;
+
+      // Create notifications for mentioned players
+      for (const mp of mentionedPlayers) {
+        // Find the player's Convex ID
+        const searchRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+          body: JSON.stringify({
+            path: 'auth:searchPlayers',
+            format: 'convex_encoded_json',
+            args: [{ query: mp.name, currentPlayerId: player.playerId }],
+          }),
+        });
+        const searchData = await searchRes.json();
+        if (searchData.value?.[0]) {
+          await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+            body: JSON.stringify({
+              path: 'notifications:createNotification',
+              format: 'convex_encoded_json',
+              args: [{
+                playerId: searchData.value[0].id,
+                type: 'mention',
+                fromId: player.playerId,
+                fromName: player.name,
+                fromAvatar: player.avatar,
+                content: `${player.name} mentioned you: ${msg.substring(0, 80)}`,
+                postId: newPostId,
+              }],
+            }),
+          });
+        }
+      }
+
       setMessage('');
+      setReplyingTo(null);
       await fetchPosts();
     } catch { /* offline */ }
     setSending(false);
+  };
+
+  const handleReply = (postId: string, author: string) => {
+    setReplyingTo({ id: postId, author });
+    setMessage(`@${author} `);
+    if (msgRef.current) msgRef.current.focus();
   };
 
   const formatTime = (ts: number) => {
@@ -146,6 +264,7 @@ export function Feed() {
 
   const renderPost = (post: FeedPost) => {
     const isScore = post.type === 'score';
+    const isBadge = post.type === 'badge';
     return (
       <div key={post.id} className="flex gap-3 p-3 bg-card rounded-xl">
         <div className="text-2xl flex-shrink-0">{post.authorAvatar || '🎮'}</div>
@@ -159,12 +278,26 @@ export function Feed() {
               <span>{post.gameEmoji}</span>
               <span className="text-text-dim">{post.content}</span>
             </div>
+          ) : isBadge ? (
+            <div className="text-sm mt-1 flex items-center gap-1">
+              <span className="text-xl">{post.gameEmoji}</span>
+              <span className="text-text-dim">{post.content}</span>
+            </div>
           ) : post.type === 'gif' ? (
             <img src={post.content} alt="GIF" className="mt-2 rounded-lg max-w-[240px]" loading="lazy" />
           ) : post.type === 'emoji' ? (
             <div className="text-4xl mt-1">{post.content}</div>
           ) : (
             <p className="text-sm mt-1 break-words">{parseMentions(post.content)}</p>
+          )}
+          {/* Reply button for messages */}
+          {!isScore && !isBadge && post.type !== 'gif' && post.type !== 'emoji' && (
+            <button
+              onClick={() => handleReply(post.id, post.authorName)}
+              className="text-text-muted text-xs mt-1 hover:text-accent transition-colors flex items-center gap-1"
+            >
+              <Reply size={10} /> Reply
+            </button>
           )}
         </div>
       </div>
@@ -205,6 +338,33 @@ export function Feed() {
 
       {tab === 'chat' && (
         <div className="flex-shrink-0 bg-surface border-t border-white/5">
+          {/* Reply banner */}
+          {replyingTo && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-accent/10 border-b border-accent/20">
+              <Reply size={12} className="text-accent" />
+              <span className="text-xs text-accent flex-1">Replying to {replyingTo.author}</span>
+              <button onClick={() => { setReplyingTo(null); setMessage(''); }} className="text-text-muted hover:text-text">
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Mention autocomplete */}
+          {showMentions && mentionList.length > 0 && (
+            <div className="border-b border-white/5 bg-card">
+              {mentionList.map(p => (
+                <button
+                  key={p.name}
+                  onClick={() => insertMention(p.name)}
+                  className="w-full flex items-center gap-2 px-4 py-2 hover:bg-card-hover transition-colors text-left"
+                >
+                  <span className="text-lg">{p.avatar}</span>
+                  <span className="text-sm text-text">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Emoji picker */}
           {showEmoji && (
             <div className="p-3 border-b border-white/5 flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
@@ -281,11 +441,15 @@ export function Feed() {
                 <ImageIcon size={18} />
               </button>
               <input
+                ref={msgRef}
                 type="text"
                 placeholder="Say something... (@ to tag)"
                 value={message}
-                onChange={e => setMessage(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                onChange={e => handleMessageInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !showMentions) handleSend();
+                  if (e.key === 'Escape') { setShowMentions(false); setReplyingTo(null); }
+                }}
                 className="flex-1 bg-card rounded-xl px-4 py-2.5 text-sm text-text placeholder-text-muted outline-none focus:ring-1 ring-accent"
                 maxLength={200}
               />

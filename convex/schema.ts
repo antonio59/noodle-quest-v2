@@ -75,4 +75,16 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_player", ["playerId"]),
+
+  notifications: defineTable({
+    playerId: v.id("players"),
+    type: v.string(),
+    fromId: v.id("players"),
+    fromName: v.string(),
+    fromAvatar: v.string(),
+    content: v.string(),
+    postId: v.optional(v.id("feed")),
+    read: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_player", ["playerId", "read", "createdAt"]),
 });

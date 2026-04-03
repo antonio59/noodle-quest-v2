@@ -11,17 +11,30 @@ const ALL_AVATARS = [
 ];
 
 const BADGES = [
-  { id: 'first_game',   name: 'First Steps',     emoji: '👣', desc: 'Play your first game' },
-  { id: 'first_star',   name: 'Star Collector',  emoji: '⭐',  desc: 'Earn your first star' },
-  { id: 'star_10',      name: 'Rising Star',     emoji: '🌟', desc: 'Earn 10 stars' },
-  { id: 'star_30',      name: 'Superstar',       emoji: '✨',    desc: 'Earn 30 stars' },
-  { id: 'star_60',      name: 'Legend',          emoji: '👑', desc: 'Earn 60 stars' },
-  { id: 'star_100',     name: 'GOAT',            emoji: '🏆', desc: 'Earn 100 stars' },
-  { id: 'perfect',      name: 'Perfectionist',   emoji: '🎯', desc: 'Get 3 stars on any game' },
-  { id: 'games_5',      name: 'Gamer',           emoji: '🎮', desc: 'Play 5 different games' },
-  { id: 'games_10',     name: 'Addict',          emoji: '🔥', desc: 'Play 10 different games' },
-  { id: 'games_all',    name: 'Completionist',   emoji: '🎉', desc: 'Play all games' },
-  { id: 'stage_10',     name: 'Marathon',        emoji: '🏃', desc: 'Reach stage 10 in any game' },
+  { id: 'first_game',   name: 'First Steps',      emoji: '👣',  desc: 'Play your first game' },
+  { id: 'first_star',   name: 'Star Collector',   emoji: '⭐',  desc: 'Earn your first star' },
+  { id: 'star_10',      name: 'Rising Star',      emoji: '🌟',  desc: 'Earn 10 stars' },
+  { id: 'star_30',      name: 'Superstar',        emoji: '✨',  desc: 'Earn 30 stars' },
+  { id: 'star_60',      name: 'Legend',           emoji: '👑',  desc: 'Earn 60 stars' },
+  { id: 'star_100',     name: 'GOAT',             emoji: '🏆',  desc: 'Earn 100 stars' },
+  { id: 'star_200',     name: 'Mythical',         emoji: '🐉',  desc: 'Earn 200 stars' },
+  { id: 'star_500',     name: 'Immortal',         emoji: '💎',  desc: 'Earn 500 stars' },
+  { id: 'perfect',      name: 'Perfectionist',    emoji: '🎯',  desc: 'Get 3 stars on any game' },
+  { id: 'perfect_5',    name: 'Sharp Shooter',    emoji: '🏹',  desc: 'Get 3 stars on 5 games' },
+  { id: 'perfect_10',   name: 'Flawless',         emoji: '💯',  desc: 'Get 3 stars on 10 games' },
+  { id: 'games_5',      name: 'Gamer',            emoji: '🎮',  desc: 'Play 5 different games' },
+  { id: 'games_10',     name: 'Addict',           emoji: '🔥',  desc: 'Play 10 different games' },
+  { id: 'games_all',    name: 'Completionist',    emoji: '🎉',  desc: 'Play all brain games' },
+  { id: 'stage_5',      name: 'Getting There',    emoji: '📈',  desc: 'Reach stage 5 in any game' },
+  { id: 'stage_10',     name: 'Marathon',         emoji: '🏃',  desc: 'Reach stage 10 in any game' },
+  { id: 'stage_15',     name: 'Endurance',        emoji: '🏋️',  desc: 'Reach stage 15 in any game' },
+  { id: 'stage_20',     name: 'Ultimate',         emoji: '🌈',  desc: 'Reach stage 20 in any game' },
+  { id: 'streak_3',     name: 'On Fire',          emoji: '🔥',  desc: 'Play 3 games in a row' },
+  { id: 'streak_7',     name: 'Unstoppable',      emoji: '⚡',  desc: 'Play 7 games in a row' },
+  { id: 'challenger',   name: 'Challenger',       emoji: '⚔️',  desc: 'Send your first challenge' },
+  { id: 'champion',     name: 'Champion',         emoji: '🥇',  desc: 'Win 5 challenges' },
+  { id: 'social',       name: 'Social Butterfly', emoji: '🦋',  desc: 'Send 10 chat messages' },
+  { id: 'explorer',     name: 'Explorer',         emoji: '🗺️',  desc: 'Try every game category' },
 ];
 
 interface PlayerStats {
@@ -95,11 +108,20 @@ export function Profile() {
       if (totalStars >= 30) earned.add('star_30');
       if (totalStars >= 60) earned.add('star_60');
       if (totalStars >= 100) earned.add('star_100');
+      if (totalStars >= 200) earned.add('star_200');
+      if (totalStars >= 500) earned.add('star_500');
       if (threeStars >= 1) earned.add('perfect');
+      if (threeStars >= 5) earned.add('perfect_5');
+      if (threeStars >= 10) earned.add('perfect_10');
       if (gamesPlayed >= 5) earned.add('games_5');
       if (gamesPlayed >= 10) earned.add('games_10');
       if (gamesPlayed >= games.length) earned.add('games_all');
+      if (maxStage >= 5) earned.add('stage_5');
       if (maxStage >= 10) earned.add('stage_10');
+      if (maxStage >= 15) earned.add('stage_15');
+      if (maxStage >= 20) earned.add('stage_20');
+      if (streak >= 3) earned.add('streak_3');
+      if (streak >= 7) earned.add('streak_7');
       setEarnedBadges(earned);
     } catch { /* offline */ }
   }, [player, games.length]);
