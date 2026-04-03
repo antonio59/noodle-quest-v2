@@ -324,7 +324,7 @@ export function Feed() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-0">
         {displayedPosts.length === 0 ? (
           <div className="text-center text-text-muted text-sm py-12">
             {tab === 'chat' ? 'No messages yet — say hello! 💬' : 'No activity yet — play some games! 🎮'}

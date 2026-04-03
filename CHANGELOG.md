@@ -7,7 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
-- Stage progression: Next Stage, Previous Stage, Random Stage buttons on end screen
+- Duel tab in Challenges page with 10 duel-capable games and direct play shortcuts
+- Local 2-player mode support for board games (Snakes & Ladders, Checkers, Connect 4, Tic Tac Toe)
+- Redesigned Snakes & Ladders: visible snakes (🐍) and ladders (🪜) on board, proper dice roll animation, AI opponent
+- Chat tab scrolling fix (min-h-0 on scroll container)
+- Game cards sorted alphabetically in game hub
 - Stage selector (← →) in game header during gameplay
 - 20 stage names: Rookie → Beginner → ... → Cosmic
 - Replay Stage button (replaces generic "Play Again")
