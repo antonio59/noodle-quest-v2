@@ -284,7 +284,7 @@ function drawScene(
   }
 }
 
-type Phase = 'intro' | 'playing';
+type Phase = 'intro' | 'playing' | 'done';
 
 function useThreeParticles(containerRef: React.RefObject<HTMLDivElement | null>) {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -566,32 +566,33 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
       setFeedbackColor('#ff6e6c');
     }
 
-    if (passed) {
-      const nextShape = currentShape + 1;
-      onProgress(nextShape / shapes.length);
+    const nextShape = currentShape + 1;
+    onProgress(nextShape / shapes.length);
 
-      if (nextShape >= shapes.length) {
-        setCumulativeScore(prev => {
-          const final = prev;
-          const avgScore = final / shapes.length;
-          const stars = avgScore > 75 ? 3 : avgScore > 50 ? 2 : 1;
-          let summary = `You traced all ${shapes.length} shapes! `;
-          if (stars === 3) summary += 'Beautiful work! Your hand-eye coordination is fantastic! 🌟';
-          else if (stars === 2) summary += 'Good tracing! Keep practicing to get even more precise.';
-          else summary += 'Nice effort! Remember: slow and steady, follow those dots!';
-          onMessage('All shapes traced!');
-          setTimeout(() => onEnd({ score: final, stars, summary }), 0);
-          return final;
-        });
-      } else {
-        setTimeout(() => {
-          setCurrentShape(nextShape);
-          setDrawnPoints([]);
-          const name = shapes[nextShape].name;
-          setFeedback(`Next shape: ${name}! Trace the dotted line.`);
-          setFeedbackColor('#67e8f9');
-        }, 1200);
-      }
+    if (nextShape >= shapes.length) {
+      setCumulativeScore(prev => {
+        const finalScore = passed
+          ? (accuracy > 0.7 ? prev + shapeScore : prev + Math.round(shapeScore * 0.7))
+          : prev;
+        const avgScore = finalScore / shapes.length;
+        const stars = avgScore > 75 ? 3 : avgScore > 50 ? 2 : 1;
+        let summary = `You traced all ${shapes.length} shapes! `;
+        if (stars === 3) summary += 'Beautiful work! Your hand-eye coordination is fantastic! 🌟';
+        else if (stars === 2) summary += 'Good tracing! Keep practicing to get even more precise.';
+        else summary += 'Nice effort! Remember: slow and steady, follow those dots!';
+        onMessage('All shapes traced!');
+        setPhase('done');
+        setTimeout(() => onEnd({ score: finalScore, stars, summary }), 0);
+        return finalScore;
+      });
+    } else if (passed) {
+      setTimeout(() => {
+        setCurrentShape(nextShape);
+        setDrawnPoints([]);
+        const name = shapes[nextShape].name;
+        setFeedback(`Next shape: ${name}! Trace the dotted line.`);
+        setFeedbackColor('#67e8f9');
+      }, 1200);
     }
   }, [drawnPoints, shapes, currentShape, onScore, onProgress, onMessage, onEnd, burstParticles]);
 
@@ -628,6 +629,23 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
         >
           Start Tracing! ✏️
         </button>
+      </div>
+    );
+  }
+
+  if (phase === 'done') {
+    const avgScore = cumulativeScore / shapes.length;
+    const stars = avgScore > 75 ? 3 : avgScore > 50 ? 2 : 1;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] p-6 text-center">
+        <div className="text-6xl mb-4">{stars === 3 ? '🌟' : stars === 2 ? '⭐' : '✨'}</div>
+        <h2 className="text-2xl font-bold text-accent mb-2">All Done!</h2>
+        <p className="text-text-dim mb-4">You traced all {shapes.length} shapes!</p>
+        <div className="bg-card rounded-xl p-4 mb-5 max-w-sm">
+          <div className="text-lg mb-1">Score: {cumulativeScore}</div>
+          <div className="text-accent">Accuracy: {Math.round(avgScore)}%</div>
+          <div className="text-warning mt-1">{'⭐'.repeat(stars)}{'☆'.repeat(3 - stars)}</div>
+        </div>
       </div>
     );
   }

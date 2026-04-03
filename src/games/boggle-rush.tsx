@@ -156,6 +156,7 @@ function BoggleRushGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   const scoreRef = useRef(0);
   const foundRef = useRef<Set<string>>(new Set());
   const wordCountRef = useRef(0);
+  const timeLeftRef = useRef(config.time);
   const gameAreaRef = useRef<HTMLDivElement>(null);
 
   const startGame = useCallback(() => {
@@ -165,6 +166,7 @@ function BoggleRushGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     setScore(0);
     scoreRef.current = 0;
     setTimeLeft(config.time);
+    timeLeftRef.current = config.time;
     setFeedback('');
     setCurrentWord('');
     setSelectedCells(new Set());
@@ -210,8 +212,8 @@ function BoggleRushGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       onProgress(Math.min(1, wordCountRef.current / config.targetWords));
       setFeedback(`✅ "${word}"! +${pts}`);
 
-      if (wordCountRef.current >= config.targetWords) {
-        const timeBonus = Math.floor(timeLeft / 2);
+        if (wordCountRef.current >= config.targetWords) {
+        const timeBonus = Math.floor(timeLeftRef.current / 2);
         scoreRef.current += timeBonus;
         setPhase('done');
         onEnd({
@@ -225,7 +227,7 @@ function BoggleRushGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       setFeedback(`"${word}" is not a valid word. Try again!`);
       setTimeout(() => { setInvalidFlash(false); setFeedback(''); }, 1500);
     }
-  }, [timeLeft, config.targetWords, onScore, onProgress, onEnd]);
+  }, [config.targetWords, onScore, onProgress, onEnd]);
 
   const getCellFromPointer = useCallback((clientX: number, clientY: number): [number, number] | null => {
     if (!gameAreaRef.current) return null;
@@ -248,10 +250,10 @@ function BoggleRushGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       setIsSelecting(true);
       const key = getCellKey(cell[0], cell[1]);
       setSelectedCells(new Set([key]));
-      setCurrentWord(grid[cell[0]][cell[1]]);
+      setCurrentWord(gridRef.current[cell[0]][cell[1]]);
       setLastCell(cell);
     }
-  }, [phase, getCellFromPointer, grid]);
+  }, [phase, getCellFromPointer]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isSelecting || !lastCell) return;
@@ -297,6 +299,7 @@ function BoggleRushGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
           });
           return 0;
         }
+        timeLeftRef.current = prev - 1;
         return prev - 1;
       });
     }, 1000);

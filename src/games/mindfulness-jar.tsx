@@ -57,6 +57,7 @@ function MindfulnessJarGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [message, setMessage] = useState('');
   const gameActiveRef = useRef(false);
   const animFrameRef = useRef<number>(0);
+  const breathTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const createParticles = useCallback(() => {
     const count = 20 + stage * 2;
@@ -161,11 +162,11 @@ function MindfulnessJarGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               setBreathRound(nextRound);
             }
           }, 4000);
-          return () => clearTimeout(outTimer);
+          breathTimersRef.current.push(outTimer);
         }, 3000);
-        return () => clearTimeout(holdTimer);
+        breathTimersRef.current.push(holdTimer);
       }, 4000);
-      return () => clearTimeout(inTimer);
+      breathTimersRef.current.push(inTimer);
     };
 
     breathCycle();
@@ -175,6 +176,7 @@ function MindfulnessJarGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     return () => {
       gameActiveRef.current = false;
       cancelAnimationFrame(animFrameRef.current);
+      breathTimersRef.current.forEach(t => clearTimeout(t));
     };
   }, []);
 

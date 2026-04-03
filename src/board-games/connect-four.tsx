@@ -309,13 +309,13 @@ function ConnectFourGame({ stage, onScore, onProgress, onEnd }: GameProps) {
                 const isLastDrop = lastDrop?.row === r && lastDrop?.col === c;
                 const isHovered = hoverCol === c && cell === 'empty' && isPlayerTurn && board[0][c] === 'empty';
 
-                return (
-                  <div
-                    key={`${r}-${c}`}
-                    onClick={() => handleColumnClick(c)}
-                    onMouseEnter={() => setHoverCol(c)}
-                    onMouseLeave={() => setHoverCol(null)}
-                    className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300
+                  return (
+                    <div
+                      key={`${r}-${c}`}
+                      onPointerDown={() => handleColumnClick(c)}
+                      onMouseEnter={() => setHoverCol(c)}
+                      onMouseLeave={() => setHoverCol(null)}
+                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300
                       ${cell === 'empty'
                         ? isHovered
                           ? 'bg-blue-400/30 scale-95'

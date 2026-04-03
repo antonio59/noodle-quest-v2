@@ -45,7 +45,7 @@ function MemoryBoardGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [_score, setScore] = useState(0);
   const [peekTimeLeft, setPeekTimeLeft] = useState(0);
   const [feedback, setFeedback] = useState('');
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(stage >= 5 ? 60 : 0);
   const gameActiveRef = useRef(false);
   const flippedRef = useRef<number[]>([]);
   const scoreRef = useRef(0);

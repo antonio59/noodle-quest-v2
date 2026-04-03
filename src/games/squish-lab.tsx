@@ -250,7 +250,7 @@ function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
     const newTotal = totalScoreRef.current + points;
     totalScoreRef.current = newTotal;
     setTotalScore(newTotal);
-    onScore(newTotal);
+    onScore(points);
     onProgress((currentItemRef.current + 1) / items.length);
 
     if (holdTimeRef.current >= 8) {

@@ -219,7 +219,7 @@ function WordSearchGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       setHighlightedCells(new Set());
       return;
     }
-    const word = cells.map(([r, c]) => grid[r]?.[c] || '').join('');
+    const word = cells.map(([r, c]) => gridRef.current[r]?.[c] || '').join('');
     const reversed = word.split('').reverse().join('');
     const checkWord = wordsRef.current.find(w => w === word || w === reversed);
 
@@ -252,7 +252,7 @@ function WordSearchGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
 
     setSelection(null);
     setHighlightedCells(new Set());
-  }, [isSelecting, selection, grid, timeLeft, onScore, onProgress, onEnd]);
+  }, [isSelecting, selection, timeLeft, onScore, onProgress, onEnd]);
 
   useEffect(() => {
     if (phase !== 'playing') return;
@@ -277,7 +277,7 @@ function WordSearchGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     return () => clearInterval(id);
   }, [phase, onEnd]);
 
-  const cellSize = Math.min(36, Math.floor(320 / config.gridSize));
+  const cellSize = Math.min(36, Math.floor(Math.min(320, typeof window !== 'undefined' ? window.innerWidth - 40 : 320) / config.gridSize));
 
   if (phase === 'intro') {
     return (

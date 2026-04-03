@@ -332,7 +332,7 @@ function SudokuGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps)
           {Array.from({ length: maxNum }, (_, i) => i + 1).map(n => (
             <button
               key={n}
-              onClick={() => placeNumber(n)}
+              onPointerDown={() => placeNumber(n)}
               className="w-10 h-10 rounded-lg bg-surface text-text font-bold text-lg hover:bg-accent hover:text-bg active:scale-95 transition-all"
             >
               {n}

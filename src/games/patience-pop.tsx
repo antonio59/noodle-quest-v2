@@ -185,6 +185,7 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     if (phase !== 'playing') return;
 
     const animFrame = () => {
+      let missedCount = 0;
       setBubbles(prev => {
         const updated = prev.map(b => ({
           ...b,
@@ -194,8 +195,7 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         updated.forEach(b => {
           if (gameAreaRef.current && b.pos > gameAreaRef.current.clientHeight + b.size && !b.popping) {
             if (b.state === 'ready') {
-              missedRef.current++;
-              setMissed(missedRef.current);
+              missedCount++;
             }
           }
         });
@@ -207,6 +207,10 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           return true;
         });
       });
+      if (missedCount > 0) {
+        missedRef.current += missedCount;
+        setMissed(missedRef.current);
+      }
     };
 
     const interval = setInterval(animFrame, 16);

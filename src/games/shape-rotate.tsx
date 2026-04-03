@@ -261,7 +261,7 @@ function ShapeRotateGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         {renderMiniGrid(targetShape, color, 16)}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 max-w-full overflow-x-auto">
         {options.map((opt, idx) => (
           <button
             key={idx}

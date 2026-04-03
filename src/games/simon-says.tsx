@@ -67,6 +67,7 @@ function SimonSaysGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const scoreRef = useRef(0);
   const correctRef = useRef(0);
   const roundRef = useRef(1);
+  const timeLeftRef = useRef(config.timeLimit);
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const generateCommand = useCallback(() => {
@@ -95,6 +96,7 @@ function SimonSaysGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setCorrectCount(0);
     setRound(1);
     setTimeLeft(config.timeLimit);
+    timeLeftRef.current = config.timeLimit;
     generateCommand();
   }, [config, generateCommand]);
 
@@ -111,6 +113,7 @@ function SimonSaysGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           onEnd({ score: scoreRef.current, stars, summary: `Time's up! ${correctRef.current}/${roundRef.current - 1} correct. Only do it when Simon says!` });
           return 0;
         }
+        timeLeftRef.current = prev - 1;
         return prev - 1;
       });
     }, 1000);
@@ -143,7 +146,7 @@ function SimonSaysGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     if (showTimerRef.current) clearTimeout(showTimerRef.current);
 
     if (isSimonSays) {
-      const points = 20 + Math.floor(timeLeft / 2);
+      const points = 20 + Math.floor(timeLeftRef.current / 2);
       scoreRef.current += points;
       correctRef.current++;
       setScore(scoreRef.current);
@@ -158,14 +161,14 @@ function SimonSaysGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
     setPhase('feedback');
     advanceRound();
-  }, [phase, isSimonSays, timeLeft, onScore, advanceRound]);
+  }, [phase, isSimonSays, onScore, advanceRound]);
 
   const handleSkip = useCallback(() => {
     if (phase !== 'playing' || !gameActiveRef.current) return;
     if (showTimerRef.current) clearTimeout(showTimerRef.current);
 
     if (!isSimonSays) {
-      const points = 15 + Math.floor(timeLeft / 3);
+      const points = 15 + Math.floor(timeLeftRef.current / 3);
       scoreRef.current += points;
       correctRef.current++;
       setScore(scoreRef.current);
@@ -180,7 +183,7 @@ function SimonSaysGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
     setPhase('feedback');
     advanceRound();
-  }, [phase, isSimonSays, timeLeft, onScore, advanceRound]);
+  }, [phase, isSimonSays, onScore, advanceRound]);
 
   useEffect(() => {
     return () => {

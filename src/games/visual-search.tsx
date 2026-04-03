@@ -70,7 +70,7 @@ function VisualSearchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const scoreRef = useRef(0);
   const totalFoundRef = useRef(0);
   const roundRef = useRef(1);
-  const targetCountRef = useRef(0);
+  const targetCountRef = useRef(1);
 
   const generateGrid = useCallback((): GridItem[] => {
     const emojiSet = EMOJI_SETS[config.emojiSet];

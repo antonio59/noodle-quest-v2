@@ -373,7 +373,7 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           return (
             <button
               key={opt}
-              onPointerDown={() => handleOption(opt)}
+              onPointerDown={(e) => { e.stopPropagation(); handleOption(opt); }}
               disabled={phase !== 'playing'}
               className="border-3 text-white px-4 py-2.5 rounded-lg text-[0.95rem] flex items-center gap-2 transition-all"
               style={{

@@ -306,9 +306,9 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     if (tapTimesRef.current.length >= config.beats) {
       setTapBtnActive(false);
       setShowTimingBar(false);
-      evaluateRhythm(score);
+      evaluateRhythm(scoreRef.current);
     }
-  }, [phase, tapBtnActive, config, getAudioCtx, evaluateRhythm, score]);
+  }, [phase, tapBtnActive, config, getAudioCtx, evaluateRhythm]);
 
   // Cleanup on unmount
   useEffect(() => {

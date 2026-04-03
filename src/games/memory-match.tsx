@@ -221,7 +221,7 @@ function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
 
         <button
-          onClick={startGame}
+          onPointerDown={startGame}
           className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
         >
           Start Game! 🃏

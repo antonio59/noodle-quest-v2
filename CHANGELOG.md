@@ -31,6 +31,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Combined emoji picker (60 emojis) + GIF search (kid-safe rating=g)
 
 ### Fixed
+- Comprehensive game audit: 3 critical, 10 high, 11 medium severity bugs fixed
+- Pattern Painter: added done phase, fixed score calculation
+- Pixel Paint: fixed canvas resize race condition
+- Crossword: empty grid guard, window.innerWidth reactivity
+- Boggle Rush: stale closures in submitWord and handlePointerDown
+- Word Search: stale grid state, grid overflow on small screens
+- Echo Tap: stale score state in handleTap
+- Patience Pop: setMissed called inside setBubbles updater
+- Memory Board: timeLeft never initialized for timed stages
+- Mindfulness Jar: breathing timer cleanup
+- Simon Says: stale timeLeft in handlers
+- Squish Lab: onScore reported cumulative total instead of delta
+- Story Builder, Feelings Faces: missing stopPropagation on touch
+- Visual Search: uninitialized targetCountRef
+- Routine Roadmap: touch drag interference with scroll
+- Shape Rotate: overflow on narrow screens
+- Checkers: preventDefault blocking scroll on mobile
+- Sudoku, Connect Four, Memory Match: onClick → onPointerDown for mobile
 - @mention autocomplete now shows all players when typing @ (not just 2+ chars)
 - GIF search now works with VITE_GIPHY_API_KEY from Netlify env vars
 - Home page stars, streak, and games played now fetch real data from Convex

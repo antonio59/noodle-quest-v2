@@ -391,13 +391,16 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
     touchStartY.current = e.touches[0].clientY;
   }, []);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent, idx: number) => {
     const endY = e.changedTouches[0].clientY;
     const deltaY = endY - touchStartY.current;
-    const itemHeight = 56;
+    const container = e.currentTarget.parentElement;
+    const itemEl = container?.children[idx] as HTMLElement | undefined;
+    const itemHeight = itemEl ? itemEl.getBoundingClientRect().height : 56;
     const moveItems = Math.round(deltaY / itemHeight);
     const newIdx = Math.max(0, Math.min(currentOrder.length - 1, idx + moveItems));
 

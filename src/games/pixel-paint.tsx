@@ -84,17 +84,21 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   }, [config.size, config.time]);
 
   useEffect(() => {
-    if (phase !== 'playing' || !canvasRef.current) return;
-    const ctx = canvasRef.current.getContext('2d');
-    if (!ctx) return;
-    const cellSize = 60 / config.size;
-    ctx.clearRect(0, 0, 60, 60);
-    target.forEach((row, y) => {
-      row.forEach((color, x) => {
-        ctx.fillStyle = COLORS[color];
-        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+    if (phase !== 'playing') return;
+    const rafId = requestAnimationFrame(() => {
+      if (!canvasRef.current) return;
+      const ctx = canvasRef.current.getContext('2d');
+      if (!ctx) return;
+      const cellSize = 60 / config.size;
+      ctx.clearRect(0, 0, 60, 60);
+      target.forEach((row, y) => {
+        row.forEach((color, x) => {
+          ctx.fillStyle = COLORS[color];
+          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        });
       });
     });
+    return () => cancelAnimationFrame(rafId);
   }, [phase, target, config.size]);
 
   const checkArt = useCallback(() => {

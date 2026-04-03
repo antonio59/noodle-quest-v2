@@ -354,6 +354,12 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       attempts++;
     }
 
+    if (finalPlacements.length === 0) {
+      setFeedback('Could not generate puzzle, retrying...');
+      setTimeout(() => startGame(), 500);
+      return;
+    }
+
     setGrid(finalGrid);
     setWordPlacements(finalPlacements);
     setScore(0);
@@ -491,7 +497,13 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     );
   }
 
-  const cellSize = Math.min(Math.floor((Math.min(window.innerWidth - 40, 400)) / config.gridSize), 48);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 400);
+  useEffect(() => {
+    const handler = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  const cellSize = Math.min(Math.floor((Math.min(windowWidth - 40, 400)) / config.gridSize), 48);
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
   return (

@@ -467,7 +467,7 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           return (
             <button
               key={`${panel.order}-${i}`}
-              onPointerDown={() => handlePanelTap(i)}
+              onPointerDown={(e) => { e.stopPropagation(); handlePanelTap(i); }}
               disabled={phase !== 'playing'}
               className="rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer transition-all p-1.5"
               style={{
