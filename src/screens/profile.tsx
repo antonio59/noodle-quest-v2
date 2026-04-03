@@ -157,16 +157,16 @@ export function Profile() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="p-5">
+      <div className="mobile-p-5 p-5">
         {/* Player Card */}
-        <div className="bg-gradient-to-br from-accent/20 to-card rounded-2xl p-6 text-center mb-6 border border-accent/10">
-          <div className="text-6xl mb-3">{player?.avatar || '🎮'}</div>
+        <div className="bg-gradient-to-br from-accent/20 to-card rounded-2xl mobile-p-6 p-6 text-center mb-6 border border-accent/10">
+          <div className="mobile-text-6xl text-6xl mb-3">{player?.avatar || '🎮'}</div>
           <h2 className="text-2xl font-bold">{player?.name}</h2>
           <p className="text-text-muted text-sm">Player</p>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-2 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
           {[
             { icon: Star, label: 'Stars', value: stats.totalStars, color: 'text-warning' },
             { icon: Zap, label: 'Streak', value: stats.streak, color: 'text-success' },
@@ -215,7 +215,7 @@ export function Profile() {
           <h3 className="text-sm font-bold text-text-dim mb-1 flex items-center gap-2">
             <Medal size={16} className="text-warning" /> Achievements ({earnedBadges.size}/{BADGES.length})
           </h3>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {BADGES.map(badge => {
               const isEarned = earnedBadges.has(badge.id);
               return (

@@ -13,7 +13,7 @@ const tabs: { id: Screen; icon: typeof Home; label: string }[] = [
 
 export function NavBar({ current, onChange, unreadCount }: { current: Screen; onChange: (s: Screen) => void; unreadCount: number }) {
   return (
-    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface overflow-x-auto scrollbar-none">
+    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface overflow-x-auto scrollbar-none pb-[env(safe-area-inset-bottom)]">
       {tabs.map(t => {
         const Icon = t.icon;
         const active = current === t.id;
@@ -21,14 +21,14 @@ export function NavBar({ current, onChange, unreadCount }: { current: Screen; on
           <button
             key={t.id}
             onClick={() => onChange(t.id)}
-            className={`flex-1 min-w-[56px] flex flex-col items-center gap-0.5 py-2 transition-colors relative ${
+            className={`flex-1 min-w-[52px] flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors relative ${
               active ? 'text-accent' : 'text-text-muted hover:text-text'
             }`}
           >
-            <Icon size={18} strokeWidth={active ? 2.5 : 2} />
-            <span className="text-[9px] font-semibold">{t.label}</span>
+            <Icon size={22} strokeWidth={active ? 2.5 : 2} />
+            <span className="text-[10px] font-semibold leading-tight">{t.label}</span>
             {t.id === 'notifications' && unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-danger rounded-full text-[8px] text-white flex items-center justify-center font-bold">
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-danger rounded-full text-[9px] text-white flex items-center justify-center font-bold px-1">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}

@@ -33,6 +33,16 @@ import '@/games/tetris-drop';
 import '@/games/word-search';
 import '@/games/boggle-rush';
 
+// New cognitive games
+import '@/games/crossword';
+import '@/games/speed-math';
+import '@/games/sequence-memory';
+import '@/games/color-match';
+import '@/games/reaction-time';
+import '@/games/number-sequence';
+import '@/games/visual-search';
+import '@/games/word-scramble';
+
 // Register board games
 import '@/board-games/snakes-ladders';
 import '@/board-games/checkers';

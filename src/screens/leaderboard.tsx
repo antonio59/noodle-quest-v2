@@ -68,14 +68,14 @@ export function Leaderboard() {
       <div className="flex-1 overflow-y-auto">
         {/* Top 3 podium */}
         {top3.length >= 3 && (
-          <div className="bg-gradient-to-b from-accent/5 to-transparent p-6">
-            <div className="flex items-end justify-center gap-4">
+          <div className="bg-gradient-to-b from-accent/5 to-transparent mobile-p-6 p-6">
+            <div className="flex items-end justify-center gap-2 sm:gap-4">
               {[0, 1, 2].map(rank => {
                 const e = top3[rank];
                 if (!e) return null;
                 return (
-                  <div key={rank} className="flex flex-col items-center w-24">
-                    <div className={`text-4xl mb-1 ${rank === 0 ? 'animate-[celebrate_1s_ease_infinite]' : ''}`}>
+                  <div key={rank} className="flex flex-col items-center w-20 sm:w-24">
+                    <div className={`text-3xl sm:text-4xl mb-1 ${rank === 0 ? 'animate-[celebrate_1s_ease_infinite]' : ''}`}>
                       {e.avatar}
                     </div>
                     <div className="text-xs font-bold truncate w-full text-center">{e.name}</div>

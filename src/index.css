@@ -22,12 +22,19 @@ body {
   color: var(--color-text);
   min-height: 100dvh;
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #root {
   height: 100dvh;
+  height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 * {
@@ -41,6 +48,24 @@ body {
 *:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Mobile responsive overrides */
+@media (max-width: 430px) {
+  .mobile-p-8 { padding: 16px !important; }
+  .mobile-p-6 { padding: 12px !important; }
+  .mobile-p-5 { padding: 10px !important; }
+  .mobile-p-4 { padding: 8px !important; }
+  .mobile-text-6xl { font-size: 2.5rem !important; }
+  .mobile-text-7xl { font-size: 3rem !important; }
+}
+
+@media (max-width: 375px) {
+  .mobile-p-8 { padding: 12px !important; }
+  .mobile-p-6 { padding: 8px !important; }
+  .mobile-p-5 { padding: 8px !important; }
+  .mobile-text-6xl { font-size: 2rem !important; }
+  .mobile-text-7xl { font-size: 2.5rem !important; }
 }
 
 @keyframes pop-in {

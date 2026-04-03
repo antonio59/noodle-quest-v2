@@ -174,8 +174,8 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
 
   if (ended) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-        <div className={`text-6xl mb-4 ${ended.stars >= 2 ? 'animate-[celebrate_0.4s_ease]' : ''}`}>
+      <div className="h-full flex flex-col items-center justify-center mobile-p-8 p-8 text-center">
+        <div className={`mobile-text-6xl text-6xl mb-4 ${ended.stars >= 2 ? 'animate-[celebrate_0.4s_ease]' : ''}`}>
           {ended.stars === 3 ? '🏆' : ended.stars === 2 ? '🎉' : '👏'}
         </div>
         <h2 className="text-2xl font-bold mb-2">
