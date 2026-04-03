@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as THREE from 'three';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
@@ -52,6 +53,122 @@ const FEEDBACKS = ["Nice focus! 🎯", "Great eyes! 👀", "You're on fire! 🔥
 
 let orbIdCounter = 0;
 
+function useOrbExplosion(containerRef: React.RefObject<HTMLDivElement | null>) {
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
+  const particlesRef = useRef<{
+    pos: THREE.Vector3; vel: THREE.Vector3; life: number; maxLife: number; color: THREE.Color;
+  }[]>([]);
+  const frameRef = useRef<number>(0);
+  const geometryRef = useRef<THREE.BufferGeometry | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;';
+    container.appendChild(canvas);
+
+    const w = Math.max(container.clientWidth, 1);
+    const h = Math.max(container.clientHeight, 1);
+    canvas.width = w;
+    canvas.height = h;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+    renderer.setSize(w, h);
+    renderer.setClearColor(0x000000, 0);
+    rendererRef.current = renderer;
+
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    const camera = new THREE.OrthographicCamera(0, w, 0, h, -10, 10);
+    cameraRef.current = camera;
+
+    const MAX = 800;
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX * 3), 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(MAX * 3), 3));
+    geometry.setDrawRange(0, 0);
+    geometryRef.current = geometry;
+
+    const material = new THREE.PointsMaterial({ size: 7, vertexColors: true, transparent: true, sizeAttenuation: false });
+    scene.add(new THREE.Points(geometry, material));
+
+    let lastTime = 0;
+    const animate = (time: number) => {
+      frameRef.current = requestAnimationFrame(animate);
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+
+      const ps = particlesRef.current;
+      for (let i = ps.length - 1; i >= 0; i--) {
+        ps[i].pos.addScaledVector(ps[i].vel, dt);
+        ps[i].vel.y += 80 * dt;
+        ps[i].life -= dt;
+        if (ps[i].life <= 0) ps.splice(i, 1);
+      }
+
+      const count = Math.min(ps.length, MAX);
+      const pos = geometry.attributes.position.array as Float32Array;
+      const col = geometry.attributes.color.array as Float32Array;
+      for (let i = 0; i < count; i++) {
+        pos[i * 3] = ps[i].pos.x;
+        pos[i * 3 + 1] = ps[i].pos.y;
+        pos[i * 3 + 2] = 0;
+        const fade = ps[i].life / ps[i].maxLife;
+        col[i * 3] = ps[i].color.r * fade;
+        col[i * 3 + 1] = ps[i].color.g * fade;
+        col[i * 3 + 2] = ps[i].color.b * fade;
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.attributes.color.needsUpdate = true;
+      geometry.setDrawRange(0, count);
+      renderer.render(scene, camera);
+    };
+    frameRef.current = requestAnimationFrame(animate);
+
+    const onResize = () => {
+      const w2 = Math.max(container.clientWidth, 1);
+      const h2 = Math.max(container.clientHeight, 1);
+      canvas.width = w2;
+      canvas.height = h2;
+      renderer.setSize(w2, h2);
+      camera.right = w2;
+      camera.bottom = h2;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      window.removeEventListener('resize', onResize);
+      renderer.dispose();
+      if (container.contains(canvas)) container.removeChild(canvas);
+    };
+  }, [containerRef]);
+
+  const explode = useCallback((x: number, y: number, color: string, count = 20) => {
+    const c = new THREE.Color(color);
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 40 + Math.random() * 120;
+      const life = 0.4 + Math.random() * 0.5;
+      particlesRef.current.push({
+        pos: new THREE.Vector3(x, y, 0),
+        vel: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed - 60, 0),
+        life,
+        maxLife: life,
+        color: new THREE.Color(c.r + Math.random() * 0.2, c.g + Math.random() * 0.2, c.b + Math.random() * 0.2),
+      });
+    }
+  }, []);
+
+  return { explode };
+}
+
 function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const [phase, setPhase] = useState<Phase>('intro');
@@ -65,6 +182,7 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const scoreRef = useRef(0);
   const targetsHitRef = useRef(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+  const { explode } = useOrbExplosion(gameAreaRef);
 
   const spawnOrb = useCallback(() => {
     if (!gameActiveRef.current || !gameAreaRef.current) return;
@@ -102,6 +220,9 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       o.id === orb.id ? { ...o, hit: true, burst: true, burstX: orb.x + orb.size / 2, burstY: orb.y + orb.size / 2 } : o
     ));
 
+    const explosionColor = orb.isTarget ? '#ff6e6c' : '#67e8f9';
+    explode(orb.x + orb.size / 2, orb.y + orb.size / 2, explosionColor, 20);
+
     if (orb.isTarget) {
       scoreRef.current += 10;
       targetsHitRef.current++;
@@ -124,7 +245,7 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setTimeout(() => {
       setOrbs(prev => prev.filter(o => o.id !== orb.id));
     }, 400);
-  }, [onScore]);
+  }, [onScore, explode]);
 
   const startGame = useCallback(() => {
     setPhase('playing');

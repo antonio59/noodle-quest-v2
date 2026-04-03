@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as THREE from 'three';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
@@ -42,6 +43,144 @@ const TIPS = [
 
 const STAR_FEEDBACKS = ["Star collected! ⭐", "Nice! Keep going! 🌟", "Great control! ✨"];
 
+function useThreeTrail(containerRef: React.RefObject<HTMLDivElement | null>) {
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
+  const particlesRef = useRef<{pos: THREE.Vector3, vel: THREE.Vector3, life: number, maxLife: number, color: THREE.Color}[]>([]);
+  const frameRef = useRef<number>(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '5';
+    container.appendChild(canvas);
+    canvasRef.current = canvas;
+
+    const w = container.clientWidth || 300;
+    const h = container.clientHeight || 300;
+    canvas.width = w;
+    canvas.height = h;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
+    renderer.setSize(w, h);
+    renderer.setClearColor(0x000000, 0);
+    rendererRef.current = renderer;
+
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    const camera = new THREE.OrthographicCamera(0, w, 0, h, -10, 10);
+    cameraRef.current = camera;
+
+    const MAX = 600;
+    const positions = new Float32Array(MAX * 3);
+    const colors = new Float32Array(MAX * 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setDrawRange(0, 0);
+
+    const material = new THREE.PointsMaterial({
+      size: 5,
+      vertexColors: true,
+      transparent: true,
+      sizeAttenuation: false,
+    });
+    scene.add(new THREE.Points(geometry, material));
+
+    let lastTime = 0;
+    const animate = (time: number) => {
+      frameRef.current = requestAnimationFrame(animate);
+      const dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+
+      const ps = particlesRef.current;
+      for (let i = ps.length - 1; i >= 0; i--) {
+        ps[i].pos.addScaledVector(ps[i].vel, dt);
+        ps[i].life -= dt;
+        if (ps[i].life <= 0) ps.splice(i, 1);
+      }
+
+      const count = Math.min(ps.length, MAX);
+      const pos = geometry.attributes.position.array as Float32Array;
+      const col = geometry.attributes.color.array as Float32Array;
+      for (let i = 0; i < count; i++) {
+        pos[i * 3] = ps[i].pos.x;
+        pos[i * 3 + 1] = ps[i].pos.y;
+        pos[i * 3 + 2] = 0;
+        const fade = ps[i].life / ps[i].maxLife;
+        col[i * 3] = ps[i].color.r * fade;
+        col[i * 3 + 1] = ps[i].color.g * fade;
+        col[i * 3 + 2] = ps[i].color.b * fade;
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.attributes.color.needsUpdate = true;
+      geometry.setDrawRange(0, count);
+      renderer.render(scene, camera);
+    };
+    frameRef.current = requestAnimationFrame(animate);
+
+    const handleResize = () => {
+      const w2 = container.clientWidth || 300;
+      const h2 = container.clientHeight || 300;
+      canvas.width = w2;
+      canvas.height = h2;
+      renderer.setSize(w2, h2);
+      camera.right = w2;
+      camera.bottom = h2;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      window.removeEventListener('resize', handleResize);
+      renderer.dispose();
+      container.removeChild(canvas);
+    };
+  }, [containerRef]);
+
+  const addTrail = useCallback((x: number, y: number) => {
+    if (particlesRef.current.length > 400) return;
+    const life = 0.3 + Math.random() * 0.2;
+    particlesRef.current.push({
+      pos: new THREE.Vector3(x + (Math.random()-0.5)*4, y + (Math.random()-0.5)*4, 0),
+      vel: new THREE.Vector3((Math.random()-0.5)*10, (Math.random()-0.5)*10, 0),
+      life,
+      maxLife: life,
+      color: new THREE.Color('#c084fc'),
+    });
+  }, []);
+
+  const explosion = useCallback((x: number, y: number, color = '#ff6e6c') => {
+    const c = new THREE.Color(color);
+    for (let i = 0; i < 25; i++) {
+      const angle = (i / 25) * Math.PI * 2 + Math.random() * 0.3;
+      const speed = 50 + Math.random() * 100;
+      const life = 0.5 + Math.random() * 0.5;
+      particlesRef.current.push({
+        pos: new THREE.Vector3(x, y, 0),
+        vel: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed, 0),
+        life,
+        maxLife: life,
+        color: c.clone(),
+      });
+    }
+  }, []);
+
+  return { addTrail, explosion };
+}
+
 function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const [phase, setPhase] = useState<Phase>('intro');
@@ -62,7 +201,10 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const isDraggingRef = useRef(false);
   const animFrameRef = useRef<number>(0);
   const moveTimeRef = useRef(0);
+  const graceRef = useRef(true);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+
+  const { addTrail, explosion } = useThreeTrail(gameAreaRef);
 
   function pointToSegmentDistance(px: number, py: number, a: Point, b: Point): number {
     const l2 = (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
@@ -206,6 +348,8 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     collectedRef.current = 0;
     isDraggingRef.current = false;
     moveTimeRef.current = 0;
+    graceRef.current = true;
+    setTimeout(() => { graceRef.current = false; }, 600);
     setScore(0);
     setCollected(0);
     setFeedback('Drag to move the ball!');
@@ -252,9 +396,11 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         else summary += 'You reached the finish! Go slower to collect more stars.';
         setFeedback('🏁 Finish! Great job!');
       } else if (reason === 'wall') {
+        explosion(ballRef.current.x, ballRef.current.y, '#ff6e6c');
         summary += 'You touched the wall! Go slower and watch the edges of the path.';
         setFeedback('💥 Hit the wall! Go slower next time.');
       } else {
+        explosion(ballRef.current.x, ballRef.current.y, '#fbbf24');
         summary += 'You hit an obstacle! Watch for the moving dangers.';
         setFeedback('💥 Hit an obstacle! Watch out for those!');
       }
@@ -286,7 +432,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       const ball = ballRef.current;
       const distToPath = getDistanceToPath(ball.x, ball.y);
 
-      if (distToPath > config.pathWidth / 2 + 3) {
+      if (!graceRef.current && distToPath > config.pathWidth / 2 + 3) {
         endGame('wall');
         return;
       }
@@ -301,6 +447,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       checkpointsRef.current.forEach(cp => {
         if (!cp.collected && Math.hypot(ball.x - cp.x, ball.y - cp.y) < 22) {
           cp.collected = true;
+          explosion(cp.x, cp.y, '#fbbf24');
           collectedRef.current++;
           setCollected(collectedRef.current);
           scoreRef.current += 50;
@@ -325,7 +472,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };
-  }, [phase, config, draw, onScore, onProgress]);
+  }, [phase, config, draw, onScore, onProgress, explosion]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     isDraggingRef.current = true;
@@ -347,7 +494,8 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       y: Math.max(10, Math.min(canvasRef.current.height - 10, e.clientY - rect.top)),
     };
     setBallPos({ ...ballRef.current });
-  }, []);
+    addTrail(ballRef.current.x, ballRef.current.y);
+  }, [addTrail]);
 
   const handlePointerUp = useCallback(() => {
     isDraggingRef.current = false;
@@ -398,7 +546,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       <div
         ref={gameAreaRef}
         className="flex-1 min-h-[280px] relative overflow-hidden"
-        style={{ background: '#232146', touchAction: 'none' }}
+        style={{ background: '#232146', touchAction: 'none', position: 'relative' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

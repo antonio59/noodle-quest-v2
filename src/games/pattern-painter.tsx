@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as THREE from 'three';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
@@ -285,6 +286,150 @@ function drawScene(
 
 type Phase = 'intro' | 'playing';
 
+function useThreeParticles(containerRef: React.RefObject<HTMLDivElement | null>) {
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
+  const particlesRef = useRef<{ pos: THREE.Vector3; vel: THREE.Vector3; life: number; color: THREE.Color }[]>([]);
+  const frameRef = useRef<number>(0);
+  const meshRef = useRef<THREE.Points | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '10';
+    container.appendChild(canvas);
+    canvasRef.current = canvas;
+
+    const w = container.clientWidth || 300;
+    const h = container.clientHeight || 300;
+    canvas.width = w;
+    canvas.height = h;
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(w, h);
+    renderer.setClearColor(0x000000, 0);
+    rendererRef.current = renderer;
+
+    const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
+    const camera = new THREE.OrthographicCamera(0, w, 0, h, -100, 100);
+    cameraRef.current = camera;
+
+    const MAX = 500;
+    const positions = new Float32Array(MAX * 3);
+    const colors = new Float32Array(MAX * 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.setDrawRange(0, 0);
+
+    const material = new THREE.PointsMaterial({
+      size: 6,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.9,
+      sizeAttenuation: false,
+    });
+    const mesh = new THREE.Points(geometry, material);
+    scene.add(mesh);
+    meshRef.current = mesh;
+
+    let lastTime = 0;
+    const animate = (time: number) => {
+      frameRef.current = requestAnimationFrame(animate);
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+
+      const ps = particlesRef.current;
+      for (let i = ps.length - 1; i >= 0; i--) {
+        ps[i].pos.addScaledVector(ps[i].vel, dt);
+        ps[i].life -= dt;
+        if (ps[i].life <= 0) ps.splice(i, 1);
+      }
+
+      const count = Math.min(ps.length, MAX);
+      const pos = geometry.attributes.position.array as Float32Array;
+      const col = geometry.attributes.color.array as Float32Array;
+      for (let i = 0; i < count; i++) {
+        pos[i * 3] = ps[i].pos.x;
+        pos[i * 3 + 1] = ps[i].pos.y;
+        pos[i * 3 + 2] = 0;
+        col[i * 3] = ps[i].color.r * (ps[i].life / 1.5);
+        col[i * 3 + 1] = ps[i].color.g * (ps[i].life / 1.5);
+        col[i * 3 + 2] = ps[i].color.b * (ps[i].life / 1.5);
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.attributes.color.needsUpdate = true;
+      geometry.setDrawRange(0, count);
+
+      (material as THREE.PointsMaterial).opacity = 0.9;
+      renderer.render(scene, camera);
+    };
+    frameRef.current = requestAnimationFrame(animate);
+
+    const handleResize = () => {
+      const w2 = container.clientWidth || 300;
+      const h2 = container.clientHeight || 300;
+      canvas.width = w2;
+      canvas.height = h2;
+      renderer.setSize(w2, h2);
+      camera.right = w2;
+      camera.bottom = h2;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      window.removeEventListener('resize', handleResize);
+      renderer.dispose();
+      container.removeChild(canvas);
+    };
+  }, [containerRef]);
+
+  const addParticles = useCallback((x: number, y: number, color = '#c084fc') => {
+    const c = new THREE.Color(color);
+    for (let i = 0; i < 3; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 30 + Math.random() * 60;
+      particlesRef.current.push({
+        pos: new THREE.Vector3(x, y, 0),
+        vel: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed, 0),
+        life: 0.6 + Math.random() * 0.4,
+        color: c.clone(),
+      });
+    }
+  }, []);
+
+  const burstParticles = useCallback((x: number, y: number) => {
+    const burstColors = ['#fbbf24', '#4ade80', '#c084fc', '#67e8f9', '#ff6e6c'];
+    for (let i = 0; i < 40; i++) {
+      const angle = (i / 40) * Math.PI * 2;
+      const speed = 60 + Math.random() * 120;
+      const c = new THREE.Color(burstColors[Math.floor(Math.random() * burstColors.length)]);
+      particlesRef.current.push({
+        pos: new THREE.Vector3(x, y, 0),
+        vel: new THREE.Vector3(Math.cos(angle) * speed, Math.sin(angle) * speed, 0),
+        life: 0.8 + Math.random() * 0.7,
+        color: c,
+      });
+    }
+  }, []);
+
+  return { addParticles, burstParticles };
+}
+
 function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const shapes = SHAPES_BY_STAGE[stage] || SHAPES_BY_STAGE[10];
   const [phase, setPhase] = useState<Phase>('intro');
@@ -299,6 +444,7 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
   const containerRef = useRef<HTMLDivElement>(null);
   const pathPointsRef = useRef<Point[]>([]);
   const gameActiveRef = useRef(false);
+  const { addParticles, burstParticles } = useThreeParticles(containerRef);
 
   const resizeAndDraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -318,9 +464,15 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
 
   useEffect(() => {
     if (phase !== 'playing') return;
-    resizeAndDraw();
+    // Wait one frame for layout so getBoundingClientRect returns real dimensions
+    const rafId = requestAnimationFrame(() => {
+      resizeAndDraw();
+    });
     window.addEventListener('resize', resizeAndDraw);
-    return () => window.removeEventListener('resize', resizeAndDraw);
+    return () => {
+      cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', resizeAndDraw);
+    };
   }, [phase, resizeAndDraw]);
 
   useEffect(() => {
@@ -349,9 +501,11 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (!tracing) return;
       e.preventDefault();
-      setDrawnPoints(prev => [...prev, getCanvasPoint(e)]);
+      const point = getCanvasPoint(e);
+      setDrawnPoints(prev => [...prev, point]);
+      addParticles(point.x, point.y, '#c084fc');
     },
-    [tracing, getCanvasPoint],
+    [tracing, getCanvasPoint, addParticles],
   );
 
   const handlePointerUp = useCallback(() => {
@@ -394,6 +548,9 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
       onScore(shapeScore);
       setFeedback(`✨ Great tracing! ${shapeScore}% accuracy!`);
       setFeedbackColor('#4ade80');
+      if (canvasRef.current) {
+        burstParticles(canvasRef.current.width / 2, canvasRef.current.height / 2);
+      }
     } else if (accuracy > 0.5) {
       passed = true;
       const pts = Math.round(shapeScore * 0.7);
@@ -436,7 +593,7 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
         }, 1200);
       }
     }
-  }, [drawnPoints, shapes, currentShape, onScore, onProgress, onMessage, onEnd]);
+  }, [drawnPoints, shapes, currentShape, onScore, onProgress, onMessage, onEnd, burstParticles]);
 
   if (phase === 'intro') {
     return (

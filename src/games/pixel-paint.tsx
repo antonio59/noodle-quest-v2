@@ -97,32 +97,6 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     });
   }, [phase, target, config.size]);
 
-  useEffect(() => {
-    if (phase !== 'playing' || config.time <= 0) return;
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          checkArt();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [phase]);
-
-  const handlePixelClick = useCallback((y: number, x: number) => {
-    if (!gameActiveRef.current) return;
-    setPlayerGrid(prev => {
-      const next = prev.map(r => [...r]);
-      next[y][x] = selectedColor;
-      return next;
-    });
-    setAnimatingPixel(`${y}-${x}`);
-    setTimeout(() => setAnimatingPixel(null), 100);
-  }, [selectedColor]);
-
   const checkArt = useCallback(() => {
     gameActiveRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
@@ -167,6 +141,32 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       return current;
     });
   }, [config.size, target, onScore, onProgress, onMessage, onEnd]);
+
+  useEffect(() => {
+    if (phase !== 'playing' || config.time <= 0) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          checkArt();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [phase, checkArt]);
+
+  const handlePixelClick = useCallback((y: number, x: number) => {
+    if (!gameActiveRef.current) return;
+    setPlayerGrid(prev => {
+      const next = prev.map(r => [...r]);
+      next[y][x] = selectedColor;
+      return next;
+    });
+    setAnimatingPixel(`${y}-${x}`);
+    setTimeout(() => setAnimatingPixel(null), 100);
+  }, [selectedColor]);
 
   if (phase === 'intro') {
     return (
@@ -224,7 +224,7 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
           />
         </div>
         {config.time > 0 && (
-          <span className={`font-bold ${timeLeft <= 10 ? 'text-danger' : 'text-danger'}`}>
+          <span className={`font-bold ${timeLeft <= 10 ? 'text-danger' : 'text-warning'}`}>
             ⏱️ {timeLeft}
           </span>
         )}

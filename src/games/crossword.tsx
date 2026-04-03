@@ -230,7 +230,15 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       Array.from({ length: size }, () => ({ letter: '', userLetter: '' }))
     );
 
-    const words = config.words;
+    const FALLBACK_WORDS: WordDef[] = [
+      { word: 'CAT', clue: 'A furry pet that purrs' },
+      { word: 'DOG', clue: 'A loyal pet that barks' },
+      { word: 'SUN', clue: 'Shines in the sky during day' },
+      { word: 'RUN', clue: 'Move faster than walking' },
+      { word: 'FUN', clue: 'Enjoyable time' },
+    ];
+    const filteredWords = config.words.filter(w => w.word.length <= size);
+    const words = filteredWords.length > 0 ? filteredWords : FALLBACK_WORDS.filter(w => w.word.length <= size);
     const placements: { word: string; clue: string; cells: [number, number][] }[] = [];
 
     const canPlace = (word: string, row: number, col: number, dir: 'across' | 'down'): boolean => {
@@ -263,15 +271,60 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     };
 
     const dirs: ('across' | 'down')[] = ['across', 'down'];
-    for (const w of words) {
+    for (let wi = 0; wi < words.length; wi++) {
+      const w = words[wi];
       let placed = false;
-      for (let attempt = 0; attempt < 300 && !placed; attempt++) {
-        const dir = dirs[Math.floor(Math.random() * 2)];
-        const row = Math.floor(Math.random() * size);
-        const col = Math.floor(Math.random() * size);
-        if (canPlace(w.word, row, col, dir)) {
-          placeWord(w.word, w.clue, row, col, dir);
+
+      // First word: place in center going across
+      if (wi === 0) {
+        const row = Math.floor(size / 2);
+        const col = Math.floor((size - w.word.length) / 2);
+        if (canPlace(w.word, row, col, 'across')) {
+          placeWord(w.word, w.clue, row, col, 'across');
           placed = true;
+        }
+      }
+
+      // Subsequent words: try to intersect with already-placed letters
+      if (!placed && placements.length > 0) {
+        const oppositeDir = (d: 'across' | 'down'): 'across' | 'down' => d === 'across' ? 'down' : 'across';
+        outer: for (const existingPlacement of placements) {
+          for (let ei = 0; ei < existingPlacement.cells.length; ei++) {
+            const [er, ec] = existingPlacement.cells[ei];
+            const existingLetter = existingPlacement.word[ei];
+            // Try to intersect: find positions in the new word that match this letter
+            for (let wi2 = 0; wi2 < w.word.length; wi2++) {
+              if (w.word[wi2] !== existingLetter) continue;
+              const dir = oppositeDir(existingPlacement.cells.length > 1 &&
+                existingPlacement.cells[0][0] === existingPlacement.cells[1][0] ? 'across' : 'down');
+              let row: number, col: number;
+              if (dir === 'across') {
+                row = er;
+                col = ec - wi2;
+              } else {
+                row = er - wi2;
+                col = ec;
+              }
+              if (row >= 0 && col >= 0 && canPlace(w.word, row, col, dir)) {
+                placeWord(w.word, w.clue, row, col, dir);
+                placed = true;
+                break outer;
+              }
+            }
+          }
+        }
+      }
+
+      // Fall back to random placement if intersection failed
+      if (!placed) {
+        for (let attempt = 0; attempt < 300 && !placed; attempt++) {
+          const dir = dirs[Math.floor(Math.random() * 2)];
+          const row = Math.floor(Math.random() * size);
+          const col = Math.floor(Math.random() * size);
+          if (canPlace(w.word, row, col, dir)) {
+            placeWord(w.word, w.clue, row, col, dir);
+            placed = true;
+          }
         }
       }
     }

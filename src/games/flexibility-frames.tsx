@@ -95,6 +95,7 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const itemIdRef = useRef(0);
+  const itemTimeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const scoreRef = useRef(0);
   const correctRef = useRef(0);
   const totalRef = useRef(0);
@@ -123,9 +124,11 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
     };
 
     setItems(prev => [...prev, item]);
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      itemTimeoutsRef.current.delete(timeoutId);
       setItems(prev => prev.filter(i => i.id !== item.id));
     }, 4500);
+    itemTimeoutsRef.current.add(timeoutId);
   }, []);
 
   const handleItemClick = useCallback(
@@ -239,6 +242,8 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
       clearInterval(spawnInterval);
       clearInterval(ruleInterval);
       clearTimeout(gameTimeout);
+      itemTimeoutsRef.current.forEach(id => clearTimeout(id));
+      itemTimeoutsRef.current.clear();
     };
   }, [phase, config, spawnItem, changeRule, onProgress, onEnd]);
 
