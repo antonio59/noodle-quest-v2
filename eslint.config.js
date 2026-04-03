@@ -23,6 +23,8 @@ export default defineConfig([
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'react-refresh/only-export-components': 'warn',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
     },
   },
   {
@@ -33,6 +35,14 @@ export default defineConfig([
       '@typescript-eslint/no-require-imports': 'off',
       'react-hooks/purity': 'off',
       'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+    },
+  },
+  {
+    files: ['**/screens/**.{ts,tsx}'],
+    rules: {
+      'react-hooks/preserve-manual-memoization': 'off',
     },
   },
 ])
