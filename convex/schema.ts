@@ -113,4 +113,28 @@ export default defineSchema({
     .index("by_player1", ["player1Id", "status"])
     .index("by_player2", ["player2Id", "status"])
     .index("by_status", ["status"]),
+
+  // Error reports and bot integration
+  reports: defineTable({
+    errorId: v.string(), // unique error identifier
+    gameId: v.optional(v.string()),
+    playerId: v.optional(v.id("players")),
+    playerName: v.optional(v.string()),
+    errorType: v.string(), // 'runtime' | 'logic' | 'ui' | 'performance'
+    severity: v.string(), // 'low' | 'medium' | 'high' | 'critical'
+    message: v.string(),
+    stackTrace: v.optional(v.string()),
+    context: v.optional(v.any()), // game state, user action, etc.
+    status: v.string(), // 'open' | 'investigating' | 'resolved' | 'dismissed'
+    linearIssueId: v.optional(v.string()), // Linear issue ID
+    linearIssueUrl: v.optional(v.string()),
+    resolvedBy: v.optional(v.string()), // bot or user who resolved
+    resolvedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_errorId", ["errorId"])
+    .index("by_game", ["gameId", "status"])
+    .index("by_created", ["createdAt"]),
 });
