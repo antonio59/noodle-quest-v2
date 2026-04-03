@@ -1,0 +1,66 @@
+# Changelog
+
+All notable changes to Noodle Quest will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Added
+- GIF search with GIPHY API (kid-safe `rating=g` filter)
+- Sticker picker (40 kid-friendly emojis)
+- Emoji picker (30 popular emojis)
+- Board games screen with locked/unlocked states
+- Breathe tab with 4 breathing exercises (Box Breathing, 4-7-8 Relax, Calm Down, Focus Flow)
+- Profile stats from Convex (stars, games played, streak, max stage)
+- 11 achievement badges in profile (First Steps, Star Collector, Rising Star, Superstar, Legend, GOAT, Perfectionist, Gamer, Addict, Completionist, Marathon)
+- `getPlayerStats` Convex query for player statistics
+- Random Stage button on home screen (surprise me!)
+- Daily challenge card on home screen
+
+### Changed
+- Full rebuild from vanilla JS to Vite + React + TypeScript + Tailwind
+- 22 brain games migrated to React components
+- Convex backend updated with new schema (favorites, playlists tables)
+- Leaderboard podium order (gold → silver → bronze, left to right)
+- Feed fetches 100 posts (up from 50)
+- Profile avatar picker prevents selecting avatars in use by other players
+- NavBar expanded to 8 tabs (Home, Games, Board, Breathe, Duel, Ranks, Chat, Profile)
+
+### Fixed
+- Audio tracks now play (await `AudioContext.resume()`)
+- Leaderboard sort order (higher stars rank higher)
+- Build errors from `useCallback` React Compiler memoization
+- Lint errors (unused imports, impure functions, async effects)
+- `.env` and `convex/_generated` removed from git tracking
+
+### Removed
+- Vite template boilerplate
+- Old vanilla JS game files (migrated to React)
+
+---
+
+## [v1.0.0] — 2025-12-15
+
+### Added
+- 19 brain training games (focus, memory, motor, flexibility, social, sequence)
+- 5 board games (Snakes & Ladders, Ludo, Checkers, Dominoes, Chess)
+- Convex backend (auth, scores, progress, challenges, feed, board games)
+- Name + PIN authentication
+- Avatar selection (15 emojis)
+- Leaderboard with podium display
+- Challenges system (send/receive/respond)
+- Chat feed with @mentions
+- Emoji picker, GIF picker, sticker picker
+- Achievement badges (12 total)
+- Category filters on home screen
+- Stage progression (10 stages per game)
+- Star ratings (0-3 per stage)
+- Daily challenges
+- Feed with activity and chat tabs
+
+### Tech Stack
+- Vanilla JS SPA (no framework)
+- Convex backend (real-time database)
+- Tailwind CSS
+- Netlify hosting
