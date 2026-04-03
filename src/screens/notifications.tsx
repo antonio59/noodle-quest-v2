@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/purity */
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Bell, Check } from 'lucide-react';

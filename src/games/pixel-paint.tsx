@@ -100,7 +100,6 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       });
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   const handlePixelClick = useCallback((y: number, x: number) => {

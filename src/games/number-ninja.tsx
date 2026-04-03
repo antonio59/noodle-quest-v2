@@ -82,7 +82,6 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     if (phase !== 'intro' && phase !== 'done') {
       showNextSequence();
     }
-  }, [round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkAnswer = useCallback(() => {
     if (phase === 'done') return;

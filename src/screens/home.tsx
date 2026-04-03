@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/purity */
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';

@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/purity, react-hooks/rules-of-hooks, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
