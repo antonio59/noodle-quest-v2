@@ -101,6 +101,9 @@ function OddOneOutGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const usedRef = useRef<Set<number>>(new Set());
 
   const generatePuzzle = useCallback(() => {
+    if (usedRef.current.size >= PUZZLE_BANK.length) {
+      usedRef.current = new Set();
+    }
     let idx: number;
     do {
       idx = Math.floor(Math.random() * PUZZLE_BANK.length);

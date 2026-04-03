@@ -51,6 +51,7 @@ export const getPlayerStats = query({
     let maxStage = 0;
     let threeStars = 0;
     const uniqueGames = new Set<string>();
+    const gameCounts = new Map<string, number>();
 
     for (const p of progress) {
       totalStars += p.starsEarned;
@@ -58,8 +59,14 @@ export const getPlayerStats = query({
       if (p.stage > maxStage) maxStage = p.stage;
       if (p.starsEarned >= 3) threeStars++;
       uniqueGames.add(p.gameId);
+      gameCounts.set(p.gameId, (gameCounts.get(p.gameId) || 0) + p.timesPlayed);
     }
 
-    return { totalStars, gamesPlayed, maxStage, threeStars, uniqueGames: uniqueGames.size, playedGameIds: [...uniqueGames] };
+    const mostPlayed = Array.from(gameCounts.entries())
+      .map(([id, count]) => ({ id, name: id, emoji: "🎮", count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+
+    return { totalStars, gamesPlayed, maxStage, threeStars, uniqueGames: uniqueGames.size, playedGameIds: [...uniqueGames], mostPlayed };
   },
 });

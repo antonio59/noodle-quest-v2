@@ -98,6 +98,9 @@ function TriviaQuestGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const usedRef = useRef<Set<number>>(new Set());
 
   const loadQuestion = useCallback(() => {
+    if (usedRef.current.size >= QUESTION_BANK.length) {
+      usedRef.current = new Set();
+    }
     let idx: number;
     do {
       idx = Math.floor(Math.random() * QUESTION_BANK.length);

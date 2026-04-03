@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
-import { Star, Zap, Shuffle, Play, Heart } from 'lucide-react';
+import { Star, Zap, Shuffle, Play, Heart, TrendingUp } from 'lucide-react';
 
 interface HomeProps {
   onPlay: (game: GameDefinition, id: string, stage: number) => void;
@@ -20,7 +20,7 @@ export function Home({ onPlay }: HomeProps) {
       return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
     } catch { return new Set(); }
   });
-  const [stats, setStats] = useState({ stars: 0, streak: 0, gamesPlayed: 0 });
+  const [stats, setStats] = useState({ stars: 0, streak: 0, gamesPlayed: 0, mostPlayed: [] as { id: string; name: string; emoji: string; count: number }[] });
 
   const fetchStats = useCallback(async () => {
     if (!player) return;
@@ -41,6 +41,7 @@ export function Home({ onPlay }: HomeProps) {
           stars: data.value.totalStars || 0,
           streak: gp > 0 ? Math.min(gp, 7) : 0,
           gamesPlayed: gp,
+          mostPlayed: (data.value.mostPlayed || []).slice(0, 6),
         });
       }
     } catch { /* offline */ }
@@ -121,6 +122,32 @@ export function Home({ onPlay }: HomeProps) {
             </div>
           ))}
         </div>
+
+        {/* Most Played */}
+        {stats.mostPlayed.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold text-text-dim mb-3 flex items-center gap-2">
+              <TrendingUp size={14} className="text-success" /> Most Played
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {stats.mostPlayed.map(g => {
+                const fullGame = games.find(gg => gg.id === g.id);
+                if (!fullGame) return null;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => onPlay(fullGame, g.id, 1)}
+                    className="bg-card hover:bg-card-hover rounded-xl p-3 text-center transition-all active:scale-95"
+                  >
+                    <div className="text-2xl mb-1">{g.emoji}</div>
+                    <div className="font-semibold text-xs truncate">{g.name}</div>
+                    <div className="text-text-muted text-[10px]">{g.count} plays</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* My Favourite Games */}
         {favGames.length > 0 && (

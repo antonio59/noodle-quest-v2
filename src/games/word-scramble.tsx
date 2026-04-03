@@ -93,12 +93,10 @@ const TIPS = [
 ];
 
 function scrambleWord(word: string, style: number): string {
-  // eslint-disable-next-line prefer-const
-  let scrambled = word;
-  const attempts = style * 20;
+  const attempts = style * 50;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
-    const chars = scrambled.split('');
+    const chars = word.split('');
     for (let i = chars.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [chars[i], chars[j]] = [chars[j], chars[i]];
@@ -107,8 +105,14 @@ function scrambleWord(word: string, style: number): string {
     if (result !== word) return result;
   }
 
-  // Fallback: reverse the word
-  return word.split('').reverse().join('');
+  // Fallback: if palindrome, swap first two chars; otherwise reverse
+  const reversed = word.split('').reverse().join('');
+  if (reversed === word && word.length >= 2) {
+    const chars = word.split('');
+    [chars[0], chars[1]] = [chars[1], chars[0]];
+    return chars.join('');
+  }
+  return reversed;
 }
 
 function WordScrambleGame({ stage, onScore, onProgress, onEnd }: GameProps) {
@@ -238,6 +242,7 @@ function WordScrambleGame({ stage, onScore, onProgress, onEnd }: GameProps) {
             : `You unscrambled ${correctRef.current}/${config.rounds} words. Practice makes perfect!`;
         onEnd({ score: scoreRef.current, stars, summary });
       } else {
+        setInputValue('');
         loadWord();
         setPhase('playing');
         setFeedback('');

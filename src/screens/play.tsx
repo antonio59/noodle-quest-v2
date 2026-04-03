@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { ArrowLeft, Star, ChevronLeft, ChevronRight, Shuffle } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import type { GameDefinition, GameResult } from '@/types';
+import { ReportIssue } from '@/components/ReportIssue';
 
 interface PlayGameProps {
   game: GameDefinition;
@@ -26,6 +27,7 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
   const [ended, setEnded] = useState<GameResult | null>(null);
   const savedRef = useRef(false);
   const gameKeyRef = useRef(0);
+  const [showReport, setShowReport] = useState(false);
 
   // Reset when stage changes
   useEffect(() => {
@@ -249,7 +251,15 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
           <ArrowLeft size={20} />
         </button>
         <StageSelector />
-        <div className="text-accent font-bold min-w-[60px] text-right pr-2">{score}</div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowReport(true)}
+            className="text-xs bg-card/50 hover:bg-card px-2 py-1 rounded-lg transition-colors"
+          >
+            🐛 Report
+          </button>
+          <div className="text-accent font-bold min-w-[36px] text-right">{score}</div>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -276,6 +286,15 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
           onEnd={handleEnd}
         />
       </div>
+
+      {showReport && (
+        <ReportIssue
+          gameId={gameId}
+          gameName={game.name}
+          stage={currentStage}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   );
 }
