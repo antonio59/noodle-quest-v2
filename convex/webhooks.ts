@@ -1,0 +1,191 @@
+import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
+import { internal } from "./_generated/api";
+
+const http = httpRouter();
+
+// Webhook endpoint for receiving error reports from OpenClaw bot or other sources
+http.route({
+  path: "/webhook/report",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      
+      // Validate required fields
+      if (!body.errorId || !body.message) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields: errorId, message" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      // Create the report
+      const reportId = await ctx.runMutation(internal.reports.createReport, {
+        errorId: body.errorId,
+        gameId: body.gameId,
+        playerId: body.playerId,
+        playerName: body.playerName,
+        errorType: body.errorType || "runtime",
+        severity: body.severity || "medium",
+        message: body.message,
+        stackTrace: body.stackTrace,
+        context: body.context,
+      });
+
+      // Create Linear issue if enabled
+      const linearApiKey = process.env.LINEAR_API_KEY;
+      if (linearApiKey) {
+        try {
+          const linearIssue = await createLinearIssue(body, linearApiKey);
+          if (linearIssue) {
+            await ctx.runMutation(internal.reports.updateReportWithLinear, {
+              errorId: body.errorId,
+              linearIssueId: linearIssue.id,
+              linearIssueUrl: linearIssue.url,
+            });
+          }
+        } catch (linearError) {
+          console.error("Failed to create Linear issue:", linearError);
+          // Don't fail the webhook if Linear fails
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, reportId }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Webhook error:", error);
+      return new Response(
+        JSON.stringify({ error: "Internal server error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+// Webhook for Linear status updates (optional - if you want Linear to notify back)
+http.route({
+  path: "/webhook/linear",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      
+      // Verify webhook signature if configured
+      const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const signature = request.headers.get("linear-signature");
+        // Add signature verification here if needed
+      }
+
+      // Handle Linear issue status changes
+      if (body.action === "update" && body.data?.state?.name === "Done") {
+        const issueId = body.data?.id;
+        if (issueId) {
+          // Find the report by Linear issue ID and mark as resolved
+          // This would require a reverse lookup - optional enhancement
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    } catch (error) {
+      console.error("Linear webhook error:", error);
+      return new Response(
+        JSON.stringify({ error: "Internal server error" }),
+        { status: 500, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }),
+});
+
+// Helper function to create Linear issues
+async function createLinearIssue(
+  report: any,
+  apiKey: string
+): Promise<{ id: string; url: string } | null> {
+  const linearTeamId = process.env.LINEAR_TEAM_ID;
+  if (!linearTeamId) {
+    console.warn("LINEAR_TEAM_ID not configured, skipping Linear issue creation");
+    return null;
+  }
+
+  const severityLabels: Record<string, string> = {
+    low: "Minor",
+    medium: "Medium",
+    high: "High",
+    critical: "Urgent",
+  };
+
+  const priority = report.severity === "critical" ? 1 : report.severity === "high" ? 2 : 3;
+
+  const mutation = `
+    mutation IssueCreate($input: IssueCreateInput!) {
+      issueCreate(input: $input) {
+        success
+        issue {
+          id
+          url
+          number
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    input: {
+      teamId: linearTeamId,
+      title: `[${report.gameId || "Unknown"}] ${report.message.substring(0, 80)}`,
+      description: buildLinearDescription(report),
+      priority,
+      labelIds: [], // Could map severity to Linear labels
+    },
+  };
+
+  const response = await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: apiKey,
+    },
+    body: JSON.stringify({ query: mutation, variables }),
+  });
+
+  const data = await response.json();
+  
+  if (data.data?.issueCreate?.success) {
+    return {
+      id: data.data.issueCreate.issue.id,
+      url: data.data.issueCreate.issue.url,
+    };
+  }
+
+  console.error("Linear API error:", data.errors);
+  return null;
+}
+
+function buildLinearDescription(report: any): string {
+  let description = `## Error Report\n\n`;
+  description += `**Error ID:** ${report.errorId}\n`;
+  description += `**Type:** ${report.errorType}\n`;
+  description += `**Severity:** ${report.severity}\n`;
+  description += `**Game:** ${report.gameId || "N/A"}\n`;
+  description += `**Player:** ${report.playerName || "Anonymous"}\n\n`;
+  description += `### Message\n${report.message}\n\n`;
+  
+  if (report.stackTrace) {
+    description += `### Stack Trace\n\`\`\`\n${report.stackTrace}\n\`\`\`\n\n`;
+  }
+  
+  if (report.context) {
+    description += `### Context\n\`\`\`json\n${JSON.stringify(report.context, null, 2)}\n\`\`\``;
+  }
+
+  return description;
+}
+
+export default http;
