@@ -11,7 +11,10 @@ interface HomeProps {
 export function Home({ onPlay }: HomeProps) {
   const { player } = useAuth();
   const games = getAllGames();
-  const recentGames = games.slice(0, 6);
+  const recentGames = useState(() => {
+    const shuffled = [...games].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 6);
+  })[0];
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try {
       return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
