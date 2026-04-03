@@ -163,6 +163,16 @@ function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
       const next = currentItemRef.current + 1;
       currentItemRef.current = next;
       setCurrentItem(next);
+      if (next >= items.length) {
+        const finalScore = totalScoreRef.current;
+        const stars = finalScore >= 200 ? 3 : finalScore >= 100 ? 2 : 1;
+        let summary = `You completed all ${items.length} experiments! `;
+        if (stars === 3) summary += 'Master squish scientist! 🏆';
+        else if (stars === 2) summary += 'Great tolerance! Hold longer for more points!';
+        else summary += 'Keep practicing — hold each texture longer for more points!';
+        onEnd({ score: finalScore, stars, summary });
+        setPhase('done');
+      }
     }, 1500);
   }, [items.length, onScore, onProgress, onMessage]);
 

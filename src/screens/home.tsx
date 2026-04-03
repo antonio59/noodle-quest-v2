@@ -1,8 +1,9 @@
 /* eslint-disable react-hooks/purity */
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
-import { Star, Zap, Shuffle, Play } from 'lucide-react';
+import { Star, Zap, Shuffle, Play, Heart } from 'lucide-react';
 
 interface HomeProps {
   onPlay: (game: GameDefinition, id: string, stage: number) => void;
@@ -12,6 +13,13 @@ export function Home({ onPlay }: HomeProps) {
   const { player } = useAuth();
   const games = getAllGames();
   const recentGames = games.slice(0, 6);
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
+    } catch { return new Set(); }
+  });
+
+  const favGames = games.filter(g => favorites.has(g.id));
 
   const handleRandomPlay = () => {
     if (games.length === 0) return;
@@ -80,6 +88,27 @@ export function Home({ onPlay }: HomeProps) {
             </div>
           ))}
         </div>
+
+        {/* My Favourite Games */}
+        {favGames.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold text-text-dim mb-3 flex items-center gap-2">
+              <Heart size={14} className="text-danger" fill="currentColor" /> My Favourites
+            </h2>
+            <div className="grid grid-cols-3 gap-2">
+              {favGames.map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => onPlay(g, g.id, 1)}
+                  className="bg-card hover:bg-card-hover rounded-xl p-3 text-center transition-all active:scale-95 relative"
+                >
+                  <div className="text-2xl mb-1">{g.emoji}</div>
+                  <div className="font-semibold text-xs truncate">{g.name}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Play */}
         <h2 className="text-sm font-bold text-text-dim mb-3">Quick Play</h2>

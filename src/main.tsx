@@ -28,6 +28,10 @@ import '@/games/feelings-faces';
 import '@/games/story-builder';
 import '@/games/routine-roadmap';
 import '@/games/just-right';
+import '@/games/sudoku';
+import '@/games/tetris-drop';
+import '@/games/word-search';
+import '@/games/boggle-rush';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

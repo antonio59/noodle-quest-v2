@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- 4 new cognitive games: Sudoku (4x4→9x9), Tetris Drop, Word Search, Boggle Rush
+- My Favourite Games section on Home screen (star games from any tab)
+- Notifications system with @mention alerts and badge achievement posts
+- Reply feature in chat with @mention autocomplete
+- 24 achievement badges (up from 11) with activity feed posts
+- Board Games and Breathe tabs inside Games screen with benefit descriptions
+- Board games unlock progress with shortcuts to remaining games
+- Combined emoji picker (60 emojis) + GIF search (kid-safe rating=g)
+
+### Fixed
+- Squish Lab stage 8+ blank screen (game now ends properly)
+- Lint errors resolved before every deploy
+- Duplicate emoji/sticker pickers merged into one
+
+### Changed
 - GIF search with GIPHY API (kid-safe `rating=g` filter)
 - Sticker picker (40 kid-friendly emojis)
 - Emoji picker (30 popular emojis)
