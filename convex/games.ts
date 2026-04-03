@@ -41,3 +41,25 @@ export const getLeaderboard = query({
     return Array.from(playerMap.entries()).map(([id, p]) => ({ playerId: id, playerName: p.name, avatar: p.avatar, totalStars: p.totalStars, totalScore: p.totalScore, gamesPlayed: p.games.size })).sort((a, b) => b.totalStars - a.totalStars).slice(0, 50);
   },
 });
+
+export const getPlayerStats = query({
+  args: { playerId: v.id("players") },
+  handler: async (ctx, args) => {
+    const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
+    let totalStars = 0;
+    let gamesPlayed = 0;
+    let maxStage = 0;
+    let threeStars = 0;
+    const uniqueGames = new Set<string>();
+
+    for (const p of progress) {
+      totalStars += p.starsEarned;
+      gamesPlayed += p.timesPlayed;
+      if (p.stage > maxStage) maxStage = p.stage;
+      if (p.starsEarned >= 3) threeStars++;
+      uniqueGames.add(p.gameId);
+    }
+
+    return { totalStars, gamesPlayed, maxStage, threeStars, uniqueGames: uniqueGames.size };
+  },
+});

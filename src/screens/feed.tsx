@@ -72,10 +72,10 @@ export function Feed() {
       const res = await fetch(url);
       const data = await res.json();
       if (data.data) {
-        setGifResults(data.data.map((g: Record<string, Record<string, string>>) => ({
-          id: g.id,
-          url: g.images.fixed_height.url,
-          title: g.title || '',
+        setGifResults(data.data.map((g: Record<string, unknown>) => ({
+          id: g.id as string,
+          url: ((g.images as Record<string, unknown>)?.fixed_height as Record<string, string>)?.url || '',
+          title: (g.title as string) || '',
         })));
       }
     } catch { /* offline */ }

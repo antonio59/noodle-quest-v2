@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
-import { LogOut, Star, Gamepad2, Zap } from 'lucide-react';
+import { LogOut, Star, Gamepad2, Zap, Trophy, Medal } from 'lucide-react';
 
 const ALL_AVATARS = [
   '🦊','🐱','🐶','🦁','🐼','🐨','🦄','🐸','🐙','🦋',
@@ -10,14 +10,108 @@ const ALL_AVATARS = [
   '🦕','🐊','🐅','🐆','🦍','🦧','🐘','🦛','🦏','🐪',
 ];
 
+const BADGES = [
+  { id: 'first_game',   name: 'First Steps',     emoji: '👣', desc: 'Play your first game' },
+  { id: 'first_star',   name: 'Star Collector',  emoji: '⭐',  desc: 'Earn your first star' },
+  { id: 'star_10',      name: 'Rising Star',     emoji: '🌟', desc: 'Earn 10 stars' },
+  { id: 'star_30',      name: 'Superstar',       emoji: '✨',    desc: 'Earn 30 stars' },
+  { id: 'star_60',      name: 'Legend',          emoji: '👑', desc: 'Earn 60 stars' },
+  { id: 'star_100',     name: 'GOAT',            emoji: '🏆', desc: 'Earn 100 stars' },
+  { id: 'perfect',      name: 'Perfectionist',   emoji: '🎯', desc: 'Get 3 stars on any game' },
+  { id: 'games_5',      name: 'Gamer',           emoji: '🎮', desc: 'Play 5 different games' },
+  { id: 'games_10',     name: 'Addict',          emoji: '🔥', desc: 'Play 10 different games' },
+  { id: 'games_all',    name: 'Completionist',   emoji: '🎉', desc: 'Play all games' },
+  { id: 'stage_10',     name: 'Marathon',        emoji: '🏃', desc: 'Reach stage 10 in any game' },
+];
+
+interface PlayerStats {
+  totalStars: number;
+  gamesPlayed: number;
+  streak: number;
+  maxStage: number;
+  threeStars: number;
+}
+
 export function Profile() {
   const { player, logout, updateAvatar } = useAuth();
   const games = getAllGames();
   const [takenAvatars, setTakenAvatars] = useState<Set<string>>(new Set());
-  const [stats, _setStats] = useState({ stars: 0, streak: 0 });
+  const [stats, setStats] = useState<PlayerStats>({ totalStars: 0, gamesPlayed: 0, streak: 0, maxStage: 0, threeStars: 0 });
+  const [earnedBadges, setEarnedBadges] = useState<Set<string>>(new Set());
+
+  // Fetch stats from Convex
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!player) return;
+      try {
+        // Fetch scores
+        const scoresRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+          body: JSON.stringify({
+            path: 'games:getPlayerStats',
+            format: 'convex_encoded_json',
+            args: [{ playerId: player.playerId }],
+          }),
+        });
+        const scoresData = await scoresRes.json();
+
+        // Fetch leaderboard for streak (games played)
+        const lbRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+          body: JSON.stringify({
+            path: 'games:getLeaderboard',
+            format: 'convex_encoded_json',
+            args: [{}],
+          }),
+        });
+        const lbData = await lbRes.json();
+
+        let totalStars = 0;
+        let gamesPlayed = 0;
+        let maxStage = 0;
+        let threeStars = 0;
+
+        if (scoresData.value) {
+          totalStars = scoresData.value.totalStars || 0;
+          gamesPlayed = scoresData.value.gamesPlayed || 0;
+          maxStage = scoresData.value.maxStage || 0;
+          threeStars = scoresData.value.threeStars || 0;
+        }
+
+        // If player not in leaderboard yet, use local data
+        if (lbData.value) {
+          const me = lbData.value.find((p: Record<string, unknown>) => p.playerName === player.name);
+          if (me) {
+            totalStars = me.totalStars as number || totalStars;
+            gamesPlayed = me.gamesPlayed as number || gamesPlayed;
+          }
+        }
+
+        const streak = gamesPlayed > 0 ? Math.min(gamesPlayed, 7) : 0;
+        setStats({ totalStars, gamesPlayed, streak, maxStage, threeStars });
+
+        // Calculate earned badges
+        const earned = new Set<string>();
+        if (gamesPlayed >= 1) earned.add('first_game');
+        if (totalStars >= 1) earned.add('first_star');
+        if (totalStars >= 10) earned.add('star_10');
+        if (totalStars >= 30) earned.add('star_30');
+        if (totalStars >= 60) earned.add('star_60');
+        if (totalStars >= 100) earned.add('star_100');
+        if (threeStars >= 1) earned.add('perfect');
+        if (gamesPlayed >= 5) earned.add('games_5');
+        if (gamesPlayed >= 10) earned.add('games_10');
+        if (gamesPlayed >= games.length) earned.add('games_all');
+        if (maxStage >= 10) earned.add('stage_10');
+        setEarnedBadges(earned);
+      } catch { /* offline */ }
+    };
+    fetchStats();
+  }, [player, games.length]);
 
   useEffect(() => {
-    // Fetch other players' avatars to block duplicates
     const fetchTaken = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
@@ -51,22 +145,19 @@ export function Profile() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-card rounded-xl p-3 text-center">
-            <Star className="mx-auto text-warning mb-1" size={18} />
-            <div className="text-xl font-bold">{stats.stars}</div>
-            <div className="text-text-muted text-[10px]">Stars</div>
-          </div>
-          <div className="bg-card rounded-xl p-3 text-center">
-            <Zap className="mx-auto text-success mb-1" size={18} />
-            <div className="text-xl font-bold">{stats.streak}</div>
-            <div className="text-text-muted text-[10px]">Streak</div>
-          </div>
-          <div className="bg-card rounded-xl p-3 text-center">
-            <Gamepad2 className="mx-auto text-accent mb-1" size={18} />
-            <div className="text-xl font-bold">{games.length}</div>
-            <div className="text-text-muted text-[10px]">Games</div>
-          </div>
+        <div className="grid grid-cols-4 gap-2 mb-6">
+          {[
+            { icon: Star, label: 'Stars', value: stats.totalStars, color: 'text-warning' },
+            { icon: Zap, label: 'Streak', value: stats.streak, color: 'text-success' },
+            { icon: Gamepad2, label: 'Games', value: stats.gamesPlayed, color: 'text-accent' },
+            { icon: Trophy, label: 'Max Stage', value: stats.maxStage, color: 'text-primary' },
+          ].map(s => (
+            <div key={s.label} className="bg-card rounded-xl p-3 text-center">
+              <s.icon className={`mx-auto mb-1 ${s.color}`} size={18} />
+              <div className="text-xl font-bold">{s.value}</div>
+              <div className="text-text-muted text-[10px]">{s.label}</div>
+            </div>
+          ))}
         </div>
 
         {/* Avatar picker */}
@@ -93,6 +184,30 @@ export function Profile() {
                 >
                   {a}
                 </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Achievements */}
+        <div className="bg-card rounded-xl p-4 mb-6">
+          <h3 className="text-sm font-bold text-text-dim mb-1 flex items-center gap-2">
+            <Medal size={16} className="text-warning" /> Achievements ({earnedBadges.size}/{BADGES.length})
+          </h3>
+          <div className="grid grid-cols-4 gap-2">
+            {BADGES.map(badge => {
+              const isEarned = earnedBadges.has(badge.id);
+              return (
+                <div
+                  key={badge.id}
+                  className={`rounded-xl p-2 text-center transition-opacity ${
+                    isEarned ? 'bg-accent-soft/50 ring-1 ring-accent/20' : 'opacity-30'
+                  }`}
+                  title={badge.desc}
+                >
+                  <div className="text-xl mb-0.5">{isEarned ? badge.emoji : '🔒'}</div>
+                  <div className="text-[10px] font-semibold text-text-dim truncate">{badge.name}</div>
+                </div>
               );
             })}
           </div>
