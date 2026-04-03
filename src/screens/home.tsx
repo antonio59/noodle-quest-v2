@@ -144,7 +144,7 @@ export function Home({ onPlay }: HomeProps) {
         )}
 
         {/* Quick Play */}
-        <h2 className="text-sm font-bold text-text-dim mb-3">Quick Play</h2>
+        <h2 className="text-sm font-bold text-text-dim mb-3">Discover Games</h2>
         <div className="grid grid-cols-3 gap-2 mb-6">
           {recentGames.map(g => (
             <button

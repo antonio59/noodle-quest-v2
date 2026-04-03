@@ -120,6 +120,7 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   const patternTimesRef = useRef<number[]>([]);
   const tapTimesRef = useRef<number[]>([]);
   const beatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scoreRef = useRef(0);
 
   const getAudioCtx = useCallback(() => {
     if (!audioCtxRef.current) {
@@ -134,9 +135,11 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     setStatusText('🔊 Listen to the rhythm...');
     setStatusColor('#67e8f9');
     setFeedback('');
-        setBeatDots(Array(config.beats).fill('off') as Array<'off' | 'on' | 'tap'>);
+    // Reset tap times for the new round
+    tapTimesRef.current = [];
+    setBeatDots(Array(config.beats).fill('off') as Array<'off' | 'on' | 'tap'>);
 
-        const beatTimes: number[] = [];
+    const beatTimes: number[] = [];
     let beatCount = 0;
 
     beatTimerRef.current = setInterval(() => {

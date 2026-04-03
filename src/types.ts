@@ -45,6 +45,7 @@ export interface Track {
   bpm?: number;
   duration?: number;
   description: string;
+  bestFor: string;
 }
 
 export interface Playlist {

@@ -8,6 +8,7 @@ export const TRACKS: Track[] = [
     type: 'lofi',
     bpm: 75,
     description: 'Jazzy chords, vinyl crackle, slow beats',
+    bestFor: 'Reading, drawing, or winding down after school',
   },
   {
     id: 'lofi-study',
@@ -16,6 +17,7 @@ export const TRACKS: Track[] = [
     type: 'lofi',
     bpm: 85,
     description: 'Uptempo lo-fi for focused study sessions',
+    bestFor: 'Homework, revision, or brain games that need concentration',
   },
   {
     id: 'focus-deep',
@@ -23,6 +25,7 @@ export const TRACKS: Track[] = [
     emoji: '🧠',
     type: 'focus',
     description: 'Evolving ambient pads for deep concentration',
+    bestFor: 'Long study sessions or tricky puzzles — blocks out distractions',
   },
   {
     id: 'focus-flow',
@@ -30,6 +33,7 @@ export const TRACKS: Track[] = [
     emoji: '🌊',
     type: 'focus',
     description: 'Gentle tones to maintain flow state',
+    bestFor: 'Creative work, writing, or getting "in the zone" for games',
   },
   {
     id: 'nature-rain',
@@ -37,6 +41,7 @@ export const TRACKS: Track[] = [
     emoji: '🌧️',
     type: 'nature',
     description: 'Soft filtered noise like distant rainfall',
+    bestFor: 'Falling asleep, calming anxiety, or relaxing after a busy day',
   },
   {
     id: 'nature-wind',
@@ -44,6 +49,7 @@ export const TRACKS: Track[] = [
     emoji: '🌲',
     type: 'nature',
     description: 'Breezy ambient sounds through trees',
+    bestFor: 'Reducing stress, calming down, or meditation breaks',
   },
   {
     id: 'meditation-breath',
@@ -51,6 +57,7 @@ export const TRACKS: Track[] = [
     emoji: '🧘',
     type: 'meditation',
     description: 'Tonal breathing guide — inhale 4s, exhale 4s',
+    bestFor: 'Panic moments, before a test, or when you feel overwhelmed',
   },
   {
     id: 'meditation-calm',
@@ -58,5 +65,6 @@ export const TRACKS: Track[] = [
     emoji: '☮️',
     type: 'meditation',
     description: 'Slow oscillating tones for mindfulness',
+    bestFor: 'Before bed, after an argument, or when your brain feels too busy',
   },
 ];

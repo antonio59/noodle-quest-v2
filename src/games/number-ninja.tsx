@@ -64,16 +64,6 @@ function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const startGame = useCallback(() => {
-    gameActiveRef.current = true;
-    scoreRef.current = 0;
-    roundRef.current = 1;
-    setScore(0);
-    setRound(1);
-    setPhase('showing');
-    runRound(1);
-  }, []);
-
   const runRound = useCallback(
     (r: number) => {
       if (!gameActiveRef.current) return;
@@ -106,8 +96,24 @@ function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     [config]
   );
 
+  const startGame = useCallback(() => {
+    gameActiveRef.current = true;
+    scoreRef.current = 0;
+    roundRef.current = 1;
+    setScore(0);
+    setRound(1);
+    setPhase('showing');
+    runRound(1);
+  }, [runRound]);
+
   const checkAnswer = useCallback(() => {
     if (phase !== 'input') return;
+
+    // Clear any pending show timer so it doesn't overwrite result display
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
 
     const answer = inputValue.trim();
     setDisplayColor('#ff6e6c');

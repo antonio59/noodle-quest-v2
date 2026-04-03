@@ -50,6 +50,7 @@ function SequenceMemoryGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [phase, setPhase] = useState<Phase>('intro');
   const [sequence, setSequence] = useState<number[]>([]);
   const [playerInput, setPlayerInput] = useState<number[]>([]);
+  const playerInputRef = useRef<number[]>([]);
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [showIdx, setShowIdx] = useState(-1);
@@ -67,6 +68,7 @@ function SequenceMemoryGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     sequenceRef.current = seq;
     setSequence(seq);
     setPlayerInput([]);
+    playerInputRef.current = [];
     setPhase('showing');
     setFeedback(`Watch ${config.seqLen} numbers...`);
     setFeedbackColor('#67e8f9');
@@ -100,7 +102,8 @@ function SequenceMemoryGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const handleNumberTap = useCallback((num: number) => {
     if (phase !== 'input' || !gameActiveRef.current) return;
 
-    const newInput = [...playerInput, num];
+    const newInput = [...playerInputRef.current, num];
+    playerInputRef.current = newInput;
     setPlayerInput(newInput);
 
     const idx = newInput.length - 1;
@@ -142,7 +145,7 @@ function SequenceMemoryGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         }
       }, 1000);
     }
-  }, [phase, playerInput, config, onScore, onProgress, onEnd, runRound]);
+  }, [phase, config, onScore, onProgress, onEnd, runRound]);
 
   if (phase === 'intro') {
     return (

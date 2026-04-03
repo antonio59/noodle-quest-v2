@@ -269,20 +269,21 @@ function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
             <button
               key={track.id}
               onClick={() => audio.toggle(track.id, { type: track.type, bpm: track.bpm })}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all active:scale-95 ${
+              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all active:scale-95 text-left ${
                 isPlaying ? 'bg-accent/20 ring-1 ring-accent' : 'bg-card hover:bg-card-hover'
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${
                 isPlaying ? 'bg-accent/30' : 'bg-card-hover'
               }`}>
                 {track.emoji}
               </div>
-              <div className="flex-1 text-left">
+              <div className="flex-1 min-w-0">
                 <div className="font-semibold text-sm">{track.name}</div>
                 <div className="text-text-muted text-xs">{track.description}</div>
+                <div className="text-accent text-xs mt-1">💡 {track.bestFor}</div>
               </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                 isPlaying ? 'bg-accent text-bg' : 'bg-card-hover text-text-muted'
               }`}>
                 {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}

@@ -6,10 +6,10 @@ const WORD_LISTS: Record<string, string[]> = {
   easy: ['CAT', 'DOG', 'SUN', 'RUN', 'FUN', 'HAT', 'BAT', 'CUP', 'MAP', 'PEN', 'BOX', 'KEY', 'RED', 'BIG', 'TOP'],
   medium: ['APPLE', 'BREAD', 'CHAIR', 'DANCE', 'EAGLE', 'FLAME', 'GRAPE', 'HEART', 'LIGHT', 'MUSIC', 'NIGHT', 'OCEAN', 'PIANO', 'RIVER', 'STONE'],
   hard: ['PLANET', 'GARDEN', 'BRIDGE', 'CASTLE', 'FOREST', 'ISLAND', 'JUNGLE', 'KITTEN', 'MARKET', 'ORANGE', 'PENCIL', 'ROCKET', 'SILVER', 'TIGER', 'VIOLET'],
-  expert: ['BALLOON', 'CHICKEN', 'DIAMOND', 'ELEPHANT', 'FESTIVAL', 'GUITARS', 'HURRICANE', 'JOURNEY', 'KITCHEN', 'LIBRARY', 'MOUNTAIN', 'NOTEBOOK', 'ORANGE', 'PUMPKIN', 'RAINBOW'],
+  expert: ['BALLOON', 'CHICKEN', 'DIAMOND', 'ELEPHANT', 'FESTIVAL', 'GUITARS', 'HURRICANE', 'JOURNEY', 'KITCHEN', 'LIBRARY', 'MOUNTAIN', 'NOTEBOOK', 'PUMPKIN', 'RAINBOW', 'EXPLORE'],
 };
 
-const ALL_WORDS = [...WORD_LISTS.easy, ...WORD_LISTS.medium, ...WORD_LISTS.hard, ...WORD_LISTS.expert];
+const ALL_WORDS = [...new Set([...WORD_LISTS.easy, ...WORD_LISTS.medium, ...WORD_LISTS.hard, ...WORD_LISTS.expert])];
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const CONFIG: Record<number, { gridSize: number; wordCount: number; wordLen: number; time: number; wordPool: string[] }> = {
@@ -23,6 +23,16 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; wordLen: num
   8: { gridSize: 10, wordCount: 6, wordLen: 6, time: 150, wordPool: WORD_LISTS.hard },
   9: { gridSize: 11, wordCount: 7, wordLen: 6, time: 160, wordPool: WORD_LISTS.expert },
   10: { gridSize: 12, wordCount: 8, wordLen: 7, time: 180, wordPool: WORD_LISTS.expert },
+  11: { gridSize: 12, wordCount: 8, wordLen: 7, time: 175, wordPool: WORD_LISTS.expert },
+  12: { gridSize: 13, wordCount: 9, wordLen: 7, time: 170, wordPool: WORD_LISTS.expert },
+  13: { gridSize: 13, wordCount: 9, wordLen: 8, time: 165, wordPool: ALL_WORDS },
+  14: { gridSize: 14, wordCount: 10, wordLen: 8, time: 160, wordPool: ALL_WORDS },
+  15: { gridSize: 14, wordCount: 10, wordLen: 8, time: 155, wordPool: ALL_WORDS },
+  16: { gridSize: 15, wordCount: 11, wordLen: 9, time: 150, wordPool: ALL_WORDS },
+  17: { gridSize: 15, wordCount: 11, wordLen: 9, time: 145, wordPool: ALL_WORDS },
+  18: { gridSize: 16, wordCount: 12, wordLen: 9, time: 140, wordPool: ALL_WORDS },
+  19: { gridSize: 16, wordCount: 12, wordLen: 10, time: 135, wordPool: ALL_WORDS },
+  20: { gridSize: 17, wordCount: 14, wordLen: 10, time: 130, wordPool: ALL_WORDS },
 };
 
 const TIPS = [
@@ -144,7 +154,7 @@ function WordSearchGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   const gameAreaRef = useRef<HTMLDivElement>(null);
 
   const startGame = useCallback(() => {
-    const shuffled = shuffle(config.wordPool);
+    const shuffled = shuffle(config.wordPool.filter(w => w.length <= config.gridSize));
     const selected = shuffled.slice(0, config.wordCount);
     const { grid: g, placedWords } = generateGrid(config.gridSize, selected);
     setGrid(g);
@@ -253,7 +263,7 @@ function WordSearchGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
           setPhase('done');
           const found = foundRef.current.size;
           const total = wordsRef.current.length;
-          const stars = found >= total * 0.8 ? 2 : found >= total * 0.4 ? 1 : 1;
+          const stars = found >= total ? 3 : found >= Math.ceil(total * 0.75) ? 2 : 1;
           onEnd({
             score: scoreRef.current,
             stars,
@@ -369,7 +379,7 @@ registerGame('word-search', {
   emoji: '🔍',
   description: 'Find hidden words in a grid of letters — drag to select!',
   category: 'focus',
-  stages: 10,
+  stages: 20,
   component: WordSearchGame,
 });
 

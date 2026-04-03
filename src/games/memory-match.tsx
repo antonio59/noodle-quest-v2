@@ -34,7 +34,7 @@ const CONFIG: Record<number, { pairs: number; cols: number; time: number }> = {
   20: { pairs: 20, cols: 7, time: 40 },
 };
 
-const EMOJIS = ['🦄', '🚀', '🌈', '🍕', '🐙', '🎸', '🌺', '🎨', '🦋', '🍦', '🎪', '🌟', '🎯', '🐶', '🌻'];
+const EMOJIS = ['🦄', '🚀', '🌈', '🍕', '🐙', '🎸', '🌺', '🎨', '🦋', '🍦', '🎪', '🌟', '🎯', '🐶', '🌻', '🐸', '🍉', '🎃', '🦊', '🐬'];
 
 const TIPS = [
   "💡 Tip: Focus on ONE row at a time. Remember what's in that row before moving on.",
@@ -236,7 +236,7 @@ function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         <span className="text-purple-400 font-bold">Moves: {moves}</span>
         <span className="text-green-400">Pairs: {matchedCount}/{config.pairs}</span>
         {config.time > 0 && (
-          <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-red-400'}`}>
+          <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-yellow-400'}`}>
             ⏱️ {timeLeft}
           </span>
         )}
