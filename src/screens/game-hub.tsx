@@ -48,7 +48,7 @@ export function GameHub({ onPlay }: GameHubProps) {
   });
   const [playedGames, setPlayedGames] = useState<Set<string>>(new Set());
 
-  const allGames = getAllGames();
+  const allGames = getAllGames().sort((a, b) => a.name.localeCompare(b.name));
   const filteredGames = allGames.filter(g => {
     if (category !== 'all' && g.category !== category) return false;
     if (search && !g.name.toLowerCase().includes(search.toLowerCase())) return false;
