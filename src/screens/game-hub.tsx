@@ -35,17 +35,9 @@ const TAB_BENEFITS: Record<string, { title: string; desc: string; icon: typeof B
   },
 };
 
-const BOARD_GAMES = [
-  { id: 'snakes', emoji: '🐍', name: 'Snakes & Ladders', desc: 'Race to 100! Climb ladders, avoid snakes!' },
-  { id: 'ludo', emoji: '🎯', name: 'Ludo', desc: 'Race your 4 pieces home first!' },
-  { id: 'checkers', emoji: '⚫', name: 'Checkers', desc: 'Jump and capture all opponent pieces!' },
-  { id: 'dominoes', emoji: '🁣', name: 'Dominoes', desc: 'Match tiles and empty your hand!' },
-  { id: 'chess', emoji: '♟️', name: 'Chess', desc: 'Checkmate your opponent\'s king!' },
-];
-
 export function GameHub({ onPlay }: GameHubProps) {
   const { player } = useAuth();
-  const [tab, setTab] = useState('brain');
+  const [tab, setTab] = useState('all');
   const audio = useAudioEngine();
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -64,9 +56,6 @@ export function GameHub({ onPlay }: GameHubProps) {
   });
 
   const favGames = allGames.filter(g => favorites.has(g.id));
-  const unplayedGames = allGames.filter(g => !playedGames.has(g.id));
-  const boardUnlocked = unplayedGames.length === 0;
-  const percent = allGames.length > 0 ? Math.round((playedGames.size / allGames.length) * 100) : 0;
 
   const toggleFav = (id: string) => {
     setFavorites(prev => {
@@ -227,7 +216,7 @@ export function GameHub({ onPlay }: GameHubProps) {
                   <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
                   <div className="flex items-center gap-1 mt-2">
                     <span className="text-text-muted text-xs">{g.stages} stages</span>
-                    {g.category === 'board' && <span className="text-primary text-xs">🤖 AI</span>}
+                    {g.category === 'board' && <span className="text-primary text-xs">🎲 Solo</span>}
                     {playedGames.has(g.id) && <span className="text-success text-xs">✓</span>}
                   </div>
                 </button>

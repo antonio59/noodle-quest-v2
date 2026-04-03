@@ -13,7 +13,7 @@ const tabs: { id: Screen; icon: typeof Home; label: string }[] = [
 
 export function NavBar({ current, onChange, unreadCount }: { current: Screen; onChange: (s: Screen) => void; unreadCount: number }) {
   return (
-    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface overflow-x-auto scrollbar-none pb-[env(safe-area-inset-bottom)]">
+    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface overflow-x-auto scrollbar-none" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
       {tabs.map(t => {
         const Icon = t.icon;
         const active = current === t.id;
