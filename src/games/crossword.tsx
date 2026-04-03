@@ -449,7 +449,7 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
             return (
               <div
                 key={`${rIdx}-${cIdx}`}
-                onPointerDown={(e) => { e.stopPropagation(); hasLetter && setSelectedCell([rIdx, cIdx]); }}
+                onPointerDown={(e) => { e.stopPropagation(); if (hasLetter) setSelectedCell([rIdx, cIdx]); }}
                 className={`flex items-center justify-center font-mono font-bold select-none transition-all relative
                   ${hasLetter ? (isCorrect ? 'bg-success/20' : 'bg-accent/20') : 'bg-surface'}
                   ${isSelected ? 'ring-2 ring-warning' : ''}
