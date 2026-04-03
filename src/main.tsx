@@ -33,6 +33,13 @@ import '@/games/tetris-drop';
 import '@/games/word-search';
 import '@/games/boggle-rush';
 
+// Register board games
+import '@/board-games/snakes-ladders';
+import '@/board-games/checkers';
+import '@/board-games/connect-four';
+import '@/board-games/tic-tac-toe';
+import '@/board-games/memory-board';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConvexClientProvider>

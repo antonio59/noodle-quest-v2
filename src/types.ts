@@ -27,7 +27,8 @@ export type GameCategory =
   | 'motor'
   | 'flexibility'
   | 'social'
-  | 'sequence';
+  | 'sequence'
+  | 'board';
 
 export interface Player {
   playerId: string;

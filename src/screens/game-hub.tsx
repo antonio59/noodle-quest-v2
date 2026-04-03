@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameDefinition, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause, Lock, Zap, Target, Brain, Hand, Users, Shuffle } from 'lucide-react';
+import { Heart, Search, Play, Pause, Brain, Zap, Target } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,13 +21,13 @@ const TABS = [
 const TAB_BENEFITS: Record<string, { title: string; desc: string; icon: typeof Brain }> = {
   brain: {
     title: 'Brain Games',
-    desc: 'Train focus, memory, and problem-solving skills. Each game has 10-20 stages that get harder as you improve!',
+    desc: 'Train focus, memory, and problem-solving skills. Each game has 20 stages that get harder as you improve!',
     icon: Brain,
   },
   board: {
     title: 'Board Games',
-    desc: 'Classic multiplayer games for 2 players. Play all brain games to unlock these fun challenges!',
-    icon: Lock,
+    desc: 'Classic games with AI opponents — play Snakes & Ladders, Checkers, Connect 4, and more!',
+    icon: Brain,
   },
   breathe: {
     title: 'Breathe & Relax',
@@ -237,99 +237,26 @@ export function GameHub({ onPlay }: GameHubProps) {
       {tab === 'board' && (
         <div className="flex-1 overflow-y-auto">
           <div className="p-5">
-            {!boardUnlocked ? (
-              <div>
-                <div className="text-center mb-6">
-                  <div className="text-4xl mb-3">🔒</div>
-                  <h2 className="text-lg font-bold mb-1">Board Games Locked</h2>
-                  <p className="text-text-muted text-sm">
-                    Play all {allGames.length} brain games to unlock {BOARD_GAMES.length} multiplayer classics
-                  </p>
-                </div>
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">🎲</div>
+              <h2 className="text-lg font-bold mb-1">Board Games</h2>
+              <p className="text-text-muted text-sm">Classic games with AI opponents — play anytime!</p>
+            </div>
 
-                {/* Progress */}
-                <div className="bg-card rounded-xl p-4 mb-6">
-                  <div className="flex justify-between text-xs text-text-muted mb-2">
-                    <span>{playedGames.size} / {allGames.length} played</span>
-                    <span>{percent}%</span>
-                  </div>
-                  <div className="h-3 bg-surface rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-500"
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Remaining games with shortcuts */}
-                {unplayedGames.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-bold text-text-dim mb-3 flex items-center gap-2">
-                      <Target size={14} /> Play these to unlock ({unplayedGames.length} left)
-                    </h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {unplayedGames.slice(0, 8).map(g => (
-                        <button
-                          key={g.id}
-                          onClick={() => onPlay(g, g.id, 1)}
-                          className="bg-card hover:bg-card-hover rounded-xl p-3 text-left transition-all active:scale-95 flex items-center gap-2"
-                        >
-                          <span className="text-xl">{g.emoji}</span>
-                          <div className="min-w-0">
-                            <div className="text-xs font-semibold truncate">{g.name}</div>
-                            <div className="text-[10px] text-text-muted">{g.stages} stages</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                    {unplayedGames.length > 8 && (
-                      <p className="text-text-muted text-xs text-center mt-3">
-                        +{unplayedGames.length - 8} more games
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Board games preview */}
-                <div className="mt-6">
-                  <h3 className="text-sm font-bold text-text-dim mb-3">Coming soon:</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {BOARD_GAMES.map(g => (
-                      <div key={g.id} className="bg-card rounded-xl p-3 text-center opacity-40 border border-dashed border-text-muted/30">
-                        <div className="text-2xl mb-1">{g.emoji}</div>
-                        <div className="text-[10px] font-semibold truncate">{g.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <div className="bg-gradient-to-r from-success/20 to-accent/20 rounded-xl p-4 mb-6 border border-success/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-bold text-success">🎉 Unlocked!</span>
-                  </div>
-                  <p className="text-text-muted text-xs">All brain games completed — board games are yours!</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-6">
-                  {BOARD_GAMES.map(g => (
-                    <div
-                      key={g.id}
-                      className="bg-card rounded-xl p-4 text-center opacity-60"
-                    >
-                      <div className="text-3xl mb-2">{g.emoji}</div>
-                      <div className="font-bold text-sm">{g.name}</div>
-                      <div className="text-text-muted text-xs mt-1">{g.desc}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-card rounded-xl p-4 text-center text-text-muted text-sm">
-                  Board games require 2 players. Multiplayer coming soon!
-                </div>
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-3">
+              {allGames.filter(g => g.category === 'board').map(g => (
+                <button
+                  key={g.id}
+                  onClick={() => onPlay(g, g.id, 1)}
+                  className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
+                >
+                  <div className="text-3xl mb-2">{g.emoji}</div>
+                  <div className="font-bold text-sm">{g.name}</div>
+                  <div className="text-text-muted text-xs mt-1">{g.description}</div>
+                  <div className="text-text-muted text-xs mt-2">{g.stages} stages • vs AI</div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
