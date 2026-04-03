@@ -43,6 +43,16 @@ import '@/games/number-sequence';
 import '@/games/visual-search';
 import '@/games/word-scramble';
 
+// New games for ages 7-14
+import '@/games/odd-one-out';
+import '@/games/code-breaker';
+import '@/games/emoji-pictionary';
+import '@/games/shape-rotate';
+import '@/games/trivia-quest';
+import '@/games/mindfulness-jar';
+import '@/games/simon-says';
+import '@/games/word-chain';
+
 // Register board games
 import '@/board-games/snakes-ladders';
 import '@/board-games/checkers';

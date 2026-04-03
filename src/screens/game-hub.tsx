@@ -197,7 +197,7 @@ export function GameHub({ onPlay }: GameHubProps) {
           </div>
 
           {/* Game Grid */}
-          <div className="mobile-p-4 p-4 grid grid-cols-2 gap-3">
+          <div className="mobile-p-4 p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {filteredGames.map(g => (
               <div key={g.id} className="bg-card rounded-xl p-4 relative group">
                 <button

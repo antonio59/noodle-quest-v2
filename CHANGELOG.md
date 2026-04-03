@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- 8 new games for ages 7-14: Odd One Out, Code Breaker, Emoji Pictionary,
+  Shape Rotation, Trivia Quest, Mindfulness Jar, Simon Says, Word Chain
+- Responsive game grid: 2 cols on mobile, 3 on tablet, 4 on desktop
 - Duel tab in Challenges page with 10 duel-capable games and direct play shortcuts
 - Local 2-player mode support for board games (Snakes & Ladders, Checkers, Connect 4, Tic Tac Toe)
 - Redesigned Snakes & Ladders: visible snakes (🐍) and ladders (🪜) on board, proper dice roll animation, AI opponent
