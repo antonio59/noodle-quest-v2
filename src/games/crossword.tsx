@@ -1,60 +1,53 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
 type Phase = 'intro' | 'playing' | 'done';
 
-interface Cell {
-  row: number;
-  col: number;
+interface CellData {
   letter: string;
-  revealed: boolean;
-  correct: boolean;
+  userLetter: string;
+  number?: number;
 }
 
-interface WordPlacement {
+interface WordDef {
   word: string;
   clue: string;
-  row: number;
-  col: number;
-  direction: 'across' | 'down';
 }
 
-const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: number; wordList: { word: string; clue: string }[] }> = {
-  1: { gridSize: 5, wordCount: 4, timeLimit: 120, wordList: [
+const CONFIG: Record<number, { gridSize: number; words: WordDef[]; timeLimit: number }> = {
+  1: { gridSize: 5, timeLimit: 180, words: [
     { word: 'CAT', clue: 'A furry pet that purrs' },
     { word: 'DOG', clue: 'A loyal pet that barks' },
     { word: 'SUN', clue: 'Shines in the sky during day' },
-    { word: 'HAT', clue: 'You wear this on your head' },
   ]},
-  2: { gridSize: 5, wordCount: 4, timeLimit: 115, wordList: [
-    { word: 'BAT', clue: 'Flies at night, uses echo' },
+  2: { gridSize: 5, timeLimit: 170, words: [
+    { word: 'BAT', clue: 'Flies at night' },
     { word: 'CUP', clue: 'You drink from this' },
     { word: 'RUN', clue: 'Move faster than walking' },
     { word: 'BIG', clue: 'Opposite of small' },
   ]},
-  3: { gridSize: 5, wordCount: 5, timeLimit: 110, wordList: [
+  3: { gridSize: 5, timeLimit: 160, words: [
     { word: 'FISH', clue: 'Lives in water, has fins' },
     { word: 'TREE', clue: 'Tall plant with leaves' },
     { word: 'BOOK', clue: 'You read this for stories' },
-    { word: 'STAR', clue: 'Twinkles in the night sky' },
-    { word: 'MOON', clue: 'Glows at night in the sky' },
+    { word: 'STAR', clue: 'Twinkles at night' },
   ]},
-  4: { gridSize: 5, wordCount: 5, timeLimit: 105, wordList: [
+  4: { gridSize: 5, timeLimit: 150, words: [
     { word: 'BIRD', clue: 'Has feathers and wings' },
     { word: 'CAKE', clue: 'Sweet treat for birthdays' },
     { word: 'RAIN', clue: 'Water falling from clouds' },
     { word: 'FROG', clue: 'Green amphibian that hops' },
     { word: 'MILK', clue: 'White drink from cows' },
   ]},
-  5: { gridSize: 6, wordCount: 5, timeLimit: 100, wordList: [
+  5: { gridSize: 6, timeLimit: 150, words: [
     { word: 'PIANO', clue: 'Musical instrument with keys' },
     { word: 'TIGER', clue: 'Big striped wild cat' },
     { word: 'OCEAN', clue: 'Vast body of salt water' },
     { word: 'BREAD', clue: 'Baked food made from flour' },
     { word: 'CLOUD', clue: 'White fluffy thing in sky' },
   ]},
-  6: { gridSize: 6, wordCount: 6, timeLimit: 95, wordList: [
+  6: { gridSize: 6, timeLimit: 140, words: [
     { word: 'DANCE', clue: 'Moving to music' },
     { word: 'FRUIT', clue: 'Apple, banana, orange are these' },
     { word: 'HOUSE', clue: 'Where people live' },
@@ -62,7 +55,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'SMILE', clue: 'What your face does when happy' },
     { word: 'WATER', clue: 'Clear liquid we drink' },
   ]},
-  7: { gridSize: 6, wordCount: 6, timeLimit: 90, wordList: [
+  7: { gridSize: 6, timeLimit: 130, words: [
     { word: 'PLANET', clue: 'Earth is one of these' },
     { word: 'FLOWER', clue: 'Colorful part of a plant' },
     { word: 'GARDEN', clue: 'Place where plants grow' },
@@ -70,7 +63,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'SCHOOL', clue: 'Place where you learn' },
     { word: 'FAMILY', clue: 'People related to you' },
   ]},
-  8: { gridSize: 7, wordCount: 6, timeLimit: 90, wordList: [
+  8: { gridSize: 7, timeLimit: 130, words: [
     { word: 'DOCTOR', clue: 'Helps sick people get better' },
     { word: 'FOREST', clue: 'Large area full of trees' },
     { word: 'BRIDGE', clue: 'Crosses over a river' },
@@ -78,7 +71,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'PENCIL', clue: 'Used for writing and drawing' },
     { word: 'WINTER', clue: 'Coldest season with snow' },
   ]},
-  9: { gridSize: 7, wordCount: 7, timeLimit: 85, wordList: [
+  9: { gridSize: 7, timeLimit: 120, words: [
     { word: 'ISLAND', clue: 'Land surrounded by water' },
     { word: 'JUNGLE', clue: 'Dense tropical forest' },
     { word: 'KITTEN', clue: 'A baby cat' },
@@ -87,7 +80,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'ROCKET', clue: 'Flies to space' },
     { word: 'SILVER', clue: 'Shiny grey precious metal' },
   ]},
-  10: { gridSize: 7, wordCount: 7, timeLimit: 80, wordList: [
+  10: { gridSize: 7, timeLimit: 110, words: [
     { word: 'TEACHER', clue: 'Helps students learn' },
     { word: 'BALLOON', clue: 'Floats when filled with air' },
     { word: 'CAPTAIN', clue: 'Leader of a ship' },
@@ -96,7 +89,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'FESTIVAL', clue: 'A big celebration event' },
     { word: 'GUITAR', clue: 'String instrument you strum' },
   ]},
-  11: { gridSize: 8, wordCount: 7, timeLimit: 80, wordList: [
+  11: { gridSize: 8, timeLimit: 110, words: [
     { word: 'ADVENTURE', clue: 'An exciting experience' },
     { word: 'BUTTERFLY', clue: 'Insect with colorful wings' },
     { word: 'CHOCOLATE', clue: 'Sweet brown treat' },
@@ -105,7 +98,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'FIREWORK', clue: 'Colorful explosion in sky' },
     { word: 'GALAXY', clue: 'Huge group of stars' },
   ]},
-  12: { gridSize: 8, wordCount: 8, timeLimit: 75, wordList: [
+  12: { gridSize: 8, timeLimit: 100, words: [
     { word: 'HARMONY', clue: 'Pleasant combination of sounds' },
     { word: 'IMAGINE', clue: 'Picture something in your mind' },
     { word: 'JOURNEY', clue: 'A long trip somewhere' },
@@ -115,7 +108,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'NOTEBOOK', clue: 'Book for writing notes' },
     { word: 'ORANGE', clue: 'Round citrus fruit and color' },
   ]},
-  13: { gridSize: 8, wordCount: 8, timeLimit: 70, wordList: [
+  13: { gridSize: 8, timeLimit: 95, words: [
     { word: 'PAINTING', clue: 'Art made with brush and paint' },
     { word: 'QUESTION', clue: 'Something you ask for info' },
     { word: 'RAINBOW', clue: 'Arc of colors after rain' },
@@ -125,7 +118,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'VACATION', clue: 'Time off from work or school' },
     { word: 'WONDER', clue: 'Feeling of amazement' },
   ]},
-  14: { gridSize: 9, wordCount: 8, timeLimit: 70, wordList: [
+  14: { gridSize: 9, timeLimit: 95, words: [
     { word: 'XYLOPHONE', clue: 'Musical instrument with bars' },
     { word: 'YELLOW', clue: 'Color of bananas and lemons' },
     { word: 'ZEBRA', clue: 'Striped horse-like animal' },
@@ -135,7 +128,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'EXPLORE', clue: 'Travel to discover new things' },
     { word: 'FEATHER', clue: 'Light covering on birds' },
   ]},
-  15: { gridSize: 9, wordCount: 9, timeLimit: 65, wordList: [
+  15: { gridSize: 9, timeLimit: 90, words: [
     { word: 'GIRAFFE', clue: 'Tallest animal with long neck' },
     { word: 'HURRICANE', clue: 'Powerful tropical storm' },
     { word: 'INVENTOR', clue: 'Person who creates new things' },
@@ -146,7 +139,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'NOCTURNAL', clue: 'Active during the night' },
     { word: 'OCTOPUS', clue: 'Eight-armed sea creature' },
   ]},
-  16: { gridSize: 9, wordCount: 9, timeLimit: 60, wordList: [
+  16: { gridSize: 9, timeLimit: 85, words: [
     { word: 'PENGUIN', clue: 'Black and white flightless bird' },
     { word: 'QUARTZ', clue: 'Common shiny mineral' },
     { word: 'RAINBOW', clue: 'Seven colors in the sky' },
@@ -157,7 +150,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'WATERFALL', clue: 'Water dropping from height' },
     { word: 'SNOWMAN', clue: 'Figure made from snow' },
   ]},
-  17: { gridSize: 9, wordCount: 10, timeLimit: 55, wordList: [
+  17: { gridSize: 9, timeLimit: 80, words: [
     { word: 'ARCHITECT', clue: 'Designs buildings' },
     { word: 'BUTTERCUP', clue: 'Small yellow wildflower' },
     { word: 'CATERPILLAR', clue: 'Larva that becomes butterfly' },
@@ -169,7 +162,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'ICEBERG', clue: 'Large floating ice mass' },
     { word: 'JASMINE', clue: 'Fragrant white flower' },
   ]},
-  18: { gridSize: 9, wordCount: 10, timeLimit: 50, wordList: [
+  18: { gridSize: 9, timeLimit: 75, words: [
     { word: 'KALEIDOSCOPE', clue: 'Tube with changing patterns' },
     { word: 'LABYRINTH', clue: 'Complex maze-like path' },
     { word: 'MUSHROOM', clue: 'Fungi growing on forest floor' },
@@ -181,7 +174,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'SANDWICH', clue: 'Food between bread slices' },
     { word: 'THUNDER', clue: 'Sound after lightning' },
   ]},
-  19: { gridSize: 9, wordCount: 10, timeLimit: 45, wordList: [
+  19: { gridSize: 9, timeLimit: 70, words: [
     { word: 'UNICORN', clue: 'Mythical horse with horn' },
     { word: 'VAMPIRE', clue: 'Mythical creature drinking blood' },
     { word: 'WARRIOR', clue: 'Brave fighter in battle' },
@@ -193,7 +186,7 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
     { word: 'DRAGON', clue: 'Mythical fire-breathing beast' },
     { word: 'EMERALD', clue: 'Precious green gemstone' },
   ]},
-  20: { gridSize: 9, wordCount: 10, timeLimit: 40, wordList: [
+  20: { gridSize: 9, timeLimit: 65, words: [
     { word: 'PHOENIX', clue: 'Mythical bird reborn from ashes' },
     { word: 'GRIFFIN', clue: 'Mythical lion-eagle creature' },
     { word: 'SPHINX', clue: 'Mythical riddle-asking beast' },
@@ -208,46 +201,41 @@ const CONFIG: Record<number, { gridSize: number; wordCount: number; timeLimit: n
 };
 
 const TIPS = [
-  "💡 Tip: Start with the shortest words — they're easiest to place!",
-  "💡 Tip: Look for crossing letters between words to help you!",
-  "💡 Tip: Read all clues first before filling in any answers.",
-  "💡 Tip: If stuck, try a different word and come back later.",
-  "💡 Tip: Letters that appear often (E, A, T, S) are good starting points.",
+  "💡 Tip: Start with the shortest words — they're easiest!",
+  "💡 Tip: Look for crossing letters between words!",
+  "💡 Tip: Read all clues first before filling in answers.",
+  "💡 Tip: If stuck, try a different word and come back.",
+  "💡 Tip: Common letters (E, A, T, S) are good starting points.",
 ];
 
 function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const [phase, setPhase] = useState<Phase>('intro');
-  const [grid, setGrid] = useState<Cell[][]>([]);
-  const [placements, setPlacements] = useState<WordPlacement[]>([]);
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
-  const [inputValue, setInputValue] = useState('');
+  const [grid, setGrid] = useState<CellData[][]>([]);
+  const [wordPlacements, setWordPlacements] = useState<{ word: string; clue: string; cells: [number, number][] }[]>([]);
+  const [selectedCell, setSelectedCell] = useState<[number, number] | null>(null);
   const [score, setScore] = useState(0);
   const [wordsFound, setWordsFound] = useState(0);
   const [timeLeft, setTimeLeft] = useState(config.timeLimit);
   const [feedback, setFeedback] = useState('');
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
-  const [activeWordIdx, setActiveWordIdx] = useState(0);
+  const [foundWords, setFoundWords] = useState<Set<string>>(new Set());
   const gameActiveRef = useRef(false);
   const scoreRef = useRef(0);
-  const wordsFoundRef = useRef(0);
+  const foundWordsRef = useRef<Set<string>>(new Set());
 
-  const buildGrid = useCallback((): { grid: Cell[][]; placements: WordPlacement[] } => {
+  const buildGrid = useCallback((): { grid: CellData[][]; placements: { word: string; clue: string; cells: [number, number][] }[] } => {
     const size = config.gridSize;
-    const emptyGrid: Cell[][] = Array.from({ length: size }, (_, r) =>
-      Array.from({ length: size }, (_, c) => ({
-        row: r, col: c, letter: '', revealed: false, correct: false,
-      }))
+    const emptyGrid: CellData[][] = Array.from({ length: size }, () =>
+      Array.from({ length: size }, () => ({ letter: '', userLetter: '' }))
     );
 
-    const words = config.wordList.slice(0, config.wordCount);
-    const placed: WordPlacement[] = [];
+    const words = config.words;
+    const placements: { word: string; clue: string; cells: [number, number][] }[] = [];
 
     const canPlace = (word: string, row: number, col: number, dir: 'across' | 'down'): boolean => {
       if (dir === 'across') {
         if (col + word.length > size) return false;
-        if (col > 0 && emptyGrid[row][col - 1].letter !== '') return false;
-        if (col + word.length < size && emptyGrid[row][col + word.length].letter !== '') return false;
         for (let i = 0; i < word.length; i++) {
           const cell = emptyGrid[row][col + i];
           if (cell.letter !== '' && cell.letter !== word[i]) return false;
@@ -255,8 +243,6 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         return true;
       } else {
         if (row + word.length > size) return false;
-        if (row > 0 && emptyGrid[row - 1][col].letter !== '') return false;
-        if (row + word.length < size && emptyGrid[row + word.length][col].letter !== '') return false;
         for (let i = 0; i < word.length; i++) {
           const cell = emptyGrid[row + i][col];
           if (cell.letter !== '' && cell.letter !== word[i]) return false;
@@ -266,56 +252,71 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     };
 
     const placeWord = (word: string, clue: string, row: number, col: number, dir: 'across' | 'down') => {
+      const cells: [number, number][] = [];
       for (let i = 0; i < word.length; i++) {
         const r = dir === 'down' ? row + i : row;
         const c = dir === 'across' ? col + i : col;
         emptyGrid[r][c].letter = word[i];
+        cells.push([r, c]);
       }
-      placed.push({ word, clue, row, col, direction: dir });
+      placements.push({ word, clue, cells });
     };
 
     const dirs: ('across' | 'down')[] = ['across', 'down'];
     for (const w of words) {
-      let placedWord = false;
-      for (let attempt = 0; attempt < 200 && !placedWord; attempt++) {
+      let placed = false;
+      for (let attempt = 0; attempt < 300 && !placed; attempt++) {
         const dir = dirs[Math.floor(Math.random() * 2)];
         const row = Math.floor(Math.random() * size);
         const col = Math.floor(Math.random() * size);
         if (canPlace(w.word, row, col, dir)) {
           placeWord(w.word, w.clue, row, col, dir);
-          placedWord = true;
+          placed = true;
         }
       }
     }
 
-    return { grid: emptyGrid, placements: placed };
+    // Add numbers to first cell of each word
+    let num = 1;
+    for (const p of placements) {
+      const [r, c] = p.cells[0];
+      if (!emptyGrid[r][c].number) {
+        emptyGrid[r][c].number = num++;
+      }
+    }
+
+    return { grid: emptyGrid, placements };
   }, [config]);
 
   const startGame = useCallback(() => {
-    const { grid: newGrid, placements: newPlacements } = buildGrid();
+    const { grid: newGrid, placements } = buildGrid();
     setGrid(newGrid);
-    setPlacements(newPlacements);
+    setWordPlacements(placements);
     setScore(0);
     setWordsFound(0);
     setTimeLeft(config.timeLimit);
     setFeedback('');
     setSelectedCell(null);
-    setActiveWordIdx(0);
+    setFoundWords(new Set());
     scoreRef.current = 0;
-    wordsFoundRef.current = 0;
+    foundWordsRef.current = new Set();
     gameActiveRef.current = true;
     setPhase('playing');
   }, [buildGrid, config]);
 
+  // Timer
   useEffect(() => {
     if (phase !== 'playing') return;
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
+      setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
           gameActiveRef.current = false;
-          const stars = wordsFoundRef.current >= config.wordCount ? 3 : wordsFoundRef.current >= config.wordCount * 0.6 ? 2 : 1;
-          const summary = `Time's up! You found ${wordsFoundRef.current}/${config.wordCount} words. Try reading all clues first next time!`;
+          const total = config.words.length;
+          const found = foundWordsRef.current.size;
+          const pct = total > 0 ? found / total : 0;
+          const stars = pct >= 1 ? 3 : pct >= 0.6 ? 2 : 1;
+          const summary = `Time's up! You found ${found}/${total} words. Try reading all clues first next time!`;
           onEnd({ score: scoreRef.current, stars, summary });
           return 0;
         }
@@ -323,199 +324,177 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [phase, config, onEnd]);
+  }, [phase, config.words.length, onEnd]);
 
-  const handleCellInput = useCallback((row: number, col: number, letter: string) => {
-    if (!gameActiveRef.current) return;
-    const upperLetter = letter.toUpperCase();
-    setGrid(prev => prev.map(r => r.map(c =>
-      c.row === row && c.col === col ? { ...c, revealed: true } : c
-    )));
+  // Handle letter input (from on-screen keyboard or physical keyboard)
+  const inputLetter = useCallback((letter: string) => {
+    if (!selectedCell || !gameActiveRef.current) return;
+    const [r, c] = selectedCell;
+    const cell = grid[r]?.[c];
+    if (!cell || cell.letter === '') return;
 
-    const cell = grid[row]?.[col];
-    if (cell && cell.letter === upperLetter) {
+    const upper = letter.toUpperCase();
+    const newGrid = grid.map(row => row.map(cell => ({ ...cell })));
+    newGrid[r][c].userLetter = upper;
+    setGrid(newGrid);
+
+    if (upper === cell.letter) {
       setScore(prev => prev + 5);
       scoreRef.current += 5;
       onScore(5);
-      setFeedback('✅ Correct letter!');
-      setTimeout(() => setFeedback(''), 1000);
-    } else if (cell && cell.letter !== '') {
-      setFeedback('❌ Wrong letter!');
-      setTimeout(() => setFeedback(''), 1000);
+      setFeedback('✅ Correct!');
+      setTimeout(() => setFeedback(''), 800);
+    } else {
+      setFeedback('❌ Try again!');
+      setTimeout(() => setFeedback(''), 800);
     }
-  }, [grid, onScore]);
 
-  const checkWordComplete = useCallback((placement: WordPlacement) => {
-    let allCorrect = true;
-    for (let i = 0; i < placement.word.length; i++) {
-      const r = placement.direction === 'down' ? placement.row + i : placement.row;
-      const c = placement.direction === 'across' ? placement.col + i : placement.col;
-      const cell = grid[r]?.[c];
-      if (!cell || !cell.revealed || cell.letter === '') {
-        allCorrect = false;
-        break;
+    // Auto-advance to next cell in same word
+    for (const wp of wordPlacements) {
+      const idx = wp.cells.findIndex(([cr, cc]) => cr === r && cc === c);
+      if (idx >= 0 && idx < wp.cells.length - 1) {
+        setSelectedCell(wp.cells[idx + 1]);
+        return;
       }
     }
-    return allCorrect;
-  }, [grid]);
+  }, [selectedCell, grid, wordPlacements, onScore]);
 
-  const selectCell = useCallback((row: number, col: number) => {
-    setSelectedCell({ row, col });
-    setInputValue('');
-  }, []);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!selectedCell || !gameActiveRef.current) return;
-    const { row, col } = selectedCell;
-
-    if (e.key.length === 1 && e.key.match(/[a-zA-Z]/)) {
-      handleCellInput(row, col, e.key);
-      // Move to next cell in active word
-      const activeWord = placements[activeWordIdx];
-      if (activeWord) {
-        const idx = activeWord.direction === 'across'
-          ? col - activeWord.col
-          : row - activeWord.row;
-        if (idx < activeWord.word.length - 1) {
-          const nextRow = activeWord.direction === 'down' ? row + 1 : row;
-          const nextCol = activeWord.direction === 'across' ? col + 1 : col;
-          setSelectedCell({ row: nextRow, col: nextCol });
-        }
-      }
-    } else if (e.key === 'Backspace') {
-      setGrid(prev => prev.map(r => r.map(c =>
-        c.row === row && c.col === col ? { ...c, revealed: false } : c
-      )));
-    } else if (e.key === 'ArrowRight' && col < grid.length - 1) {
-      setSelectedCell({ row, col: col + 1 });
-    } else if (e.key === 'ArrowLeft' && col > 0) {
-      setSelectedCell({ row, col: col - 1 });
-    } else if (e.key === 'ArrowDown' && row < grid.length - 1) {
-      setSelectedCell({ row: row + 1, col });
-    } else if (e.key === 'ArrowUp' && row > 0) {
-      setSelectedCell({ row: row - 1, col });
-    }
-  }, [selectedCell, handleCellInput, placements, activeWordIdx, grid]);
-
+  // Check for completed words
   useEffect(() => {
     if (phase !== 'playing') return;
-    for (const placement of placements) {
-      if (checkWordComplete(placement)) {
-        const alreadyCounted = wordsFoundRef.current > 0;
-        wordsFoundRef.current++;
-        setWordsFound(wordsFoundRef.current);
-        const points = placement.word.length * 15;
+    for (const wp of wordPlacements) {
+      if (foundWordsRef.current.has(wp.word)) continue;
+      const allFilled = wp.cells.every(([r, c]) => grid[r]?.[c]?.userLetter === grid[r]?.[c]?.letter && grid[r]?.[c]?.letter !== '');
+      if (allFilled) {
+        foundWordsRef.current.add(wp.word);
+        setFoundWords(new Set(foundWordsRef.current));
+        const newCount = foundWordsRef.current.size;
+        setWordsFound(newCount);
+        const points = wp.word.length * 20;
         scoreRef.current += points;
         setScore(scoreRef.current);
         onScore(points);
-        onProgress(wordsFoundRef.current / config.wordCount);
-        setFeedback(`🎉 "${placement.word}" found! +${points}`);
+        onProgress(newCount / config.words.length);
+        setFeedback(`🎉 "${wp.word}" found! +${points}`);
         setTimeout(() => setFeedback(''), 2000);
 
-        if (wordsFoundRef.current >= config.wordCount) {
+        if (newCount >= config.words.length) {
           gameActiveRef.current = false;
-          const timeBonus = Math.floor(timeLeft / 5);
+          const timeBonus = Math.floor(timeLeft / 3);
           scoreRef.current += timeBonus;
           const stars = timeLeft > config.timeLimit * 0.5 ? 3 : timeLeft > config.timeLimit * 0.25 ? 2 : 1;
-          const summary = `All ${config.wordCount} words found! Amazing vocabulary! 🏆 Time bonus: +${timeBonus}`;
+          const summary = `All ${config.words.length} words found! Amazing vocabulary! 🏆 Time bonus: +${timeBonus}`;
           setTimeout(() => onEnd({ score: scoreRef.current, stars, summary }), 1500);
         }
         break;
       }
     }
-  }, [grid, placements, checkWordComplete, config, onScore, onProgress, onEnd, timeLeft]);
+  }, [grid, wordPlacements, phase, config.words.length, config.timeLimit, onScore, onProgress, onEnd, timeLeft]);
+
+  // Physical keyboard support
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key.length === 1 && e.key.match(/[a-zA-Z]/)) {
+        inputLetter(e.key);
+      } else if (e.key === 'Backspace' && selectedCell) {
+        const [r, c] = selectedCell;
+        const newGrid = grid.map(row => row.map(cell => ({ ...cell })));
+        newGrid[r][c].userLetter = '';
+        setGrid(newGrid);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [phase, inputLetter, selectedCell, grid]);
 
   if (phase === 'intro') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
         <div className="text-6xl mb-4">✏️</div>
-        <h2 className="text-2xl font-bold text-cyan-400 mb-2">Crossword Puzzle</h2>
-        <p className="text-cyan-300 mb-4 max-w-xs">Fill in the grid using the clues!</p>
-
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="text-3xl mb-2">📝 {config.wordCount} words to find</div>
-          <div className="text-yellow-400">{config.gridSize}×{config.gridSize} grid</div>
-          <div className="text-green-400 mt-1">⏱️ {config.timeLimit} seconds</div>
+        <h2 className="text-2xl font-bold text-accent mb-2">Crossword Puzzle</h2>
+        <p className="text-text-dim mb-4 max-w-xs">Fill in the grid using the clues!</p>
+        <div className="bg-card rounded-xl p-4 mb-5 max-w-xs">
+          <div className="text-lg mb-1">📝 {config.words.length} words</div>
+          <div className="text-warning">{config.gridSize}×{config.gridSize} grid</div>
+          <div className="text-success mt-1">⏱️ {config.timeLimit}s</div>
         </div>
-
-        <div className="bg-[#1a1833] rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-purple-300 text-sm">Tap a cell, then type a letter!</div>
-        </div>
-
-        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
-        >
-          Start Game! ✏️
+        <p className="text-text-dim text-sm mb-5 max-w-xs">{tip}</p>
+        <button onClick={startGame} className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg active:scale-95">
+          Start! ✏️
         </button>
       </div>
     );
   }
 
-  const cellSize = config.gridSize > 7 ? 36 : config.gridSize > 5 ? 42 : 50;
+  const cellSize = Math.min(Math.floor((Math.min(window.innerWidth - 40, 400)) / config.gridSize), 48);
+  const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
   return (
-    <div className="flex flex-col h-full min-h-[350px] items-center" onKeyDown={handleKeyDown} tabIndex={0}>
-      <div className="flex gap-4 px-4 py-2 bg-[#232146] rounded-xl mb-3 w-full justify-center">
-        <span className="text-cyan-400 font-bold">Words: {wordsFound}/{config.wordCount}</span>
-        <span className="text-purple-400">Score: {score}</span>
-        <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400' : 'text-yellow-400'}`}>
-          ⏱️ {timeLeft}
-        </span>
+    <div className="flex flex-col h-full min-h-[350px] items-center">
+      {/* Header */}
+      <div className="flex gap-3 px-3 py-2 bg-card rounded-xl mb-2 w-full justify-center">
+        <span className="text-accent font-bold text-sm">Words: {wordsFound}/{config.words.length}</span>
+        <span className="text-text-dim text-sm">Score: {score}</span>
+        <span className={`font-bold text-sm ${timeLeft <= 10 ? 'text-danger' : 'text-warning'}`}>⏱️ {timeLeft}</span>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4 w-full max-w-2xl px-2">
-        <div
-          className="grid gap-0.5 p-2 bg-[#232146] rounded-xl"
-          style={{ gridTemplateColumns: `repeat(${config.gridSize}, ${cellSize}px)` }}
-        >
-          {grid.map((row, rIdx) =>
-            row.map((cell, cIdx) => {
-              const isSelected = selectedCell?.row === rIdx && selectedCell?.col === cIdx;
-              const hasLetter = cell.letter !== '';
-              return (
-                <div
-                  key={`${rIdx}-${cIdx}`}
-                  onPointerDown={(e) => { e.stopPropagation(); selectCell(rIdx, cIdx); }}
-                  className={`flex items-center justify-center font-mono font-bold text-lg select-none cursor-pointer transition-all
-                    ${hasLetter ? 'bg-purple-500/30' : 'bg-[#1a1833]'}
-                    ${isSelected ? 'ring-2 ring-yellow-400' : ''}
-                  `}
-                  style={{ width: cellSize, height: cellSize }}
-                >
-                  {cell.revealed ? cell.letter : ''}
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-sm text-cyan-300 font-bold mb-2">Clues:</div>
-          <div className="space-y-1 max-h-[250px] overflow-y-auto">
-            {placements.map((p, idx) => (
-              <button
-                key={idx}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setActiveWordIdx(idx);
-                  setSelectedCell({ row: p.row, col: p.col });
-                }}
-                className={`w-full text-left text-xs p-2 rounded-lg transition-colors
-                  ${idx === activeWordIdx ? 'bg-purple-600/40' : 'bg-[#232146] hover:bg-[#2a2850]'}`}
+      {/* Grid */}
+      <div className="grid gap-0.5 p-2 bg-card rounded-xl mb-2" style={{ gridTemplateColumns: `repeat(${config.gridSize}, ${cellSize}px)` }}>
+        {grid.map((row, rIdx) =>
+          row.map((cell, cIdx) => {
+            const isSelected = selectedCell?.[0] === rIdx && selectedCell?.[1] === cIdx;
+            const hasLetter = cell.letter !== '';
+            const isCorrect = cell.userLetter !== '' && cell.userLetter === cell.letter;
+            return (
+              <div
+                key={`${rIdx}-${cIdx}`}
+                onPointerDown={(e) => { e.stopPropagation(); hasLetter && setSelectedCell([rIdx, cIdx]); }}
+                className={`flex items-center justify-center font-mono font-bold select-none transition-all relative
+                  ${hasLetter ? (isCorrect ? 'bg-success/20' : 'bg-accent/20') : 'bg-surface'}
+                  ${isSelected ? 'ring-2 ring-warning' : ''}
+                  ${!hasLetter ? 'opacity-30' : 'cursor-pointer'}
+                `}
+                style={{ width: cellSize, height: cellSize, fontSize: cellSize * 0.45 }}
               >
-                <span className="text-yellow-400 font-bold">{p.direction === 'across' ? '→' : '↓'} </span>
-                <span className="text-purple-300">{p.clue}</span>
-                <span className="text-gray-500 ml-1">({p.word.length})</span>
-              </button>
-            ))}
-          </div>
+                {cell.number && <span className="absolute top-0 left-0.5 text-[8px] text-text-muted">{cell.number}</span>}
+                {cell.userLetter || (hasLetter ? '' : '')}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Clues */}
+      <div className="w-full max-w-sm px-2 mb-2">
+        <div className="text-xs text-text-dim font-bold mb-1">Clues:</div>
+        <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+          {wordPlacements.map((wp, idx) => {
+            const isFound = foundWords.has(wp.word);
+            return (
+              <span key={idx} className={`text-[10px] px-2 py-0.5 rounded-full ${isFound ? 'bg-success/20 text-success line-through' : 'bg-card text-text-muted'}`}>
+                {wp.clue} ({wp.word.length})
+              </span>
+            );
+          })}
         </div>
       </div>
 
-      <div className="text-center py-2 text-yellow-400 text-sm min-h-[24px]">{feedback}</div>
+      {/* Letter keyboard */}
+      <div className="flex flex-wrap justify-center gap-0.5 px-1 mb-1 max-w-sm">
+        {LETTERS.map(l => (
+          <button
+            key={l}
+            onPointerDown={(e) => { e.preventDefault(); inputLetter(l); }}
+            className="w-7 h-7 bg-card hover:bg-card-hover rounded text-xs font-bold text-text active:scale-90 transition-transform"
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {/* Feedback */}
+      <div className="text-center py-1 text-warning text-sm min-h-[24px]">{feedback}</div>
     </div>
   );
 }

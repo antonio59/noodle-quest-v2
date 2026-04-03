@@ -127,9 +127,10 @@ function SpeedMathGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         if (prev <= 1) {
           clearInterval(timer);
           gameActiveRef.current = false;
-          const accuracy = roundRef.current > 0 ? correctRef.current / roundRef.current : 0;
+          const completed = Math.max(0, roundRef.current - 1);
+          const accuracy = completed > 0 ? correctRef.current / completed : 0;
           const stars = accuracy > 0.8 ? 3 : accuracy > 0.5 ? 2 : 1;
-          const summary = `Time's up! You got ${correctRef.current}/${roundRef.current - 1} correct (${Math.round(accuracy * 100)}%). Practice your ${config.operations.join(', ')} tables!`;
+          const summary = `Time's up! You got ${correctRef.current}/${completed} correct (${Math.round(accuracy * 100)}%). Practice your ${config.operations.join(', ')} tables!`;
           onEnd({ score: scoreRef.current, stars, summary });
           return 0;
         }

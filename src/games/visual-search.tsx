@@ -23,27 +23,27 @@ const EMOJI_SETS: Record<string, { target: string; distractors: string[] }> = {
   sports: { target: '⚽', distractors: ['🏀', '🏈', '⚾', '🎾', '🏐', '🏉', '🎱', '🏓', '🏸'] },
 };
 
-const CONFIG: Record<number, { gridSize: number; targetCount: number; timeLimit: number; emojiSet: string; similarity: number }> = {
-  1: { gridSize: 5, targetCount: 1, timeLimit: 30, emojiSet: 'fruits', similarity: 0 },
-  2: { gridSize: 5, targetCount: 1, timeLimit: 28, emojiSet: 'fruits', similarity: 0 },
-  3: { gridSize: 6, targetCount: 1, timeLimit: 25, emojiSet: 'animals', similarity: 0 },
-  4: { gridSize: 6, targetCount: 2, timeLimit: 25, emojiSet: 'animals', similarity: 0 },
-  5: { gridSize: 6, targetCount: 2, timeLimit: 23, emojiSet: 'nature', similarity: 0.3 },
-  6: { gridSize: 7, targetCount: 2, timeLimit: 22, emojiSet: 'nature', similarity: 0.3 },
-  7: { gridSize: 7, targetCount: 3, timeLimit: 20, emojiSet: 'food', similarity: 0.3 },
-  8: { gridSize: 7, targetCount: 3, timeLimit: 18, emojiSet: 'food', similarity: 0.5 },
-  9: { gridSize: 8, targetCount: 3, timeLimit: 18, emojiSet: 'space', similarity: 0.5 },
-  10: { gridSize: 8, targetCount: 4, timeLimit: 16, emojiSet: 'space', similarity: 0.5 },
-  11: { gridSize: 8, targetCount: 4, timeLimit: 15, emojiSet: 'ocean', similarity: 0.6 },
-  12: { gridSize: 8, targetCount: 5, timeLimit: 14, emojiSet: 'ocean', similarity: 0.6 },
-  13: { gridSize: 9, targetCount: 5, timeLimit: 13, emojiSet: 'weather', similarity: 0.6 },
-  14: { gridSize: 9, targetCount: 6, timeLimit: 12, emojiSet: 'weather', similarity: 0.7 },
-  15: { gridSize: 9, targetCount: 6, timeLimit: 11, emojiSet: 'sports', similarity: 0.7 },
-  16: { gridSize: 9, targetCount: 7, timeLimit: 10, emojiSet: 'sports', similarity: 0.7 },
-  17: { gridSize: 10, targetCount: 7, timeLimit: 10, emojiSet: 'fruits', similarity: 0.8 },
-  18: { gridSize: 10, targetCount: 8, timeLimit: 9, emojiSet: 'animals', similarity: 0.8 },
-  19: { gridSize: 10, targetCount: 8, timeLimit: 8, emojiSet: 'nature', similarity: 0.9 },
-  20: { gridSize: 10, targetCount: 10, timeLimit: 8, emojiSet: 'food', similarity: 0.9 },
+const CONFIG: Record<number, { gridSize: number; targetCount: number; timeLimit: number; emojiSet: string; similarity: number; rounds: number }> = {
+  1: { gridSize: 5, targetCount: 1, timeLimit: 30, emojiSet: 'fruits', similarity: 0, rounds: 5 },
+  2: { gridSize: 5, targetCount: 1, timeLimit: 28, emojiSet: 'fruits', similarity: 0, rounds: 5 },
+  3: { gridSize: 6, targetCount: 1, timeLimit: 25, emojiSet: 'animals', similarity: 0, rounds: 6 },
+  4: { gridSize: 6, targetCount: 2, timeLimit: 25, emojiSet: 'animals', similarity: 0, rounds: 6 },
+  5: { gridSize: 6, targetCount: 2, timeLimit: 23, emojiSet: 'nature', similarity: 0.3, rounds: 6 },
+  6: { gridSize: 7, targetCount: 2, timeLimit: 22, emojiSet: 'nature', similarity: 0.3, rounds: 7 },
+  7: { gridSize: 7, targetCount: 3, timeLimit: 20, emojiSet: 'food', similarity: 0.3, rounds: 7 },
+  8: { gridSize: 7, targetCount: 3, timeLimit: 18, emojiSet: 'food', similarity: 0.5, rounds: 7 },
+  9: { gridSize: 8, targetCount: 3, timeLimit: 18, emojiSet: 'space', similarity: 0.5, rounds: 8 },
+  10: { gridSize: 8, targetCount: 4, timeLimit: 16, emojiSet: 'space', similarity: 0.5, rounds: 8 },
+  11: { gridSize: 8, targetCount: 4, timeLimit: 15, emojiSet: 'ocean', similarity: 0.6, rounds: 8 },
+  12: { gridSize: 8, targetCount: 5, timeLimit: 14, emojiSet: 'ocean', similarity: 0.6, rounds: 8 },
+  13: { gridSize: 9, targetCount: 5, timeLimit: 13, emojiSet: 'weather', similarity: 0.6, rounds: 9 },
+  14: { gridSize: 9, targetCount: 6, timeLimit: 12, emojiSet: 'weather', similarity: 0.7, rounds: 9 },
+  15: { gridSize: 9, targetCount: 6, timeLimit: 11, emojiSet: 'sports', similarity: 0.7, rounds: 9 },
+  16: { gridSize: 9, targetCount: 7, timeLimit: 10, emojiSet: 'sports', similarity: 0.7, rounds: 10 },
+  17: { gridSize: 10, targetCount: 7, timeLimit: 10, emojiSet: 'fruits', similarity: 0.8, rounds: 10 },
+  18: { gridSize: 10, targetCount: 8, timeLimit: 9, emojiSet: 'animals', similarity: 0.8, rounds: 10 },
+  19: { gridSize: 10, targetCount: 8, timeLimit: 8, emojiSet: 'nature', similarity: 0.9, rounds: 10 },
+  20: { gridSize: 10, targetCount: 10, timeLimit: 8, emojiSet: 'food', similarity: 0.9, rounds: 10 },
 };
 
 const TIPS = [
@@ -160,11 +160,11 @@ function VisualSearchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           if (!gameActiveRef.current) return;
           roundRef.current++;
           setRound(roundRef.current);
-          onProgress(roundRef.current / 5);
+          onProgress(roundRef.current / config.rounds);
 
-          if (roundRef.current > 5) {
+          if (roundRef.current > config.rounds) {
             gameActiveRef.current = false;
-            const stars = totalFoundRef.current >= 8 ? 3 : totalFoundRef.current >= 5 ? 2 : 1;
+            const stars = totalFoundRef.current >= config.rounds * 1.5 ? 3 : totalFoundRef.current >= config.rounds ? 2 : 1;
             const timeBonus = Math.floor(timeLeft * 5);
             scoreRef.current += timeBonus;
             const summary = `You found ${totalFoundRef.current} targets across ${roundRef.current - 1} rounds! Eagle eyes! 🦅`;
@@ -223,7 +223,7 @@ function VisualSearchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   return (
     <div className="flex flex-col h-full min-h-[350px] items-center p-2">
       <div className="flex gap-4 px-4 py-2 bg-[#232146] rounded-xl mb-2 w-full justify-center">
-        <span className="text-orange-400 font-bold">Round: {round}/5</span>
+        <span className="text-orange-400 font-bold">Round: {round}/{config.rounds}</span>
         <span className="text-green-400">Found: {foundCount}/{targetCountRef.current}</span>
         <span className="text-purple-400">Total: {totalFound}</span>
         <span className="text-yellow-400">Score: {score}</span>
