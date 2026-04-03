@@ -1,23 +1,20 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Send, Smile, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Send, Smile, Image as ImageIcon, Sticker, Search, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FeedPost } from '@/types';
 
 const NOW = Date.now();
+const GIPHY_KEY = import.meta.env.VITE_GIPHY_API_KEY || '';
 
 const EMOJIS = ['😀','😂','🤣','😍','🥰','😎','🤔','👍','👏','🙌','❤️','🔥','⭐','🎉','🎮','🏆','💪','🧠','🎯','✨','💯','🚀','🌟','🎊','🥳','😋','🤩','😏','🫡','🤝'];
 
-const GIPHY_STICKERS = [
-  { id: '1', url: 'https://media.giphy.com/media/XRB1uf2F9bGOA/giphy.gif', label: 'Party' },
-  { id: '2', url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif', label: 'Clap' },
-  { id: '3', url: 'https://media.giphy.com/media/3o7TKU8RvQuomFfUUU/giphy.gif', label: 'Dance' },
-  { id: '4', url: 'https://media.giphy.com/media/l0HlvtIPzPdt2usKs/giphy.gif', label: 'Fire' },
-  { id: '5', url: 'https://media.giphy.com/media/26u4cqiYI30juCOGY/giphy.gif', label: 'Thumbs' },
-  { id: '6', url: 'https://media.giphy.com/media/3oriO0OEd9QIDdllqo/giphy.gif', label: 'Mind Blown' },
-  { id: '7', url: 'https://media.giphy.com/media/jUwpNzg9IcyrK/giphy.gif', label: 'LOL' },
-  { id: '8', url: 'https://media.giphy.com/media/3o6fJ1BM7R2EBRDnxK/giphy.gif', label: 'Love' },
-  { id: '9', url: 'https://media.giphy.com/media/111ebonMs90YLu/giphy.gif', label: 'Cheer' },
-];
+const STICKER_EMOJIS = ['🎈','🎁','🎀','🎊','🎉','🎵','🎶','🌈','🦄','🐱','🐶','🐼','🦊','🐸','🐙','🦋','🌸','🌺','🍕','🍩','🧁','🍦','🎂','🍰','🍭','🍬','🍫','🍪','🧸','⭐','💫','✨','🌟','💖','💝','💗','💕','💞','💓','💘'];
+
+interface GiphyResult {
+  id: string;
+  url: string;
+  title: string;
+}
 
 export function Feed() {
   const { player } = useAuth();
@@ -27,6 +24,11 @@ export function Feed() {
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
+  const [showSticker, setShowSticker] = useState(false);
+  const [gifSearch, setGifSearch] = useState('');
+  const [gifResults, setGifResults] = useState<GiphyResult[]>([]);
+  const [gifLoading, setGifLoading] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -59,6 +61,46 @@ export function Feed() {
     return () => clearTimeout(timer);
   }, [fetchPosts]);
 
+  // Search GIPHY with kid-safe rating
+  const searchGifs = useCallback(async (query: string) => {
+    if (!GIPHY_KEY) return;
+    setGifLoading(true);
+    try {
+      const url = query
+        ? `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=12&rating=g&lang=en`
+        : `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=12&rating=g&lang=en`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.data) {
+        setGifResults(data.data.map((g: Record<string, Record<string, string>>) => ({
+          id: g.id,
+          url: g.images.fixed_height.url,
+          title: g.title || '',
+        })));
+      }
+    } catch { /* offline */ }
+    setGifLoading(false);
+  }, []);
+
+  // Auto-search trending when GIF panel opens
+  useEffect(() => {
+    if (showGif && gifResults.length === 0) {
+      searchGifs('');
+    }
+  }, [showGif]);
+
+  // Focus search input when GIF panel opens
+  useEffect(() => {
+    if (showGif && searchRef.current) {
+      searchRef.current.focus();
+    }
+  }, [showGif]);
+
+  const handleGifSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchGifs(gifSearch);
+  };
+
   const chatPosts = posts.filter(p => p.type !== 'score').reverse();
   const activityPosts = [...posts.filter(p => p.type === 'score')];
 
@@ -68,6 +110,7 @@ export function Feed() {
     setSending(true);
     setShowEmoji(false);
     setShowGif(false);
+    setShowSticker(false);
     try {
       await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
         method: 'POST',
@@ -114,7 +157,9 @@ export function Feed() {
               <span className="text-text-dim">{post.content}</span>
             </div>
           ) : post.type === 'gif' ? (
-            <img src={post.content} alt="GIF" className="mt-2 rounded-lg max-h-32" loading="lazy" />
+            <img src={post.content} alt="GIF" className="mt-2 rounded-lg max-w-[240px]" loading="lazy" />
+          ) : post.type === 'sticker' ? (
+            <div className="text-5xl mt-1">{post.content}</div>
           ) : post.type === 'emoji' ? (
             <div className="text-4xl mt-1">{post.content}</div>
           ) : (
@@ -161,7 +206,7 @@ export function Feed() {
         <div className="flex-shrink-0 bg-surface border-t border-white/5">
           {/* Emoji picker */}
           {showEmoji && (
-            <div className="p-3 border-b border-white/5 flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+            <div className="p-3 border-b border-white/5 flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
               {EMOJIS.map(e => (
                 <button
                   key={e}
@@ -174,37 +219,86 @@ export function Feed() {
             </div>
           )}
 
-          {/* GIF picker */}
+          {/* Sticker picker */}
+          {showSticker && (
+            <div className="p-3 border-b border-white/5 flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+              {STICKER_EMOJIS.map(e => (
+                <button
+                  key={e}
+                  onClick={() => handleSend('sticker', e)}
+                  className="text-2xl hover:scale-125 transition-transform active:scale-90"
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* GIF picker with search */}
           {showGif && (
             <div className="p-3 border-b border-white/5">
-              <div className="grid grid-cols-3 gap-2">
-                {GIPHY_STICKERS.map(g => (
-                  <button
-                    key={g.id}
-                    onClick={() => handleSend('gif', g.url)}
-                    className="rounded-lg overflow-hidden hover:ring-2 ring-accent transition-all active:scale-95"
-                  >
-                    <img src={g.url} alt={g.label} className="w-full h-20 object-cover" loading="lazy" />
+              <form onSubmit={handleGifSearch} className="flex gap-2 mb-3">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    placeholder="Search GIFs... (kid-safe)"
+                    value={gifSearch}
+                    onChange={e => setGifSearch(e.target.value)}
+                    className="w-full bg-card rounded-xl pl-9 pr-4 py-2 text-sm text-text placeholder-text-muted outline-none focus:ring-1 ring-accent"
+                  />
+                </div>
+                <button type="submit" className="bg-accent text-bg px-4 rounded-xl text-sm font-semibold active:scale-95">
+                  Search
+                </button>
+                {gifSearch && (
+                  <button type="button" onClick={() => { setGifSearch(''); searchGifs(''); }} className="text-text-muted p-2">
+                    <X size={16} />
                   </button>
-                ))}
+                )}
+              </form>
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                {gifLoading ? (
+                  <div className="col-span-3 text-center text-text-muted text-sm py-4">Loading...</div>
+                ) : gifResults.length === 0 ? (
+                  <div className="col-span-3 text-center text-text-muted text-sm py-4">No GIFs found</div>
+                ) : (
+                  gifResults.map(g => (
+                    <button
+                      key={g.id}
+                      onClick={() => handleSend('gif', g.url)}
+                      className="rounded-lg overflow-hidden hover:ring-2 ring-accent transition-all active:scale-95"
+                    >
+                      <img src={g.url} alt={g.title} className="w-full h-24 object-cover" loading="lazy" />
+                    </button>
+                  ))
+                )}
               </div>
+              <div className="text-center text-[10px] text-text-muted mt-2">🔒 Kid-safe: G-rated GIFs only</div>
             </div>
           )}
 
           {/* Compose bar */}
           <div className="p-3">
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-1.5 items-center">
               <button
-                onClick={() => { setShowEmoji(!showEmoji); setShowGif(false); }}
+                onClick={() => { setShowEmoji(!showEmoji); setShowGif(false); setShowSticker(false); }}
                 className={`p-2 rounded-lg transition-colors ${showEmoji ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'}`}
               >
-                <Smile size={20} />
+                <Smile size={18} />
               </button>
               <button
-                onClick={() => { setShowGif(!showGif); setShowEmoji(false); }}
+                onClick={() => { setShowSticker(!showSticker); setShowGif(false); setShowEmoji(false); }}
+                className={`p-2 rounded-lg transition-colors ${showSticker ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'}`}
+              >
+                <Sticker size={18} />
+              </button>
+              <button
+                onClick={() => { setShowGif(!showGif); setShowEmoji(false); setShowSticker(false); }}
                 className={`p-2 rounded-lg transition-colors ${showGif ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'}`}
               >
-                <ImageIcon size={20} />
+                <ImageIcon size={18} />
               </button>
               <input
                 type="text"
