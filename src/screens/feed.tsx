@@ -147,15 +147,13 @@ export function Feed() {
     const atMatch = val.match(/@(\w*)$/);
     if (atMatch) {
       const query = atMatch[1].toLowerCase();
-      if (query.length >= 1) {
-        const players = await fetchPlayers();
-        const filtered = players.filter(p => p.name.toLowerCase().includes(query)).slice(0, 5);
-        setMentionList(filtered);
-        setShowMentions(filtered.length > 0);
-        setMentionQuery(query);
-      } else {
-        setShowMentions(false);
-      }
+      const players = await fetchPlayers();
+      const filtered = query.length >= 1
+        ? players.filter(p => p.name.toLowerCase().includes(query)).slice(0, 5)
+        : players.slice(0, 8);
+      setMentionList(filtered);
+      setShowMentions(filtered.length > 0);
+      setMentionQuery(query);
     } else {
       setShowMentions(false);
     }

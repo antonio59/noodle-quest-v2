@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import type { GameDefinition } from '@/types';
@@ -17,6 +17,37 @@ export function Home({ onPlay }: HomeProps) {
       return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
     } catch { return new Set(); }
   });
+  const [stats, setStats] = useState({ stars: 0, streak: 0, gamesPlayed: 0 });
+
+  const fetchStats = useCallback(async () => {
+    if (!player) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'games:getPlayerStats',
+          format: 'convex_encoded_json',
+          args: [{ playerId: player.playerId }],
+        }),
+      });
+      const data = await res.json();
+      if (data.value) {
+        const gp = data.value.gamesPlayed || 0;
+        setStats({
+          stars: data.value.totalStars || 0,
+          streak: gp > 0 ? Math.min(gp, 7) : 0,
+          gamesPlayed: gp,
+        });
+      }
+    } catch { /* offline */ }
+  }, [player]);
+
+  useEffect(() => {
+    if (!player) return;
+    const timer = setTimeout(fetchStats, 0);
+    return () => clearTimeout(timer);
+  }, [player, fetchStats]);
 
   const favGames = games.filter(g => favorites.has(g.id));
 
@@ -40,7 +71,7 @@ export function Home({ onPlay }: HomeProps) {
             <h1 className="text-2xl font-bold">{player?.avatar} {player?.name}</h1>
           </div>
           <div className="bg-card rounded-xl px-3 py-2 text-center">
-            <div className="text-lg font-bold text-warning">0</div>
+            <div className="text-lg font-bold text-warning">{stats.stars}</div>
             <div className="text-text-muted text-[10px]">⭐ Stars</div>
           </div>
         </div>
@@ -76,9 +107,9 @@ export function Home({ onPlay }: HomeProps) {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { icon: Star, label: 'Stars', value: '0', color: 'text-warning' },
-            { icon: Zap, label: 'Streak', value: '0', color: 'text-success' },
-            { icon: Play, label: 'Games', value: String(games.length), color: 'text-accent' },
+            { icon: Star, label: 'Stars', value: stats.stars, color: 'text-warning' },
+            { icon: Zap, label: 'Streak', value: stats.streak, color: 'text-success' },
+            { icon: Play, label: 'Played', value: stats.gamesPlayed, color: 'text-accent' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-xl p-3 text-center">
               <s.icon className={`mx-auto mb-1 ${s.color}`} size={18} />

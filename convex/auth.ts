@@ -38,9 +38,10 @@ export const getPlayer = query({
 export const searchPlayers = query({
   args: { query: v.string(), currentPlayerId: v.id("players") },
   handler: async (ctx, args) => {
-    if (args.query.length < 2) return [];
     const players = await ctx.db.query("players").collect();
-    return players.filter(p => p._id !== args.currentPlayerId && p.name.toLowerCase().includes(args.query.toLowerCase())).slice(0, 10).map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
+    const filtered = players.filter(p => p._id !== args.currentPlayerId);
+    if (args.query.length < 1) return filtered.slice(0, 10).map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
+    return filtered.filter(p => p.name.toLowerCase().includes(args.query.toLowerCase())).slice(0, 10).map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
   },
 });
 
