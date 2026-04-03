@@ -40,76 +40,75 @@ export function Profile() {
   const [earnedBadges, setEarnedBadges] = useState<Set<string>>(new Set());
 
   // Fetch stats from Convex
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!player) return;
-      try {
-        // Fetch scores
-        const scoresRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-          body: JSON.stringify({
-            path: 'games:getPlayerStats',
-            format: 'convex_encoded_json',
-            args: [{ playerId: player.playerId }],
-          }),
-        });
-        const scoresData = await scoresRes.json();
+  const fetchStats = useCallback(async () => {
+    if (!player) return;
+    try {
+      const scoresRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'games:getPlayerStats',
+          format: 'convex_encoded_json',
+          args: [{ playerId: player.playerId }],
+        }),
+      });
+      const scoresData = await scoresRes.json();
 
-        // Fetch leaderboard for streak (games played)
-        const lbRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-          body: JSON.stringify({
-            path: 'games:getLeaderboard',
-            format: 'convex_encoded_json',
-            args: [{}],
-          }),
-        });
-        const lbData = await lbRes.json();
+      const lbRes = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'games:getLeaderboard',
+          format: 'convex_encoded_json',
+          args: [{}],
+        }),
+      });
+      const lbData = await lbRes.json();
 
-        let totalStars = 0;
-        let gamesPlayed = 0;
-        let maxStage = 0;
-        let threeStars = 0;
+      let totalStars = 0;
+      let gamesPlayed = 0;
+      let maxStage = 0;
+      let threeStars = 0;
 
-        if (scoresData.value) {
-          totalStars = scoresData.value.totalStars || 0;
-          gamesPlayed = scoresData.value.gamesPlayed || 0;
-          maxStage = scoresData.value.maxStage || 0;
-          threeStars = scoresData.value.threeStars || 0;
+      if (scoresData.value) {
+        totalStars = scoresData.value.totalStars || 0;
+        gamesPlayed = scoresData.value.gamesPlayed || 0;
+        maxStage = scoresData.value.maxStage || 0;
+        threeStars = scoresData.value.threeStars || 0;
+      }
+
+      if (lbData.value) {
+        const me = lbData.value.find((p: Record<string, unknown>) => p.playerName === player.name);
+        if (me) {
+          totalStars = (me.totalStars as number) || totalStars;
+          gamesPlayed = (me.gamesPlayed as number) || gamesPlayed;
         }
+      }
 
-        // If player not in leaderboard yet, use local data
-        if (lbData.value) {
-          const me = lbData.value.find((p: Record<string, unknown>) => p.playerName === player.name);
-          if (me) {
-            totalStars = me.totalStars as number || totalStars;
-            gamesPlayed = me.gamesPlayed as number || gamesPlayed;
-          }
-        }
+      const streak = gamesPlayed > 0 ? Math.min(gamesPlayed, 7) : 0;
+      setStats({ totalStars, gamesPlayed, streak, maxStage, threeStars });
 
-        const streak = gamesPlayed > 0 ? Math.min(gamesPlayed, 7) : 0;
-        setStats({ totalStars, gamesPlayed, streak, maxStage, threeStars });
-
-        // Calculate earned badges
-        const earned = new Set<string>();
-        if (gamesPlayed >= 1) earned.add('first_game');
-        if (totalStars >= 1) earned.add('first_star');
-        if (totalStars >= 10) earned.add('star_10');
-        if (totalStars >= 30) earned.add('star_30');
-        if (totalStars >= 60) earned.add('star_60');
-        if (totalStars >= 100) earned.add('star_100');
-        if (threeStars >= 1) earned.add('perfect');
-        if (gamesPlayed >= 5) earned.add('games_5');
-        if (gamesPlayed >= 10) earned.add('games_10');
-        if (gamesPlayed >= games.length) earned.add('games_all');
-        if (maxStage >= 10) earned.add('stage_10');
-        setEarnedBadges(earned);
-      } catch { /* offline */ }
-    };
-    fetchStats();
+      const earned = new Set<string>();
+      if (gamesPlayed >= 1) earned.add('first_game');
+      if (totalStars >= 1) earned.add('first_star');
+      if (totalStars >= 10) earned.add('star_10');
+      if (totalStars >= 30) earned.add('star_30');
+      if (totalStars >= 60) earned.add('star_60');
+      if (totalStars >= 100) earned.add('star_100');
+      if (threeStars >= 1) earned.add('perfect');
+      if (gamesPlayed >= 5) earned.add('games_5');
+      if (gamesPlayed >= 10) earned.add('games_10');
+      if (gamesPlayed >= games.length) earned.add('games_all');
+      if (maxStage >= 10) earned.add('stage_10');
+      setEarnedBadges(earned);
+    } catch { /* offline */ }
   }, [player, games.length]);
+
+  useEffect(() => {
+    if (!player) return;
+    const timer = setTimeout(fetchStats, 0);
+    return () => clearTimeout(timer);
+  }, [player, games.length, fetchStats]);
 
   useEffect(() => {
     const fetchTaken = async () => {
