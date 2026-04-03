@@ -87,4 +87,16 @@ export default defineSchema({
     read: v.boolean(),
     createdAt: v.number(),
   }).index("by_player", ["playerId", "read", "createdAt"]),
+
+  reports: defineTable({
+    playerId: v.id("players"),
+    playerName: v.string(),
+    gameId: v.string(),
+    gameName: v.string(),
+    stage: v.number(),
+    description: v.string(),
+    status: v.string(),
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  }).index("by_status", ["status", "createdAt"]),
 });
