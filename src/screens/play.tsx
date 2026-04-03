@@ -117,6 +117,13 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
   const handleEnd = (result: GameResult) => {
     setEnded(result);
     saveScore(result);
+
+    // Auto-advance to next stage on 3-star win
+    if (result.stars === 3 && currentStage < game.stages) {
+      setTimeout(() => {
+        setCurrentStage(s => s + 1);
+      }, 3000);
+    }
   };
 
   const nextStage = () => {
@@ -185,6 +192,12 @@ export function PlayGame({ game, gameId, stage, onBack }: PlayGameProps) {
         {renderStars(ended.stars)}
         <p className="text-accent text-xl font-bold mb-2">Score: {ended.score}</p>
         <p className="text-text-muted text-sm mb-6 max-w-xs">{ended.summary}</p>
+
+        {ended.stars === 3 && currentStage < game.stages && (
+          <div className="text-success text-sm mb-4 animate-pulse">
+            ⭐ Perfect! Advancing to Stage {currentStage + 1}...
+          </div>
+        )}
 
         {/* Stage navigation */}
         <div className="flex items-center gap-2 mb-4">

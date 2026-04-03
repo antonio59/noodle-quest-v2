@@ -442,7 +442,7 @@ function CheckersGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               return (
                 <div
                   key={`${r}-${c}`}
-                  onClick={() => handleCellClick(r, c)}
+                  onPointerDown={(e) => { e.preventDefault(); handleCellClick(r, c); }}
                   className={`aspect-square flex items-center justify-center relative cursor-pointer
                     ${isDark ? 'bg-amber-900' : 'bg-amber-100'}
                     ${isSelected ? 'ring-2 ring-yellow-400 z-10' : ''}

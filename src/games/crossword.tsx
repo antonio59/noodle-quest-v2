@@ -343,8 +343,19 @@ function CrosswordGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   const startGame = useCallback(() => {
     const { grid: newGrid, placements } = buildGrid();
-    setGrid(newGrid);
-    setWordPlacements(placements);
+    // If no words were placed, retry up to 5 times
+    let finalGrid = newGrid;
+    let finalPlacements = placements;
+    let attempts = 0;
+    while (finalPlacements.length === 0 && attempts < 5) {
+      const retry = buildGrid();
+      finalGrid = retry.grid;
+      finalPlacements = retry.placements;
+      attempts++;
+    }
+
+    setGrid(finalGrid);
+    setWordPlacements(finalPlacements);
     setScore(0);
     setWordsFound(0);
     setTimeLeft(config.timeLimit);

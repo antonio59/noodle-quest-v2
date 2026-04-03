@@ -66,9 +66,65 @@ function weightedRandomLetter(): string {
 }
 
 function generateGrid(size: number): string[][] {
-  return Array.from({ length: size }, () =>
+  // Start with random letters
+  const grid: string[][] = Array.from({ length: size }, () =>
     Array.from({ length: size }, () => weightedRandomLetter())
   );
+
+  // Place guaranteed valid words on the grid
+  const shortWords = Array.from(VALID_WORDS).filter(w => w.length >= 3 && w.length <= size);
+  const wordsToPlace = shortWords.sort(() => Math.random() - 0.5).slice(0, Math.min(8, shortWords.length));
+
+  for (const word of wordsToPlace) {
+    // Try to place the word somewhere on the grid
+    let placed = false;
+    for (let attempt = 0; attempt < 50 && !placed; attempt++) {
+      const row = Math.floor(Math.random() * size);
+      const col = Math.floor(Math.random() * size);
+      const dir = Math.random() > 0.5 ? 'across' : 'down';
+
+      if (dir === 'across' && col + word.length <= size) {
+        let canPlace = true;
+        for (let i = 0; i < word.length; i++) {
+          if (grid[row][col + i] !== '' && grid[row][col + i] !== word[i]) {
+            canPlace = false;
+            break;
+          }
+        }
+        if (canPlace) {
+          for (let i = 0; i < word.length; i++) {
+            grid[row][col + i] = word[i];
+          }
+          placed = true;
+        }
+      } else if (dir === 'down' && row + word.length <= size) {
+        let canPlace = true;
+        for (let i = 0; i < word.length; i++) {
+          if (grid[row + i][col] !== '' && grid[row + i][col] !== word[i]) {
+            canPlace = false;
+            break;
+          }
+        }
+        if (canPlace) {
+          for (let i = 0; i < word.length; i++) {
+            grid[row + i][col] = word[i];
+          }
+          placed = true;
+        }
+      }
+    }
+  }
+
+  // Fill any empty cells
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (grid[r][c] === '') {
+        grid[r][c] = weightedRandomLetter();
+      }
+    }
+  }
+
+  return grid;
 }
 
 function getScoreForLength(len: number): number {
