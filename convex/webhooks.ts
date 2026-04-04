@@ -10,8 +10,20 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     try {
+      // Verify webhook secret if configured
+      const webhookSecret = process.env.WEBHOOK_SECRET;
+      if (webhookSecret) {
+        const headerSecret = request.headers.get("X-Webhook-Secret");
+        if (headerSecret !== webhookSecret) {
+          return new Response(
+            JSON.stringify({ error: "Unauthorized" }),
+            { status: 401, headers: { "Content-Type": "application/json" } }
+          );
+        }
+      }
+
       const body = await request.json();
-      
+
       // Validate required fields
       if (!body.errorId || !body.message) {
         return new Response(
@@ -21,7 +33,7 @@ http.route({
       }
 
       // Create the report
-      const reportId = await ctx.runMutation(internal.reports.createReport, {
+      const { id: reportId, isNew } = await ctx.runMutation(internal.reports.createReport, {
         errorId: body.errorId,
         gameId: body.gameId,
         playerId: body.playerId,
@@ -33,21 +45,23 @@ http.route({
         context: body.context,
       });
 
-      // Create Linear issue if enabled
-      const linearApiKey = process.env.LINEAR_API_KEY;
-      if (linearApiKey) {
-        try {
-          const linearIssue = await createLinearIssue(body, linearApiKey);
-          if (linearIssue) {
-            await ctx.runMutation(internal.reports.updateReportWithLinear, {
-              errorId: body.errorId,
-              linearIssueId: linearIssue.id,
-              linearIssueUrl: linearIssue.url,
-            });
+      // Create Linear issue only for newly created reports (avoid duplicates)
+      if (isNew) {
+        const linearApiKey = process.env.LINEAR_API_KEY;
+        if (linearApiKey) {
+          try {
+            const linearIssue = await createLinearIssue(body, linearApiKey);
+            if (linearIssue) {
+              await ctx.runMutation(internal.reports.updateReportWithLinear, {
+                errorId: body.errorId,
+                linearIssueId: linearIssue.id,
+                linearIssueUrl: linearIssue.url,
+              });
+            }
+          } catch (linearError) {
+            console.error("Failed to create Linear issue:", linearError);
+            // Don't fail the webhook if Linear fails
           }
-        } catch (linearError) {
-          console.error("Failed to create Linear issue:", linearError);
-          // Don't fail the webhook if Linear fails
         }
       }
 

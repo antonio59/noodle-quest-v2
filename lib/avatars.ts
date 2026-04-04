@@ -15,7 +15,7 @@ export const AVATARS: string[] = [
 
 /**
  * Pick a random avatar that isn't already taken by a nearby player.
- * Falls back to full random if takenSet is empty.
+ * Falls back to full pool if all avatars are taken.
  */
 export function pickUniqueAvatar(takenSet?: Set<string>): string {
   const available = takenSet

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This release adds automated error detection and bot-driven bug fixing capabilities through OpenClaw integration, Linear issue tracking, and a complete error reporting system.
+This release adds automated error detection and bot-driven bug-fixing capabilities through OpenClaw integration, Linear issue tracking, and a complete error reporting system.
 
 ## What's New
 

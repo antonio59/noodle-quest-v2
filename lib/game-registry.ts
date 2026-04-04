@@ -1,4 +1,4 @@
-import type { GameDefinition } from '@/types';
+import type { GameCategory, GameDefinition } from '@/types';
 
 const registry = new Map<string, GameDefinition>();
 
@@ -14,6 +14,6 @@ export function getAllGames() {
   return Array.from(registry.entries()).map(([id, game]) => ({ id, ...game }));
 }
 
-export function getGamesByCategory(category: string) {
+export function getGamesByCategory(category: GameCategory) {
   return getAllGames().filter(g => g.category === category);
 }
