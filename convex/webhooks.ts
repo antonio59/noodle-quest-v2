@@ -136,13 +136,15 @@ async function createLinearIssue(
     }
   `;
 
+  const projectId = process.env.LINEAR_PROJECT_ID;
   const variables = {
     input: {
       teamId: linearTeamId,
       title: `[${report.gameId || "Unknown"}] ${report.message.substring(0, 80)}`,
       description: buildLinearDescription(report),
       priority,
-      labelIds: [], // Could map severity to Linear labels
+      labelIds: [],
+      ...(projectId ? { projectIds: [projectId] } : {}),
     },
   };
 
