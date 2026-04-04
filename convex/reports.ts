@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // Create a new error report
@@ -29,7 +29,7 @@ export const createReport = mutation({
         updatedAt: now,
         status: "open",
       });
-      return existing._id;
+      return { id: existing._id, isNew: false };
     }
 
     // Create new report
@@ -48,12 +48,12 @@ export const createReport = mutation({
       updatedAt: now,
     });
 
-    return reportId;
+    return { id: reportId, isNew: true };
   },
 });
 
 // Resolve a report (called by bot after fix)
-export const resolveReport = mutation({
+export const resolveReport = internalMutation({
   args: {
     errorId: v.string(),
     resolvedBy: v.optional(v.string()),
@@ -69,6 +69,8 @@ export const resolveReport = mutation({
       throw new Error(`Report not found for errorId: ${args.errorId}`);
     }
 
+    const wasAlreadyResolved = report.status === "resolved";
+
     const now = Date.now();
     await ctx.db.patch(report._id, {
       status: "resolved",
@@ -77,8 +79,8 @@ export const resolveReport = mutation({
       updatedAt: now,
     });
 
-    // Post resolution message to feed if player exists
-    if (report.playerId) {
+    // Post resolution message to feed only if not already resolved
+    if (report.playerId && !wasAlreadyResolved) {
       await ctx.db.insert("feed", {
         authorId: report.playerId,
         authorName: "🤖 Noodle Bot",
@@ -131,7 +133,7 @@ export const getRecentReports = query({
 });
 
 // Update report with Linear issue info
-export const updateReportWithLinear = mutation({
+export const updateReportWithLinear = internalMutation({
   args: {
     errorId: v.string(),
     linearIssueId: v.string(),

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **OpenClaw Bot Integration** - Automated error detection, reporting, and resolution workflow
 - **Error Reporting System** - New `reports` table in Convex schema for tracking bugs with status lifecycle (open → investigating → resolved → dismissed)
-- **Linear Issue Integration** - Automatic GitHub Linear issue creation when errors are reported, with project assignment support
+- **Linear Issue Integration** - Automatic Linear issue creation when errors are reported, with project assignment support
 - **Webhook Endpoints** - Two new Convex HTTP routes:
   - `POST /webhook/report` - Accept error reports from bots or external monitoring
   - `POST /webhook/linear` - Optional webhook for Linear status sync

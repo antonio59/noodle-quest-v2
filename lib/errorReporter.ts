@@ -51,20 +51,18 @@ function generateErrorId(gameId: string | undefined, message: string, errorType:
   return `err_${Math.abs(hash).toString(36)}`;
 }
 
-// Global error boundary helper
-export function setupGlobalErrorReporting(reportError: (opts: any) => Promise<string | null>) {
-  // Catch unhandled promise rejections
-  window.addEventListener("unhandledrejection", (event) => {
+// Global error boundary helper — returns cleanup function to remove listeners
+export function setupGlobalErrorReporting(reportError: (opts: any) => Promise<string | null>): () => void {
+  const rejectionHandler = (event: PromiseRejectionEvent) => {
     reportError({
       errorType: "runtime",
       severity: "high",
       message: `Unhandled rejection: ${event.reason?.message || event.reason}`,
       stackTrace: event.reason?.stack,
     });
-  });
+  };
 
-  // Catch unhandled errors
-  window.addEventListener("error", (event) => {
+  const errorHandler = (event: ErrorEvent) => {
     reportError({
       errorType: "runtime",
       severity: "high",
@@ -76,5 +74,13 @@ export function setupGlobalErrorReporting(reportError: (opts: any) => Promise<st
         colno: event.colno,
       },
     });
-  });
+  };
+
+  window.addEventListener("unhandledrejection", rejectionHandler);
+  window.addEventListener("error", errorHandler);
+
+  return () => {
+    window.removeEventListener("unhandledrejection", rejectionHandler);
+    window.removeEventListener("error", errorHandler);
+  };
 }

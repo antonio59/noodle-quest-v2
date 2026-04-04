@@ -1,5 +1,6 @@
 [build]
   publish = "dist"
+  # --legacy-peer-deps needed: React 19 peer deps conflict with some packages expecting React 18
   command = "npm install --legacy-peer-deps && npm run build"
 
 [[redirects]]
