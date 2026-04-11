@@ -58,3 +58,11 @@ export const updateAvatar = mutation({
     return { success: true };
   },
 });
+
+export const getAllPlayers = query({
+  args: {},
+  handler: async (ctx) => {
+    const players = await ctx.db.query("players").collect();
+    return players.map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
+  },
+});
