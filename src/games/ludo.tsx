@@ -1,15 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
-// Define AI difficulty levels
 const DIFFICULTY_LEVELS = {
   easy: { enterChance: 0.4, moveHomeChance: 0.6, captureChance: 0.5 },
   medium: { enterChance: 0.8, moveHomeChance: 0.9, captureChance: 0.8 },
   hard: { enterChance: 1.0, moveHomeChance: 1.0, captureChance: 1.0 },
 };
 
-type TokenPos = number; // -1 = in yard, 0-27 = on track, 28-32 = home stretch, 33 = finished
+type TokenPos = number;
 
 interface PlayerState {
   color: string;
@@ -17,86 +16,79 @@ interface PlayerState {
   pos: TokenPos;
 }
 
-const TRACK_LENGTH = 28;
-const HOME_STRETCH = 5;
-
 function rollDie(): number {
   return Math.floor(Math.random() * 6) + 1;
 }
 
-// Track path (simplified linear for mobile)
-function getTrackPos(index: number): { x: number; y: number } {
-  const angle = (index / TRACK_LENGTH) * Math.PI * 2 - Math.PI / 2;
-  const r = 0.38;
-  return { x: 0.5 + Math.cos(angle) * r, y: 0.5 + Math.sin(angle) * r };
-}
-
 function movePlayer(pos: number, steps: number): number {
   if (pos === -1) {
-    return steps === 6 ? 0 : -1; // need 6 to enter
+    return steps === 6 ? 0 : -1;
   }
   const newPos = pos + steps;
-  if (newPos > TRACK_LENGTH + HOME_STRETCH) return pos; // can't overshoot
-  if (newPos > TRACK_LENGTH) return TRACK_LENGTH + (newPos - TRACK_LENGTH); // home stretch
-  if (newPos === TRACK_LENGTH + HOME_STRETCH) return TRACK_LENGTH + HOME_STRETCH; // finished
+  if (newPos > 33) return pos;
+  if (newPos > 28) return 28 + (newPos - 28);
+  if (newPos === 33) return 33;
   return newPos;
 }
 
-// Simple AI: prefer entering > moving toward home > capturing > random
 function aiMove(pPos: number, aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
   const { enterChance, moveHomeChance, captureChance } = DIFFICULTY_LEVELS[difficulty];
   
-  // Prefer entering (if in yard and dice is 6)
   if (aiPos === -1 && Math.random() < enterChance) {
     return 6;
   }
   
-  // Prefer moving toward home (if on track and close to home)
-  if (aiPos >= 0 && aiPos < TRACK_LENGTH && Math.random() < moveHomeChance) {
-    // Move more aggressively when close to home
-    const distanceToHome = TRACK_LENGTH + HOME_STRETCH - aiPos;
+  if (aiPos >= 0 && aiPos < 28 && Math.random() < moveHomeChance) {
+    const distanceToHome = 33 - aiPos;
     if (distanceToHome <= 3) return distanceToHome;
     if (distanceToHome <= 6) return Math.min(distanceToHome, 6);
   }
   
-  // Prefer capturing player (if possible)
-  if (pPos >= 0 && pPos < TRACK_LENGTH && Math.random() < captureChance) {
-    // If player is ahead, try to land exactly on them
+  if (pPos >= 0 && pPos < 28 && Math.random() < captureChance) {
     const distance = pPos - aiPos;
     if (distance > 0 && distance <= 6) return distance;
   }
   
-  // Random move
   return rollDie();
 }
 
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
-  const players: PlayerState[] = [
-    { color: '#ef4444', emoji: '🔴', pos: -1 },
-    { color: '#3b82f6', emoji: '🔵', pos: -1 },
-  ];
-  // Player is index 0 (red), AI is index 1 (blue)
-
   const [pPos, setPPos] = useState<number>(-1);
   const [aiPos, setAiPos] = useState<number>(-1);
   const [turn, setTurn] = useState<'player' | 'ai'>('player');
   const [die, setDie] = useState<number | null>(null);
-  const [rolls, setRolls] = useState(0);
   const [wins, setWins] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const targetWins = Math.min(stage, 10);
   const difficulty = aiDifficulty || 'medium';
 
+  const pathPositions = [
+    { r: 1, c: 6 }, { r: 2, c: 6 }, { r: 3, c: 6 }, { r: 4, c: 6 }, { r: 5, c: 6 },
+    { r: 6, c: 5 }, { r: 6, c: 4 }, { r: 6, c: 3 }, { r: 6, c: 2 }, { r: 6, c: 1 },
+    { r: 6, c: 0 }, { r: 7, c: 0 }, { r: 8, c: 0 },
+    { r: 8, c: 1 }, { r: 8, c: 2 }, { r: 8, c: 3 }, { r: 8, c: 4 }, { r: 8, c: 5 },
+    { r: 8, c: 6 }, { r: 9, c: 6 }, { r: 10, c: 6 },
+    { r: 10, c: 5 }, { r: 10, c: 4 }, { r: 10, c: 3 }, { r: 10, c: 2 }, { r: 10, c: 1 },
+    { r: 10, c: 0 }, { r: 11, c: 0 },
+  ];
+  
+  const playerHomeStretch = [
+    { r: 7, c: 1 }, { r: 7, c: 2 }, { r: 7, c: 3 }, { r: 7, c: 4 }, { r: 7, c: 5 },
+  ];
+
+  useEffect(() => {
+    onMessage('Your turn! Roll the die to start.');
+  }, []);
+
   const handleRoll = () => {
     if (gameOver || turn !== 'player') return;
     const d = rollDie();
     setDie(d);
-    setRolls(r => r + 1);
     const newPos = movePlayer(pPos, d);
     setPPos(newPos);
-    onMessage(`You rolled ${d}! ${newPos === -1 ? 'Need a 6 to enter!' : `Moved to ${newPos}`}`);
+    onMessage(`You rolled ${d}! ${newPos === -1 ? 'Need a 6 to enter!' : `Moved to position ${newPos}`}`);
 
-    if (newPos >= TRACK_LENGTH + HOME_STRETCH) {
+    if (newPos >= 33) {
       const newWins = wins + 1;
       setWins(newWins);
       setGameOver(true);
@@ -105,16 +97,15 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       if (newWins >= targetWins) {
         onEnd({ score: newWins * 100, stars: 3, summary: `Won ${newWins} Ludo games!` });
       } else {
-        onMessage('You got home! Rolling for AI...');
+        onMessage('You got home! Starting new round...');
         setTimeout(() => resetGame(), 2000);
       }
       return;
     }
 
-    // Capture: if player lands on AI
-    if (newPos === aiPos && newPos >= 0 && newPos < TRACK_LENGTH) {
+    if (newPos === aiPos && newPos >= 0 && newPos < 28) {
       setAiPos(-1);
-      onMessage('Sent AI back to yard!');
+      onMessage('Sent AI back to base!');
     }
 
     setTurn('ai');
@@ -127,22 +118,21 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     setAiPos(newPos);
     onMessage(`AI rolled ${d}!`);
 
-    if (newPos >= TRACK_LENGTH + HOME_STRETCH) {
+    if (newPos >= 33) {
       setGameOver(true);
       onMessage('AI got home — you lost!');
       setTimeout(() => resetGame(), 2000);
       return;
     }
 
-    // Capture player
-    if (newPos === pPos && newPos >= 0 && newPos < TRACK_LENGTH) {
+    if (newPos === pPos && newPos >= 0 && newPos < 28) {
       setPPos(-1);
-      onMessage('AI sent you back to yard!');
+      onMessage('AI sent you back to base!');
     }
 
     setTurn('player');
     if (d === 6) {
-      onMessage('AI got a 6 — rolled again!');
+      onMessage('AI rolled a 6 — rolling again!');
       setTimeout(aiTurn, 600);
     }
   };
@@ -156,84 +146,97 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     onMessage('Your turn! Roll the die.');
   };
 
-  // Render board
-  const renderTrack = () => {
+  const getCellContent = (pos: number) => {
+    if (pos === -1) return null;
+    if (pos >= 28) {
+      const homeIdx = pos - 28;
+      if (homeIdx < 5) {
+        return { player: pPos === pos, ai: aiPos === pos, isHome: true, homeIdx };
+      }
+      return { player: pPos === pos, ai: aiPos === pos, isHome: false };
+    }
+    return { player: pPos === pos, ai: aiPos === pos, isHome: false };
+  };
+
+  const renderBoard = () => {
     const cells = [];
-    for (let i = 0; i < TRACK_LENGTH; i++) {
-      const pos = getTrackPos(i);
-      const isPlayer = pPos === i;
-      const isAI = aiPos === i;
-      cells.push(
-        <div
-          key={i}
-          className="absolute w-6 h-6 rounded-full border border-white/20 flex items-center justify-center text-xs"
-          style={{
-            left: `${pos.x * 100}%`,
-            top: `${pos.y * 100}%`,
-            transform: 'translate(-50%, -50%)',
-            background: isPlayer ? '#ef4444' : isAI ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-          }}
-        >
-          {isPlayer ? '🔴' : isAI ? '🔵' : ''}
-        </div>
-      );
+    
+    for (let r = 0; r < 12; r++) {
+      for (let c = 0; c < 7; c++) {
+        const pathIdx = pathPositions.findIndex(p => p.r === r && p.c === c);
+        const isPath = pathIdx !== -1;
+        const isHome = r === 7 && c >= 1 && c <= 5;
+        const isPlayerHome = r >= 1 && r <= 5 && c >= 1 && c <= 5;
+        const isAIHome = r >= 6 && r <= 10 && c >= 1 && c <= 5;
+        
+        let bgColor = 'transparent';
+        let textColor = '';
+        
+        if (isPlayerHome) {
+          bgColor = '#ef4444';
+        } else if (isAIHome) {
+          bgColor = '#3b82f6';
+        } else if (isHome) {
+          bgColor = '#22c55e';
+        } else if (isPath) {
+          bgColor = '#374151';
+        }
+        
+        const content = pathIdx !== -1 ? getCellContent(pathIdx) : null;
+        
+        cells.push(
+          <div
+            key={`${r}-${c}`}
+            className="w-7 h-7 flex items-center justify-center text-xs"
+            style={{ backgroundColor: bgColor }}
+          >
+            {content && (
+              <>
+                {content.player && <span>🔴</span>}
+                {content.ai && <span>🔵</span>}
+              </>
+            )}
+            {isHome && !content?.player && !content?.ai && <span className="text-green-400 text-[8px]">★</span>}
+          </div>
+        );
+      }
     }
-
-    // Home stretch indicators
-    for (let i = TRACK_LENGTH; i < TRACK_LENGTH + HOME_STRETCH; i++) {
-      const pct = ((i - TRACK_LENGTH) / HOME_STRETCH) * 80 + 10;
-      cells.push(
-        <div
-          key={`home-${i}`}
-          className="absolute w-6 h-6 rounded-full border border-success/30 flex items-center justify-center text-xs"
-          style={{ left: '50%', top: `${pct}%`, transform: 'translate(-50%, -50%)', background: 'rgba(74,222,128,0.2)' }}
-        >
-          {pPos === i ? '🔴' : aiPos === i ? '🔵' : ''}
-        </div>
-      );
-    }
-
+    
     return cells;
   };
 
   return (
-    <div className="h-full flex flex-col items-center p-3">
-      <div className="flex gap-3 mb-3 text-sm items-center">
+    <div className="h-full flex flex-col items-center p-2">
+      <div className="flex gap-3 mb-2 text-sm items-center">
         <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: 🔴</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: 🔵</span>
+        <span className="bg-card rounded-lg px-3 py-1.5 text-blue-400 font-bold">AI: 🔵</span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
       </div>
 
-      {/* Board */}
-      <div className="relative w-64 h-64 bg-card rounded-2xl mb-4">
-        {/* Yard indicators */}
-        <div className="absolute top-2 left-2 text-2xl">{pPos === -1 ? '🔴' : '·'}</div>
-        <div className="absolute top-2 right-2 text-2xl">{aiPos === -1 ? '🔵' : '·'}</div>
-        {/* Home */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center">
-          <div className="text-lg">🏠</div>
-          <div className="text-xs text-text-muted">Home</div>
+      <div className="bg-card rounded-xl p-1 mb-3">
+        <div 
+          className="grid grid-cols-7 gap-px"
+          style={{ width: 'fit-content' }}
+        >
+          {renderBoard()}
         </div>
-        {/* Track */}
-        {renderTrack()}
       </div>
 
-      {/* Die & Roll */}
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 bg-card rounded-xl flex items-center justify-center text-3xl font-bold">
+      <div className="flex items-center gap-4 mb-2">
+        <div className="w-14 h-14 bg-card rounded-xl flex items-center justify-center text-3xl font-bold">
           {die ?? '🎲'}
         </div>
         <button
           onClick={handleRoll}
           disabled={gameOver || turn !== 'player'}
-          className="bg-accent text-bg font-bold px-6 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 disabled:opacity-30"
+          className="bg-accent text-bg font-bold px-5 py-2.5 rounded-xl text-base hover:opacity-90 active:scale-95 disabled:opacity-30"
         >
-          {turn === 'player' ? 'Roll!' : 'AI rolling...'}
+          {turn === 'player' ? 'Roll!' : 'AI...'}
         </button>
       </div>
 
-      <div className="mt-3 text-xs text-text-muted text-center">
-        Roll a 6 to enter the track. First one home wins!
+      <div className="text-xs text-text-muted text-center px-2">
+        Roll a 6 to enter. First to reach 33 wins!
       </div>
     </div>
   );

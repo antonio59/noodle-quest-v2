@@ -38,6 +38,9 @@ import '@/games/ludo';
 import '@/games/snakes-ladders';
 import '@/games/crossword';
 import '@/games/wordsearch';
+import '@/games/flag-match';
+import '@/games/themed-crossword';
+import '@/games/fill-blank';
 
 // Register breathing exercises
 import '@/games/box-breathing';

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Lock, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PIN_LENGTH = 6;
 const PROFILE_COLORS = [
@@ -21,6 +22,7 @@ interface Profile {
 
 export function Auth() {
   const { login, signup } = useAuth();
+  const navigate = useNavigate();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [pin, setPin] = useState('');
@@ -43,7 +45,7 @@ export function Auth() {
       const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-        body: JSON.stringify({ path: 'auth:getAllPlayers', format: 'json', args: {} }),
+        body: JSON.stringify({ path: 'auth:getAllPlayers', format: 'convex_encoded_json', args: {} }),
       });
       const data = await res.json();
       if (data.value) {
@@ -56,7 +58,7 @@ export function Auth() {
         setProfiles(mapped);
         if (mapped.length === 0) setShowSignup(true);
       }
-    } catch { /* offline fallback */ }
+    } catch (e) { console.error('Failed to fetch players:', e); /* offline fallback */ }
   };
 
   const handlePinPress = async (num: string) => {
@@ -69,9 +71,11 @@ export function Auth() {
       const err = await login(selectedProfile.name, newPin);
       setLoading(false);
       if (err) {
-        setError('Incorrect PIN. Try again!');
+        setError('Incorrect passcode. Try again!');
         setPin('');
         setTimeout(() => setError(''), 2000);
+      } else {
+        navigate('/');
       }
     }
   };
@@ -88,11 +92,12 @@ export function Auth() {
     if (!signupName.trim()) { setError('Enter your name!'); return; }
     if (signupName.trim().length < 2) { setError('Name needs 2+ characters!'); return; }
     if (!/^\d{6}$/.test(signupPin)) { setError('Passcode must be 6 digits'); return; }
-    if (signupPin !== signupPinConfirm) { setError('PINs don\'t match!'); return; }
+    if (signupPin !== signupPinConfirm) { setError('Passcodes don\'t match!'); return; }
     setLoading(true);
     const err = await signup(signupName.trim(), signupPin);
     setLoading(false);
     if (err) setError(err);
+    else navigate('/');
   };
 
   if (showSignup) {
@@ -182,7 +187,7 @@ export function Auth() {
 
           <div className="text-center mb-8">
             <Lock className="w-8 h-8 text-text-muted mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-text">Enter your PIN</h2>
+            <h2 className="text-xl font-bold text-text">Enter your passcode</h2>
             <div className="flex justify-center gap-3 mt-6">
               {[...Array(PIN_LENGTH)].map((_, i) => (
                 <div

@@ -251,40 +251,60 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       return;
     }
 
-    setTurn(next);
+      setTurn(next);
     if (next === 'b') {
       onMessage('AI thinking...');
       setTimeout(() => {
         const aiM = aiMove(b, difficulty);
-        if (aiM) {
-          const nb = cloneBoard(b);
-          const capturedPiece = nb[aiM.to[0]][aiM.to[1]];
-          if (capturedPiece) {
-            setCaptured(prev => ({ ...prev, b: [...prev.b, capturedPiece.type] }));
-          }
-          if (nb[aiM.from[0]][aiM.from[1]]?.type === 'P' && aiM.to[0] === 7) {
-            nb[aiM.to[0]][aiM.to[1]] = { type: 'Q', color: 'b' };
-          } else {
-            nb[aiM.to[0]][aiM.to[1]] = nb[aiM.from[0]][aiM.from[1]];
-          }
-          nb[aiM.from[0]][aiM.from[1]] = null;
-          setBoard(nb);
-
-          const playerHasMoves = hasAnyLegalMoves(nb, 'w');
-          const playerInCheck = isInCheck(nb, 'w');
-          if (!playerHasMoves) {
-            if (playerInCheck) {
-              onMessage('Checkmate — AI wins!');
+        
+        if (!aiM) {
+          // AI has no legal moves - check for checkmate or stalemate
+          const inCheck = isInCheck(b, 'b');
+          if (inCheck) {
+            const newWins = wins + 1;
+            setWins(newWins);
+            onScore(200);
+            onProgress(newWins / targetWins);
+            onMessage('Checkmate! You win!');
+            if (newWins >= targetWins) {
+              setTimeout(() => onEnd({ score: newWins * 200, stars: 3, summary: `Won ${newWins} chess games!` }), 1000);
             } else {
-              onMessage('Stalemate — draw!');
+              setTimeout(() => resetBoard(), 1500);
             }
+          } else {
+            onMessage('Stalemate — draw!');
             setTimeout(() => resetBoard(), 1500);
-            return;
           }
-          if (playerInCheck) onMessage('Check! Your turn');
-          else onMessage('Your turn!');
-          setTurn('w');
+          return;
         }
+        
+        const nb = cloneBoard(b);
+        const capturedPiece = nb[aiM.to[0]][aiM.to[1]];
+        if (capturedPiece) {
+          setCaptured(prev => ({ ...prev, b: [...prev.b, capturedPiece.type] }));
+        }
+        if (nb[aiM.from[0]][aiM.from[1]]?.type === 'P' && aiM.to[0] === 7) {
+          nb[aiM.to[0]][aiM.to[1]] = { type: 'Q', color: 'b' };
+        } else {
+          nb[aiM.to[0]][aiM.to[1]] = nb[aiM.from[0]][aiM.from[1]];
+        }
+        nb[aiM.from[0]][aiM.from[1]] = null;
+        setBoard(nb);
+
+        const playerHasMoves = hasAnyLegalMoves(nb, 'w');
+        const playerInCheck = isInCheck(nb, 'w');
+        if (!playerHasMoves) {
+          if (playerInCheck) {
+            onMessage('Checkmate — AI wins!');
+          } else {
+            onMessage('Stalemate — draw!');
+          }
+          setTimeout(() => resetBoard(), 1500);
+          return;
+        }
+        if (playerInCheck) onMessage('Check! Your turn');
+        else onMessage('Your turn!');
+        setTurn('w');
       }, 400);
     }
   };
