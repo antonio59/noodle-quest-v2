@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Lock, Plus } from 'lucide-react';
 
 const PIN_LENGTH = 6;
@@ -19,7 +19,7 @@ interface Profile {
   color: string;
 }
 
-export function Auth({ onBack }: { onBack: () => void }) {
+export function Auth() {
   const { login, signup } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
