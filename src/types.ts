@@ -20,7 +20,7 @@ export interface GameProps {
   onMessage: (msg: string) => void;
   onEnd: (result: GameResult) => void;
   multiplayerState?: MultiplayerState;
-  onMultiplayerMove?: (move: any) => void;
+  onMultiplayerMove?: (move: unknown) => void;
   aiDifficulty?: 'easy' | 'medium' | 'hard';
 }
 
@@ -34,7 +34,7 @@ export interface MultiplayerState {
   sessionId: string;
   playerNumber: 1 | 2;
   currentPlayer: 1 | 2;
-  boardState: any;
+  boardState: unknown;
   opponentName: string;
   opponentAvatar: string;
   status: 'waiting' | 'playing' | 'finished';
@@ -115,11 +115,11 @@ export interface MultiplayerSession {
   player2Id?: string;
   player2Name?: string;
   player2Avatar?: string;
-  boardState: any;
+  boardState: unknown;
   currentPlayer: number;
   status: 'waiting' | 'playing' | 'finished';
   winner?: number;
-  moves: any[];
+  moves: unknown[];
   createdAt: number;
   updatedAt: number;
 }

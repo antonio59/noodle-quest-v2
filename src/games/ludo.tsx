@@ -170,7 +170,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
         const isAIHome = r >= 6 && r <= 10 && c >= 1 && c <= 5;
         
         let bgColor = 'transparent';
-        let textColor = '';
+        const textColor = '';
         
         if (isPlayerHome) {
           bgColor = '#ef4444';
