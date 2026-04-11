@@ -43,16 +43,18 @@ export function Auth() {
       const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-        body: JSON.stringify({ path: 'auth:getAllPlayers', format: 'convex_encoded_json', args: [] }),
+        body: JSON.stringify({ path: 'auth:getAllPlayers', format: 'json', args: {} }),
       });
       const data = await res.json();
       if (data.value) {
-        setProfiles(data.value.map((p: { id: string; name: string; avatar: string }, i: number) => ({
+        const mapped = data.value.map((p: { id: string; name: string; avatar: string }, i: number) => ({
           id: p.id,
           name: p.name,
           avatar: p.avatar,
           color: PROFILE_COLORS[i % PROFILE_COLORS.length],
-        })));
+        }));
+        setProfiles(mapped);
+        if (mapped.length === 0) setShowSignup(true);
       }
     } catch { /* offline fallback */ }
   };
@@ -85,7 +87,7 @@ export function Auth() {
   const handleSignup = async () => {
     if (!signupName.trim()) { setError('Enter your name!'); return; }
     if (signupName.trim().length < 2) { setError('Name needs 2+ characters!'); return; }
-    if (!/^\d{6,8}$/.test(signupPin)) { setError('PIN should be 6-8 digits'); return; }
+    if (!/^\d{6}$/.test(signupPin)) { setError('Passcode must be 6 digits'); return; }
     if (signupPin !== signupPinConfirm) { setError('PINs don\'t match!'); return; }
     setLoading(true);
     const err = await signup(signupName.trim(), signupPin);
@@ -131,7 +133,7 @@ export function Auth() {
             />
             <input
               type="password"
-              placeholder="Choose a PIN (6-8 digits)"
+              placeholder="6-digit passcode"
               value={signupPin}
               onChange={e => { setSignupPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setError(''); }}
               className="w-full bg-surface rounded-xl px-4 py-3 text-text placeholder-text-muted border border-transparent focus:border-accent outline-none"
@@ -140,7 +142,7 @@ export function Auth() {
             />
             <input
               type="password"
-              placeholder="Confirm PIN"
+              placeholder="Confirm passcode"
               value={signupPinConfirm}
               onChange={e => { setSignupPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 8)); setError(''); }}
               className="w-full bg-surface rounded-xl px-4 py-3 text-text placeholder-text-muted border border-transparent focus:border-accent outline-none"

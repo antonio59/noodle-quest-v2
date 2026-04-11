@@ -12,6 +12,9 @@ import type * as auth from "../auth.js";
 import type * as challenges from "../challenges.js";
 import type * as feed from "../feed.js";
 import type * as games from "../games.js";
+import type * as multiplayer from "../multiplayer.js";
+import type * as reports from "../reports.js";
+import type * as webhooks from "../webhooks.js";
 
 import type {
   ApiFromModules,
@@ -24,6 +27,9 @@ declare const fullApi: ApiFromModules<{
   challenges: typeof challenges;
   feed: typeof feed;
   games: typeof games;
+  multiplayer: typeof multiplayer;
+  reports: typeof reports;
+  webhooks: typeof webhooks;
 }>;
 
 /**

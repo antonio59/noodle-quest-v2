@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signup = async (name: string, pin: string, avatar?: string): Promise<string | null> => {
     if (name.length < 2) return 'Name needs at least 2 characters!';
-    if (!/^\d{6,8}$/.test(pin)) return 'PIN should be 6-8 digits';
+    if (!/^\d{6}$/.test(pin)) return 'Passcode must be 6 digits';
     try {
       const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
         method: 'POST',
