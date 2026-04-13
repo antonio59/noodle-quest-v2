@@ -1,25 +1,26 @@
-import type { GameMeta } from '@/types';
-import type { ComponentType } from 'react';
-import type { GameProps } from '@/types';
+import { lazy, type ComponentType } from 'react';
+import type { GameMeta, GameProps } from '@/types';
 
-/** Stored entry: metadata for listing + a lazy loader for the component. */
+/** Stored entry: metadata + pre-built lazy component. */
 interface GameEntry {
   meta: GameMeta;
-  loader: () => Promise<{ default: ComponentType<GameProps> }>;
+  LazyComponent: ComponentType<GameProps>;
 }
 
 const registry = new Map<string, GameEntry>();
 const aliases = new Map<string, string>();
 
 /**
- * Register a game with metadata (eagerly available) and a lazy component loader.
+ * Register a game with metadata and a dynamic import loader.
+ * The lazy component is created here at registration time (module init),
+ * not during render, satisfying react-hooks/static-components.
  */
 export function registerGame(
   id: string,
   meta: GameMeta,
   loader: () => Promise<{ default: ComponentType<GameProps> }>,
 ) {
-  registry.set(id, { meta, loader });
+  registry.set(id, { meta, LazyComponent: lazy(loader) });
 }
 
 export function registerAlias(alias: string, targetId: string) {
@@ -37,9 +38,9 @@ export function getGameMeta(id: string): (GameMeta & { id: string }) | undefined
   return { id, ...entry.meta };
 }
 
-/** Get the lazy loader for a game's component. */
-export function getGameLoader(id: string) {
-  return resolveEntry(id)?.loader;
+/** Get the pre-built lazy component for a game. */
+export function getGameComponent(id: string): ComponentType<GameProps> | undefined {
+  return resolveEntry(id)?.LazyComponent;
 }
 
 /** Get game metadata by id (alias for getGameMeta, kept for backward compat). */
