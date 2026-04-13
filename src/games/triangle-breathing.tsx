@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 import { Mountain, Brain, Leaf, Target } from 'lucide-react';
 
 // Triangle Breathing: inhale 4s, hold 4s, exhale 4s (3 sides of a triangle)
@@ -144,7 +143,7 @@ function TriangleBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
           </div>
 
           <button
-            onClick={() => setPhase('idle')}
+            onClick={startCycle}
             className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
           >
             Start Session
@@ -219,17 +218,5 @@ function TriangleBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
     </div>
   );
 }
-
-registerGame('triangle-breathing', {
-  name: 'Triangle Breathing',
-  emoji: '🔺',
-  description: 'Equal inhale-hold-exhale, visual triangle guide',
-  category: 'breathe',
-  stages: 10,
-  component: TriangleBreathingGame,
-  benefits: ['Grounding', 'Mental clarity', 'Beginner friendly', 'Breath awareness'],
-  duration: '2-14 min',
-  bestFor: ['Beginners', 'Quick reset', 'Pre-focus sessions'],
-});
 
 export default TriangleBreathingGame;

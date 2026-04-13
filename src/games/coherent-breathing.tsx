@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 import { Waves, Heart, Battery, Activity } from 'lucide-react';
 
 // Coherent/Resonance Breathing: inhale 5s, exhale 5s (5.5 breaths/min)
@@ -145,7 +144,7 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
           </div>
 
           <button
-            onClick={() => setPhase('idle')}
+            onClick={startCycle}
             className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
           >
             Start Session
@@ -226,17 +225,5 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
     </div>
   );
 }
-
-registerGame('coherent-breathing', {
-  name: 'Coherent Breathing',
-  emoji: '☯️',
-  description: 'Equal inhale-exhale for heart-breath sync',
-  category: 'breathe',
-  stages: 10,
-  component: CoherentBreathingGame,
-  benefits: ['HRV optimization', 'Parasympathetic activation', 'Blood pressure control', 'Sustained energy'],
-  duration: '2-12 min',
-  bestFor: ['Daily practice', 'Heart health', 'Post-exercise recovery'],
-});
 
 export default CoherentBreathingGame;

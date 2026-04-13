@@ -63,10 +63,22 @@ body {
   }
 }
 
-/* Ensure minimum touch target size */
-button, a, [role="button"] {
+/* Ensure minimum touch target size (opt-out with .game-cell) */
+button:not(.game-cell), a, [role="button"]:not(.game-cell) {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* Suppress browser default focus rings inside game boards */
+.game-board button:focus,
+.game-board button:focus-visible,
+.game-board [role="button"]:focus,
+.game-board [role="button"]:focus-visible,
+.game-board div[role="gridcell"]:focus,
+.game-cell:focus,
+.game-cell:focus-visible {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Allow text selection in inputs/contenteditable but not on buttons */

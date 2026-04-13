@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 // Define AI difficulty levels
 const DIFFICULTY_LEVELS = {
@@ -35,9 +34,9 @@ function getCellPos(cell: number): { row: number; col: number } {
 function aiMove(playerPos: number, aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
   const { enterChance, ladderChance, snakeAvoidChance } = DIFFICULTY_LEVELS[difficulty];
   
-  // Prefer entering (if in yard and dice is 6)
-  if (aiPos === 0 && Math.random() < enterChance) {
-    return 6;
+  // AI at start just rolls normally
+  if (aiPos === 0) {
+    return rollDie();
   }
   
   // Prefer ladders (if close to a ladder)
@@ -124,14 +123,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
     const d = rollDie();
     setDie(d);
 
-    if (playerPos === 0 && d !== 6) {
-      onMessage(`Rolled ${d} — need a 6 to start!`);
-      setTurn('ai');
-      setTimeout(aiTurn, 800);
-      return;
-    }
-
-    const startPos = playerPos === 0 && d === 6 ? 0 : playerPos;
+    const startPos = playerPos === 0 ? 0 : playerPos;
     const target = startPos + d;
     if (target > BOARD_SIZE) {
       onMessage(`Rolled ${d} — need exact number to finish!`);
@@ -169,13 +161,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
     if (gameOver) return;
     const d = aiMove(playerPos, aiPos, difficulty);
 
-    if (aiPos === 0 && d !== 6) {
-      onMessage(`AI rolled ${d} — no 6, can't start.`);
-      setTurn('player');
-      return;
-    }
-
-    const startPos = aiPos === 0 && d === 6 ? 0 : aiPos;
+    const startPos = aiPos === 0 ? 0 : aiPos;
     const target = startPos + d;
     if (target > BOARD_SIZE) {
       onMessage(`AI rolled ${d} — overshoots!`);
@@ -257,20 +243,10 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
       </div>
 
       <div className="mt-2 text-xs text-text-muted text-center">
-        Roll 6 to start. 🪜 ladders up, 🐍 snakes down. Exact roll to finish!
+        Roll to move. 🪜 ladders up, 🐍 snakes down. Exact roll to finish!
       </div>
     </div>
   );
 }
-
-registerGame('snakes-ladders', {
-  name: 'Snakes & Ladders',
-  emoji: '🐍',
-  description: 'Classic race game — climb ladders, dodge snakes!',
-  category: 'board',
-  stages: 10,
-  component: SnakesLaddersGame,
-  aiDifficulty: 'medium',
-});
 
 export default SnakesLaddersGame;

@@ -1,11 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess, Square } from 'chess.js';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const PIECE_UNICODE: Record<string, string> = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
-  bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
+  bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟︎',
+};
+
+const PIECE_COLORS: Record<string, string> = {
+  w: '#ffffff',
+  b: '#1a1a2e',
+};
+
+const PIECE_STROKE: Record<string, string> = {
+  w: '#555555',
+  b: '#000000',
 };
 
 const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
@@ -195,8 +204,14 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
                 ? <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.44} fill="none" stroke="#7b61ff" strokeWidth={3} opacity={0.6} />
                 : <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.16} fill="#7b61ff" opacity={0.5} />)}
               {cell && pk && (
-                <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
-                  fontSize={cs * 0.7} style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+                <>
+                  <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
+                    fontSize={cs * 0.7} fill={PIECE_STROKE[cell.color]} stroke={PIECE_STROKE[cell.color]} strokeWidth={cell.color === 'w' ? 0.5 : 0}
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+                  <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
+                    fontSize={cs * 0.7} fill={PIECE_COLORS[cell.color]}
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+                </>
               )}
             </g>
           );
@@ -216,15 +231,5 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     </div>
   );
 }
-
-registerGame('chess', {
-  name: 'Chess',
-  emoji: '♔',
-  description: 'The royal game — checkmate the AI king!',
-  category: 'board',
-  stages: 10,
-  component: ChessGame,
-  aiDifficulty: 'medium',
-});
 
 export default ChessGame;

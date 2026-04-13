@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 // Define AI difficulty levels
 const DIFFICULTY_LEVELS = {
@@ -164,15 +163,32 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
         <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
       </div>
 
-      <div className="bg-[#1a3a6a] p-2 rounded-xl">
+      <div className="text-xs text-text-muted text-center mb-2">
+        Click a column to drop your disc
+      </div>
+
+      <div className="bg-[#1a3a6a] p-2 rounded-xl game-board">
+        {/* Column hover indicators */}
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {Array.from({ length: COLS }, (_, c) => (
+            <button
+              key={`arrow-${c}`}
+              onClick={() => handleDrop(c)}
+              disabled={!!winner || turn !== 'red' || !!board[0][c]}
+              className="game-cell h-5 flex items-center justify-center text-text-muted hover:text-danger transition-colors disabled:opacity-0"
+            >
+              ▼
+            </button>
+          ))}
+        </div>
         <div className="grid grid-cols-7 gap-1">
           {board.map((row, r) =>
             row.map((cell, c) => (
               <button
                 key={`${r}-${c}`}
                 onClick={() => handleDrop(c)}
-                disabled={!!winner || turn !== 'red' || r !== 0 && !board[r - 1]?.[c] === false}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
+                disabled={!!winner || turn !== 'red'}
+                className="game-cell w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
                 style={{
                   background: cell === 'red' ? '#ef4444' : cell === 'yellow' ? '#fbbf24' : '#0f1d3a',
                   boxShadow: cell ? 'inset 0 -2px 4px rgba(0,0,0,0.3)' : 'inset 0 2px 4px rgba(0,0,0,0.5)',
@@ -199,15 +215,5 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     </div>
   );
 }
-
-registerGame('connect-four', {
-  name: 'Connect Four',
-  emoji: '🟡',
-  description: 'Drop discs to connect four in a row!',
-  category: 'board',
-  stages: 10,
-  component: ConnectFourGame,
-  aiDifficulty: 'medium',
-});
 
 export default ConnectFourGame;

@@ -1,23 +1,41 @@
 import { useState, useEffect } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const C = 28;
 const N = 15;
 const W = C * N;
 
+// Full Ludo outer track: 52 squares around the board
 const TRACK: [number, number][] = [
+  // Red start → top-left approach (0-5)
   [6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5],
+  // Up the left column of top arm (6-11)
   [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6],
+  // Top-right turn (12)
   [0, 7],
+  // Down the right column of top arm (13-18)
   [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8],
+  // Right arm top row (19-24)
   [6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14],
+  // Right-bottom turn (25)
   [7, 14],
-  [8, 14], [8, 13],
+  // Right arm bottom row going left (26-31)
+  [8, 14], [8, 13], [8, 12], [8, 11], [8, 10], [8, 9],
+  // Down the right column of bottom arm (32-37)
+  [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8],
+  // Bottom-left turn (38)
+  [14, 7],
+  // Up the left column of bottom arm (39-44)
+  [14, 6], [13, 6], [12, 6], [11, 6], [10, 6], [9, 6],
+  // Left arm bottom row (45-50)
+  [8, 5], [8, 4], [8, 3], [8, 2], [8, 1], [8, 0],
+  // Left-top turn (51)
+  [7, 0],
 ];
 
+// Home stretch for red player (entering from position 51 → center)
 const STRETCH: [number, number][] = [
-  [7, 13], [7, 12], [7, 11], [7, 10], [7, 9],
+  [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6],
 ];
 
 const DIFF_CFG = {
@@ -32,25 +50,25 @@ function rollDie(): number {
 
 function posCoord(pos: number): [number, number] {
   if (pos < 0) return [-1, -1];
-  if (pos < 28) return TRACK[pos];
-  if (pos < 33) return STRETCH[pos - 28];
-  return [7, 7];
+  if (pos < 52) return TRACK[pos];
+  if (pos < 58) return STRETCH[pos - 52];
+  return [7, 7]; // home center
 }
 
 function advance(pos: number, steps: number): number {
   if (pos === -1) return steps === 6 ? 0 : -1;
   const next = pos + steps;
-  return next > 33 ? pos : next;
+  return next > 58 ? pos : next; // 52 track + 6 stretch = 58 = home
 }
 
 function aiRoll(pPos: number, aPos: number, diff: 'easy' | 'medium' | 'hard'): number {
   const cfg = DIFF_CFG[diff];
   if (aPos === -1 && Math.random() < cfg.enter) return 6;
   if (aPos >= 0 && Math.random() < cfg.home) {
-    const gap = 33 - aPos;
+    const gap = 58 - aPos;
     if (gap > 0 && gap <= 6) return gap;
   }
-  if (aPos >= 0 && aPos < 28 && pPos >= 0 && pPos < 28 && Math.random() < cfg.cap) {
+  if (aPos >= 0 && aPos < 52 && pPos >= 0 && pPos < 52 && Math.random() < cfg.cap) {
     const gap = pPos - aPos;
     if (gap > 0 && gap <= 6) return gap;
   }
@@ -99,16 +117,16 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
     setAPos(np);
 
-    if (np >= 0 && np < 28 && np === pPos) {
+    if (np >= 0 && np < 52 && np === pPos) {
       setPPos(-1);
       onMessage(`AI rolled ${d} — captured you! Back to base!`);
-    } else if (np >= 33) {
+    } else if (np >= 58) {
       setOver(true);
       onMessage('AI reached home — you lose this round!');
       setTimeout(reset, 1500);
       return;
     } else {
-      const label = np >= 28 ? `home stretch ${np - 27}/5` : `square ${np}`;
+      const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
       onMessage(`AI rolled ${d} — moved to ${label}`);
     }
 
@@ -141,10 +159,10 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
     setPPos(np);
 
-    if (np >= 0 && np < 28 && np === aPos) {
+    if (np >= 0 && np < 52 && np === aPos) {
       setAPos(-1);
       onMessage(`Rolled ${d} — captured AI! Sent back to base!`);
-    } else if (np >= 33) {
+    } else if (np >= 58) {
       const w = wins + 1;
       setWins(w);
       onScore(100);
@@ -158,7 +176,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       }
       return;
     } else {
-      const label = np >= 28 ? `home stretch ${np - 27}/5` : `square ${np}`;
+      const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
       onMessage(`Rolled ${d} — moved to ${label}`);
     }
 
@@ -212,7 +230,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
     TRACK.forEach(([col, row], i) => {
       const isRedEntry = i === 0;
-      const isBlueEntry = i === 14;
+      const isBlueEntry = i === 26;
       let fill = '#f1f5f9';
       if (isRedEntry) fill = '#fecaca';
       if (isBlueEntry) fill = '#bfdbfe';
@@ -259,7 +277,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       );
     } else {
       const [col, row] = posCoord(pPos);
-      const sameCell = aPos === pPos && pPos >= 28;
+      const sameCell = aPos === pPos && pPos >= 52;
       el.push(
         <circle key="pt" cx={cx(col) + (sameCell ? -5 : 0)} cy={cy(row)} r={r} fill="#ef4444" stroke="white" strokeWidth={2} filter="url(#shadow)" />,
       );
@@ -272,7 +290,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       );
     } else {
       const [col, row] = posCoord(aPos);
-      const sameCell = aPos === pPos && pPos >= 28;
+      const sameCell = aPos === pPos && pPos >= 52;
       el.push(
         <circle key="at" cx={cx(col) + (sameCell ? 5 : 0)} cy={cy(row)} r={r} fill="#3b82f6" stroke="white" strokeWidth={2} filter="url(#shadow)" />,
       );
@@ -283,8 +301,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
   const posLabel = (pos: number) => {
     if (pos === -1) return 'Base';
-    if (pos < 28) return `Track ${pos}`;
-    if (pos < 33) return `Stretch ${pos - 27}/5`;
+    if (pos < 52) return `Track ${pos}`;
+    if (pos < 58) return `Stretch ${pos - 51}/6`;
     return 'HOME';
   };
 
@@ -340,15 +358,5 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     </div>
   );
 }
-
-registerGame('ludo', {
-  name: 'Ludo',
-  emoji: '🎲',
-  description: 'Roll the dice and race your token home!',
-  category: 'board',
-  stages: 10,
-  component: LudoGame,
-  aiDifficulty: 'medium',
-});
 
 export default LudoGame;

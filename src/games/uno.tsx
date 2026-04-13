@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 type UnoColor = 'red' | 'blue' | 'green' | 'yellow';
 type UnoSymbol = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'skip' | 'reverse' | 'draw2';
@@ -518,7 +517,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
         </div>
       )}
 
-      <div className="w-full flex justify-center items-end gap-0.5 px-1 pb-1 overflow-x-auto max-h-32 py-2">
+      <div className="w-full flex justify-center items-end gap-0.5 px-1 pb-4 overflow-x-auto max-h-36 py-2">
         {playerHand.map(card => {
           const playable = isPlayerTurn && phase === 'playing' && canPlay(card, topCard, currentColor);
           const isHighlighted = highlightCard === card.id;
@@ -595,15 +594,5 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
     </div>
   );
 }
-
-registerGame('uno', {
-  name: 'UNO',
-  emoji: '🃏',
-  description: 'Match colors and numbers — be first to empty your hand!',
-  category: 'board',
-  stages: 10,
-  component: UnoGame,
-  aiDifficulty: 'medium',
-});
 
 export default UnoGame;

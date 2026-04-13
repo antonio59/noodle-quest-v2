@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 import { Moon, Heart, Zap, Shield } from 'lucide-react';
 
 // 4-7-8 Breathing: inhale 4s, hold 7s, exhale 8s
@@ -143,7 +142,7 @@ function CalmBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
           </div>
 
           <button
-            onClick={() => setPhase('idle')}
+            onClick={startCycle}
             className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
           >
             Start Session
@@ -211,17 +210,5 @@ function CalmBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
     </div>
   );
 }
-
-registerGame('calm-breathing', {
-  name: '4-7-8 Calm',
-  emoji: '🌊',
-  description: 'Inhale 4s, hold 7s, exhale 8s — reduces anxiety',
-  category: 'breathe',
-  stages: 10,
-  component: CalmBreathingGame,
-  benefits: ['Reduces anxiety', 'Aids sleep', 'Calms nervous system', 'Manages cravings'],
-  duration: '1-7 min',
-  bestFor: ['Bedtime routine', 'Anxiety relief', 'Quick calming'],
-});
 
 export default CalmBreathingGame;

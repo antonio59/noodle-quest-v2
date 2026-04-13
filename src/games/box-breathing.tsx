@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 import { Clock, Heart, Brain, Shield } from 'lucide-react';
 
 // Box Breathing: inhale 4s, hold 4s, exhale 4s, hold 4s
@@ -177,7 +176,7 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
           </div>
 
           <button
-            onClick={() => setPhase('idle')}
+            onClick={startCycle}
             className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
           >
             Start Session
@@ -263,17 +262,5 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
     </div>
   );
 }
-
-registerGame('box-breathing', {
-  name: 'Box Breathing',
-  emoji: '📦',
-  description: '4-4-4-4 breathing pattern for calm and focus',
-  category: 'breathe',
-  stages: 10,
-  component: BoxBreathingGame,
-  benefits: ['Reduces stress', 'Lowers heart rate', 'Improves focus', 'Used by Navy SEALs'],
-  duration: '3-13 min',
-  bestFor: ['Stress relief', 'Pre-exam calm', 'Daily mindfulness'],
-});
 
 export default BoxBreathingGame;

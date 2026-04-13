@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameCategory } from '@/types';
@@ -11,7 +11,7 @@ const TABS = [
     id: 'brain', 
     label: '🧠 Brain', 
     emoji: '🧠',
-    description: '21 brain games across 6 categories to train focus, memory, motor skills, flexibility, social awareness, and sequencing.',
+    description: 'Brain games across 6 categories to train focus, memory, motor skills, flexibility, social awareness, and sequencing.',
     benefits: [
       'Improves concentration and attention span',
       'Strengthens working memory',
@@ -25,7 +25,7 @@ const TABS = [
     id: 'board', 
     label: '🎲 Board', 
     emoji: '🎲',
-    description: '6 classic board games to play solo against AI or with friends — Tic-Tac-Toe, Checkers, Chess, Connect Four, Ludo, and Snakes & Ladders.',
+    description: 'board games to play solo against AI or with friends — Tic-Tac-Toe, Checkers, Chess, Connect Four, Ludo, Snakes & Ladders, Crossword, Word Search, Bingo, UNO, and Scrabble.',
     benefits: [
       'Develops strategic thinking and planning',
       'Improves decision-making under pressure',
@@ -141,7 +141,12 @@ export function GameHub() {
         <h2 className="text-base font-bold mb-1 flex items-center gap-2">
           {currentTab.emoji} {currentTab.label}
         </h2>
-        <p className="text-text-muted text-xs mb-2 line-clamp-1">{currentTab.description}</p>
+        <p className="text-text-muted text-xs mb-2 line-clamp-1">
+          {tab === 'brain' && `${brainGames.length} `}
+          {tab === 'board' && `${allGames.filter(g => g.category === 'board').length} `}
+          {tab === 'breathe' && `${allGames.filter(g => g.category === 'breathe').length} `}
+          {currentTab.description}
+        </p>
         <div className="flex gap-2 overflow-x-auto scrollbar-none">
           {currentTab.benefits.map((benefit, i) => (
             <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-card text-[10px] text-text-muted whitespace-nowrap">
@@ -314,6 +319,59 @@ export function GameHub() {
   );
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function NowPlayingBar({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
+  const [elapsed, setElapsed] = useState(0);
+  const duration = 180; // 3 minutes per procedural track
+
+  useEffect(() => {
+    setElapsed(0);
+    const interval = setInterval(() => {
+      setElapsed(prev => (prev + 1) % duration);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [audio.currentTrack]);
+
+  const track = TRACKS.find(t => t.id === audio.currentTrack);
+  const pct = (elapsed / duration) * 100;
+
+  return (
+    <div className="sticky bottom-0 p-3 bg-surface/80 backdrop-blur border-t border-white/5">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="text-xl animate-[celebrate_2s_ease_infinite]">🎵</div>
+        <div className="flex-1">
+          <div className="text-xs font-semibold text-accent flex items-center gap-2">
+            Now Playing
+            <span className="inline-flex items-end gap-[2px] h-3">
+              <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.6s_ease-in-out_infinite]" style={{ height: '60%' }} />
+              <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s]" style={{ height: '100%' }} />
+              <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '40%' }} />
+            </span>
+          </div>
+          <div className="text-xs text-text-muted">{track?.name}</div>
+        </div>
+        <div className="text-xs text-text-muted tabular-nums">
+          {formatTime(elapsed)} / {formatTime(duration)}
+        </div>
+        <button
+          onClick={audio.stop}
+          className="bg-card text-text px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-card-hover"
+        >
+          Stop
+        </button>
+      </div>
+      <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
+        <div className="h-full bg-accent transition-all duration-1000 rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
   const [filter, setFilter] = useState<string>('all');
   const types = ['all', 'lofi', 'focus', 'nature', 'meditation'];
@@ -377,33 +435,7 @@ function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
       </div>
 
       {audio.isPlaying && (
-        <div className="sticky bottom-0 p-3 bg-surface/80 backdrop-blur border-t border-white/5">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="text-xl animate-[celebrate_2s_ease_infinite]">🎵</div>
-            <div className="flex-1">
-              <div className="text-xs font-semibold text-accent flex items-center gap-2">
-                Now Playing
-                <span className="inline-flex items-end gap-[2px] h-3">
-                  <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.6s_ease-in-out_infinite]" style={{ height: '60%' }} />
-                  <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s]" style={{ height: '100%' }} />
-                  <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '40%' }} />
-                </span>
-              </div>
-              <div className="text-xs text-text-muted">
-                {TRACKS.find(t => t.id === audio.currentTrack)?.name}
-              </div>
-            </div>
-            <button
-              onClick={audio.stop}
-              className="bg-card text-text px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-card-hover"
-            >
-              Stop
-            </button>
-          </div>
-          <div className="w-full h-1 bg-card rounded-full overflow-hidden">
-            <div className="h-full bg-accent animate-[progressLoop_8s_linear_infinite]" style={{ width: '30%' }} />
-          </div>
-        </div>
+        <NowPlayingBar audio={audio} />
       )}
     </div>
   );

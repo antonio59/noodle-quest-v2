@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 type Piece = { color: 'red' | 'black'; king: boolean };
 type Board = (Piece | null)[][];
@@ -422,6 +421,18 @@ function CheckersGame({
                 )}
                 {cell && (
                   <>
+                    {/* Selection ring for selected piece */}
+                    {isSel && (
+                      <circle
+                        cx={c * cs + cs / 2}
+                        cy={r * cs + cs / 2}
+                        r={cs * 0.44}
+                        fill="none"
+                        stroke="#FBBF24"
+                        strokeWidth={3}
+                        opacity={0.9}
+                      />
+                    )}
                     <circle
                       cx={c * cs + cs / 2}
                       cy={r * cs + cs / 2}
@@ -485,15 +496,5 @@ function CheckersGame({
     </div>
   );
 }
-
-registerGame('checkers', {
-  name: 'Checkers',
-  emoji: '⬤',
-  description: 'Jump and capture your way to victory!',
-  category: 'board',
-  stages: 10,
-  component: CheckersGame,
-  aiDifficulty: 'medium',
-});
 
 export default CheckersGame;

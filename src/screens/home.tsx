@@ -10,7 +10,8 @@ export function Home() {
   const { player } = useAuth();
   const games = getAllGames();
 
-  const stats = useQuery(api.games.getPlayerStats, player ? { playerId: player.playerId as any } : 'skip' as any);
+  const stats = useQuery(api.games.getPlayerStats, player?.playerId ? { playerId: player.playerId as any } : 'skip' as any);
+  const isLoading = stats === undefined && !!player?.playerId;
 
   const recentGames = games.slice(0, 4);
   const totalStars = stats?.totalStars ?? 0;
@@ -31,8 +32,8 @@ export function Home() {
 
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { icon: Star, label: 'Stars', value: String(totalStars), color: 'text-warning' },
-            { icon: Zap, label: 'Games', value: String(gamesPlayed), color: 'text-success' },
+            { icon: Star, label: 'Stars', value: isLoading ? '...' : String(totalStars), color: 'text-warning' },
+            { icon: Zap, label: 'Games', value: isLoading ? '...' : String(gamesPlayed), color: 'text-success' },
             { icon: Trophy, label: 'Games Unlocked', value: String(games.length), color: 'text-accent' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-xl p-3 text-center shadow-sm">

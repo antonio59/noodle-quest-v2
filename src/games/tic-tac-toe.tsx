@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 // Define AI difficulty levels
 const DIFFICULTY_LEVELS = {
@@ -11,6 +10,7 @@ const DIFFICULTY_LEVELS = {
 
 type Cell = 'X' | 'O' | null;
 type Player = 'X' | 'O';
+type WinLine = number[] | null;
 
 const WIN_LINES = [
   [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
@@ -18,12 +18,13 @@ const WIN_LINES = [
   [0, 4, 8], [2, 4, 6],            // diagonals
 ];
 
-function checkWinner(board: Cell[]): Cell | 'draw' | null {
-  for (const [a, b, c] of WIN_LINES) {
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+function checkWinner(board: Cell[]): { result: Cell | 'draw' | null; line: WinLine } {
+  for (const line of WIN_LINES) {
+    const [a, b, c] = line;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return { result: board[a], line };
   }
-  if (board.every(c => c !== null)) return 'draw';
-  return null;
+  if (board.every(c => c !== null)) return { result: 'draw', line: null };
+  return { result: null, line: null };
 }
 
 // Simple AI: win > block > center > random
@@ -65,6 +66,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [turn, setTurn] = useState<Player>('X');
   const [winner, setWinner] = useState<Cell | 'draw' | null>(null);
+  const [winLine, setWinLine] = useState<WinLine>(null);
   const [wins, setWins] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const targetWins = stage <= 3 ? stage : 3 + Math.floor(stage / 2);
@@ -78,8 +80,9 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     const next = [...board];
     next[i] = human;
     setBoard(next);
-    const result = checkWinner(next);
+    const { result, line } = checkWinner(next);
     if (result) {
+      setWinLine(line);
       handleResult(result, next);
     } else {
       setTurn(ai);
@@ -89,8 +92,9 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
         const afterAi = [...next];
         afterAi[aiIdx] = ai;
         setBoard(afterAi);
-        const aiResult = checkWinner(afterAi);
+        const { result: aiResult, line: aiLine } = checkWinner(afterAi);
         if (aiResult) {
+          setWinLine(aiLine);
           handleResult(aiResult, afterAi);
         } else {
           setTurn(human);
@@ -126,6 +130,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     setBoard(Array(9).fill(null));
     setTurn('X');
     setWinner(null);
+    setWinLine(null);
     onMessage('Your turn! (X)');
   };
 
@@ -136,20 +141,25 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
         <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">Games: {gamesPlayed}</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-4">
-        {board.map((cell, i) => (
-          <button
-            key={i}
-            onClick={() => handleCell(i)}
-            disabled={!!cell || !!winner || turn !== human}
-            className={`w-20 h-20 rounded-xl text-3xl font-bold flex items-center justify-center transition-all active:scale-90 ${
-              cell === 'X' ? 'text-accent' : cell === 'O' ? 'text-danger' : 'bg-card-hover hover:bg-card-hover'
-            } ${!cell && !winner && turn === human ? 'hover:bg-card-hover' : ''}`}
-            style={{ boxShadow: cell ? 'none' : '0 2px 0 rgba(0,0,0,0.2)' }}
-          >
-            {cell || ''}
-          </button>
-        ))}
+      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-4 game-board">
+        {board.map((cell, i) => {
+          const isWinCell = winLine?.includes(i) ?? false;
+          return (
+            <button
+              key={i}
+              onClick={() => handleCell(i)}
+              disabled={!!cell || !!winner || turn !== human}
+              className={`game-cell w-20 h-20 rounded-xl text-3xl font-bold flex items-center justify-center transition-all active:scale-90 ${
+                cell === 'X' ? 'text-accent' : cell === 'O' ? 'text-danger' : 'bg-card-hover hover:bg-card-hover'
+              } ${!cell && !winner && turn === human ? 'hover:bg-card-hover' : ''} ${
+                isWinCell ? 'ring-3 ring-success bg-success/20' : ''
+              }`}
+              style={{ boxShadow: cell ? 'none' : '0 2px 0 rgba(0,0,0,0.2)' }}
+            >
+              {cell || ''}
+            </button>
+          );
+        })}
       </div>
 
       {winner && (
@@ -163,15 +173,5 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     </div>
   );
 }
-
-registerGame('tic-tac-toe', {
-  name: 'Tic-Tac-Toe',
-  emoji: '⭕',
-  description: 'Classic X and O — beat the AI!',
-  category: 'board',
-  stages: 10,
-  component: TicTacToeGame,
-  aiDifficulty: 'medium',
-});
 
 export default TicTacToeGame;

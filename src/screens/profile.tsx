@@ -107,12 +107,14 @@ export function Profile() {
         )}
 
         {/* Logout */}
-        <button
-          onClick={logout}
-          className="w-full flex items-center justify-center gap-2 bg-card text-danger font-semibold py-3 rounded-xl hover:bg-card-hover transition-colors active:scale-95"
-        >
-          <LogOut size={18} /> Log Out
-        </button>
+        <div className="pt-4 border-t border-white/5">
+          <button
+            onClick={logout}
+            className="mx-auto flex items-center justify-center gap-2 text-danger/70 hover:text-danger text-sm font-medium py-2 px-6 rounded-lg border border-danger/20 hover:border-danger/40 transition-colors active:scale-95"
+          >
+            <LogOut size={16} /> Log Out
+          </button>
+        </div>
       </div>
     </div>
   );

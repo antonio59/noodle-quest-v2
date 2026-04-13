@@ -33,11 +33,11 @@ export function WordSearchGrid({
         row.map((ch, c) => {
           const state = cellStateFor(r, c);
           let cls =
-            'aspect-square flex items-center justify-center rounded-sm border font-bold uppercase cursor-pointer transition ';
+            'game-cell aspect-square flex items-center justify-center rounded-sm border font-bold uppercase cursor-pointer transition select-none ';
           if (state.found) {
             cls += `${state.highlightClass || 'bg-success/40'} border-transparent text-bg `;
           } else if (state.selected) {
-            cls += 'bg-accent-soft border-accent text-text ';
+            cls += 'bg-accent/30 border-accent text-text ring-2 ring-accent ';
           } else {
             cls += 'bg-surface border-card-hover hover:bg-card-hover text-text ';
           }

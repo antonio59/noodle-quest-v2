@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const COL_LABELS = ['B', 'I', 'N', 'G', 'O'];
 const COL_RANGES: [number, number][] = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
@@ -260,9 +259,9 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
                       width={cs - 2}
                       height={cs - 2}
                       rx={4}
-                      fill={marked ? (isFree ? '#6366f1' : '#818cf8') : isCurrent ? '#fbbf24' : '#1e1b4b'}
-                      stroke={canClick ? '#a5b4fc' : '#312e81'}
-                      strokeWidth={canClick ? 2.5 : 1}
+                      fill={marked ? (isFree ? '#6366f1' : '#818cf8') : isCurrent ? '#fbbf24' : canClick ? '#2d2566' : '#1e1b4b'}
+                      stroke={isCurrent ? '#fbbf24' : canClick ? '#a5b4fc' : '#312e81'}
+                      strokeWidth={canClick || isCurrent ? 2.5 : 1}
                     >
                       {isCurrent && <animate attributeName="opacity" values="0.7;1;0.7" dur="0.8s" repeatCount="indefinite" />}
                     </rect>
@@ -293,16 +292,25 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
                         {cell}
                       </text>
                     )}
-                    {marked && (
-                      <circle
-                        cx={x + cs / 2}
-                        cy={y + cs / 2}
-                        r={cs / 2 - 6}
-                        fill="none"
-                        stroke={isFree ? '#a5b4fc' : '#e0e7ff'}
-                        strokeWidth={2}
-                        opacity={0.5}
-                      />
+                    {marked && !isFree && (
+                      <>
+                        <circle
+                          cx={x + cs / 2}
+                          cy={y + cs / 2}
+                          r={cs / 2 - 6}
+                          fill="none"
+                          stroke="#e0e7ff"
+                          strokeWidth={2.5}
+                          opacity={0.7}
+                        />
+                        <circle
+                          cx={x + cs / 2}
+                          cy={y + cs / 2}
+                          r={3}
+                          fill="#e0e7ff"
+                          opacity={0.7}
+                        />
+                      </>
                     )}
                   </g>
                 );
@@ -414,15 +422,5 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     </div>
   );
 }
-
-registerGame('bingo', {
-  name: 'Bingo',
-  emoji: '🎱',
-  description: 'Match numbers and complete your card!',
-  category: 'board',
-  stages: 10,
-  component: BingoGame,
-  aiDifficulty: 'medium',
-});
 
 export default BingoGame;

@@ -58,7 +58,7 @@ export function CrosswordGrid({
             return (
               <div
                 key={`${r}-${c}`}
-                className="aspect-square bg-black rounded-sm"
+                className="aspect-square bg-black/90 rounded-sm"
                 aria-hidden="true"
               />
             );
@@ -68,8 +68,8 @@ export function CrosswordGrid({
           const theme = highlighted
             ? isActive
               ? 'bg-accent-soft border-accent'
-              : 'bg-primary/10 border-primary/40'
-            : 'bg-surface border-card-hover';
+              : 'bg-primary/15 border-primary/50'
+            : 'bg-[#2a2850] border-[#3d3a60]';
 
           return (
             <div key={`${r}-${c}`} className={`${base} ${theme}`}>
