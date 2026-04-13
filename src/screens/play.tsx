@@ -1,12 +1,23 @@
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, Suspense, lazy, type ComponentType } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, ChevronRight, ArrowRight } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGameMeta, getGameLoader } from '@/lib/game-registry';
-import { lazy } from 'react';
-import type { GameResult } from '@/types';
+import type { GameResult, GameProps } from '@/types';
+
+// Module-level cache so React.lazy is called once per gameId, outside render.
+const lazyCache = new Map<string, ComponentType<GameProps>>();
+function getLazyGame(gameId: string): ComponentType<GameProps> | null {
+  const cached = lazyCache.get(gameId);
+  if (cached) return cached;
+  const loader = getGameLoader(gameId);
+  if (!loader) return null;
+  const component = lazy(loader);
+  lazyCache.set(gameId, component);
+  return component;
+}
 
 export function PlayGame() {
   const navigate = useNavigate();
@@ -36,13 +47,8 @@ export function PlayGame() {
   // Look up game metadata (no component import)
   const gameMeta = gameId ? getGameMeta(gameId) : undefined;
 
-  // Lazily resolve the game component — memoised so React.lazy is called once per gameId
-  const GameComponent = useMemo(() => {
-    if (!gameId) return null;
-    const loader = getGameLoader(gameId);
-    if (!loader) return null;
-    return lazy(loader);
-  }, [gameId]);
+  // Resolve lazy component from module-level cache (not created during render)
+  const GameComponent = gameId ? getLazyGame(gameId) : null;
 
   // Redirect if game not found
   useEffect(() => {
