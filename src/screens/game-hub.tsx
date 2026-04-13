@@ -172,7 +172,7 @@ export function GameHub() {
               <h3 className="text-sm font-bold text-text-dim mb-3 flex items-center gap-1.5">
                 <Heart size={14} className="text-danger" fill="currentColor" /> Favorites
               </h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {favGames.map(g => (
                   <button
                     key={g.id}
@@ -211,9 +211,9 @@ export function GameHub() {
             </div>
           </div>
 
-          <div className="p-4 grid grid-cols-2 gap-3">
+          <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {filteredGames.map(g => (
-              <div key={g.id} className="bg-card rounded-xl p-4 relative group">
+              <div key={g.id} className="bg-card rounded-xl p-4 relative group shadow-sm hover:shadow-md transition-shadow">
                 <button
                   onClick={() => toggleFav(g.id)}
                   className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -238,12 +238,12 @@ export function GameHub() {
 
       {tab === 'board' && (
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4 grid grid-cols-2 gap-3">
+          <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {allGames.filter(g => g.category === 'board').map(g => (
               <div
                 key={g.id}
                 onClick={() => navigateToGame(g.id)}
-                className="bg-card hover:bg-card-hover rounded-xl p-4 relative cursor-pointer transition-colors"
+                className="bg-card hover:bg-card-hover rounded-xl p-4 relative cursor-pointer transition-colors shadow-sm hover:shadow-md"
               >
                 <button
                   onClick={e => { e.stopPropagation(); navigateToMultiplayer(g.id); }}
@@ -290,12 +290,12 @@ export function GameHub() {
 
       {tab === 'breathe' && (
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4 grid grid-cols-2 gap-3">
+          <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {allGames.filter(g => g.category === 'breathe').map(g => (
               <button
                 key={g.id}
                 onClick={() => navigateToGame(g.id)}
-                className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
+                className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95 shadow-sm hover:shadow-md"
               >
                 <div className="text-3xl mb-2">{g.emoji}</div>
                 <div className="font-semibold text-sm mb-1">{g.name}</div>

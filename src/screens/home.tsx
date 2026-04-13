@@ -35,7 +35,7 @@ export function Home() {
             { icon: Zap, label: 'Games', value: String(gamesPlayed), color: 'text-success' },
             { icon: Trophy, label: 'Available', value: String(games.length), color: 'text-accent' },
           ].map(s => (
-            <div key={s.label} className="bg-card rounded-xl p-3 text-center">
+            <div key={s.label} className="bg-card rounded-xl p-3 text-center shadow-sm">
               <s.icon className={`mx-auto mb-1 ${s.color}`} size={20} />
               <div className="text-xl font-bold">{s.value}</div>
               <div className="text-text-muted text-xs">{s.label}</div>
@@ -46,12 +46,12 @@ export function Home() {
         <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
           <Zap size={18} className="text-accent" /> Quick Play
         </h2>
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
           {recentGames.map(g => (
             <button
               key={g.id}
               onClick={() => navigate(`/play/${g.id}`, { state: { stage: 1 } })}
-              className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95"
+              className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95 shadow-sm hover:shadow-md"
             >
               <div className="text-3xl mb-2">{g.emoji}</div>
               <div className="font-semibold text-sm">{g.name}</div>

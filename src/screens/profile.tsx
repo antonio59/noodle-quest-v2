@@ -3,7 +3,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { AVATARS } from '@/lib/avatars';
-import { LogOut, Star, Gamepad2 } from 'lucide-react';
+import { LogOut, Star, Gamepad2, Trophy, Zap } from 'lucide-react';
 
 export function Profile() {
   const { player, logout, updateAvatar } = useAuth();
@@ -19,7 +19,7 @@ export function Profile() {
     <div className="h-full overflow-y-auto">
       <div className="p-5">
         {/* Player Card */}
-        <div className="bg-card rounded-2xl p-6 text-center mb-6">
+        <div className="bg-card rounded-2xl p-6 text-center mb-6 shadow-sm">
           <button className="text-6xl mb-3 active:scale-90 transition-transform">
             {player?.avatar || '🎮'}
           </button>
@@ -30,9 +30,9 @@ export function Profile() {
         </div>
 
         {/* Avatar picker */}
-        <div className="bg-card rounded-xl p-4 mb-6">
+        <div className="bg-card rounded-xl p-4 mb-6 shadow-sm">
           <h3 className="text-sm font-bold text-text-dim mb-3">Change Avatar</h3>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
             {AVATARS.map(a => (
               <button
                 key={a}
@@ -48,14 +48,24 @@ export function Profile() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-card rounded-xl p-4 text-center">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-card rounded-xl p-4 text-center shadow-sm">
             <Star className="mx-auto text-warning mb-1" size={20} />
             <div className="text-2xl font-bold">{totalStars}</div>
             <div className="text-text-muted text-xs">Total Stars</div>
           </div>
-          <div className="bg-card rounded-xl p-4 text-center">
-            <Gamepad2 className="mx-auto text-accent mb-1" size={20} />
+          <div className="bg-card rounded-xl p-4 text-center shadow-sm">
+            <Trophy className="mx-auto text-accent mb-1" size={20} />
+            <div className="text-2xl font-bold">{stats?.gamesPlayed ?? 0}</div>
+            <div className="text-text-muted text-xs">Games Played</div>
+          </div>
+          <div className="bg-card rounded-xl p-4 text-center shadow-sm">
+            <Zap className="mx-auto text-success mb-1" size={20} />
+            <div className="text-2xl font-bold">{(stats?.totalScore ?? 0).toLocaleString()}</div>
+            <div className="text-text-muted text-xs">Total Score</div>
+          </div>
+          <div className="bg-card rounded-xl p-4 text-center shadow-sm">
+            <Gamepad2 className="mx-auto text-primary mb-1" size={20} />
             <div className="text-2xl font-bold">{games.length}</div>
             <div className="text-text-muted text-xs">Games Available</div>
           </div>

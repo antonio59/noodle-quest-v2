@@ -237,7 +237,7 @@ export function Auth() {
         <h1 className="text-3xl font-bold mb-2 text-text">Who's playing? 🎮</h1>
         <p className="text-text-muted text-sm mb-8">Pick your profile</p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
           {profiles.map((profile) => (
             <button
               key={profile.id}
