@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const COLORS = ['#232146', '#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24'];
 
@@ -275,14 +274,5 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     </div>
   );
 }
-
-registerGame('pixel-paint', {
-  name: 'Pixel Paint',
-  emoji: '🟦',
-  description: 'Tap the squares to match the pixel art picture!',
-  category: 'motor',
-  stages: 10,
-  component: PixelPaintGame,
-});
 
 export default PixelPaintGame;

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, type ReactElement } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface FillBlank {
   word: string;
@@ -297,15 +296,5 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     </div>
   );
 }
-
-registerGame('fill-blank', {
-  name: 'Fill in the Blank',
-  emoji: '✏️',
-  description: 'Fill in missing letters to complete the word!',
-  category: 'memory',
-  stages: 10,
-  component: FillBlankGame,
-  aiDifficulty: 'medium',
-});
 
 export default FillBlankGame;

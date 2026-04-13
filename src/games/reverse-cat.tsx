@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const COLOR_DATA = [
   { color: '#ff6e6c', name: 'red', emoji: '🔴' },
@@ -231,14 +230,5 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     </div>
   );
 }
-
-registerGame('reverse-cat', {
-  name: 'Reverse Cat',
-  emoji: '🔄',
-  description: 'Watch the pattern, then repeat it BACKWARDS!',
-  category: 'memory',
-  stages: 10,
-  component: ReverseCatGame,
-});
 
 export default ReverseCatGame;

@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, ChevronRight, ArrowRight } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getGame } from '@/lib/game-registry';
+import { getGameMeta, getGameLoader } from '@/lib/game-registry';
+import { lazy } from 'react';
 import type { GameResult } from '@/types';
 
 export function PlayGame() {
@@ -16,7 +17,7 @@ export function PlayGame() {
   const stage = (location.state as any)?.stage ?? 1;
   const fromTab = (location.state as any)?.fromTab ?? 'brain';
   const isMultiplayer = (location.state as any)?.multiplayer ?? false;
-  const aiDifficulty = (location.state as any)?.aiDifficulty ?? 'medium';
+  const initialDifficulty = (location.state as any)?.aiDifficulty as string | undefined;
 
   const [currentStage, setCurrentStage] = useState(stage);
   const [score, setScore] = useState(0);
@@ -25,23 +26,67 @@ export function PlayGame() {
   const [ended, setEnded] = useState<GameResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [nextStage, setNextStage] = useState<number | null>(null);
+  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>(
+    (initialDifficulty as any) || 'medium'
+  );
+  const [showLobby, setShowLobby] = useState(!initialDifficulty);
 
   const saveScore = useMutation(api.games.saveScore);
 
-  // Look up the game from the registry
-  const gameEntry = gameId ? getGame(gameId) : undefined;
+  // Look up game metadata (no component import)
+  const gameMeta = gameId ? getGameMeta(gameId) : undefined;
+
+  // Lazily resolve the game component — memoised so React.lazy is called once per gameId
+  const GameComponent = useMemo(() => {
+    if (!gameId) return null;
+    const loader = getGameLoader(gameId);
+    if (!loader) return null;
+    return lazy(loader);
+  }, [gameId]);
 
   // Redirect if game not found
   useEffect(() => {
-    if (!gameEntry) {
+    if (!gameMeta) {
       navigate('/games', { replace: true });
     }
-  }, [gameEntry, navigate]);
+  }, [gameMeta, navigate]);
 
-  if (!gameEntry || !gameId) return null;
+  if (!gameMeta || !gameId || !GameComponent) return null;
 
-  const { component: GameComponent, ...game } = gameEntry;
-  const gameDef = { ...game, component: GameComponent };
+  // Show pre-game lobby for board games when no difficulty was pre-selected
+  if (showLobby && gameMeta.category === 'board') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">{gameMeta.emoji}</div>
+        <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
+        <p className="text-text-muted text-sm mb-6 max-w-xs">{gameMeta.description}</p>
+
+        <div className="w-full max-w-xs space-y-3 mb-6">
+          <h3 className="text-sm font-semibold text-text-dim">Choose Difficulty</h3>
+          {(['easy', 'medium', 'hard'] as const).map(d => (
+            <button
+              key={d}
+              onClick={() => { setAiDifficulty(d); setShowLobby(false); }}
+              className={`w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+                d === 'easy' ? 'bg-success/20 text-success hover:bg-success/30'
+                : d === 'medium' ? 'bg-accent/20 text-accent hover:bg-accent/30'
+                : 'bg-danger/20 text-danger hover:bg-danger/30'
+              }`}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => navigate(`/games${fromTab !== 'brain' ? `?tab=${fromTab}` : ''}`)}
+          className="text-text-muted text-sm hover:text-text transition-colors"
+        >
+          <ArrowLeft size={14} className="inline mr-1" /> Back to Games
+        </button>
+      </div>
+    );
+  }
 
   const handleEnd = async (result: GameResult) => {
     setEnded(result);
@@ -62,7 +107,7 @@ export function PlayGame() {
     }
     setSaving(false);
 
-    if (result.stars > 0 && currentStage < gameDef.stages) {
+    if (result.stars > 0 && currentStage < gameMeta.stages) {
       setNextStage(currentStage + 1);
     }
   };
@@ -147,8 +192,8 @@ export function PlayGame() {
           <ArrowLeft size={20} />
         </button>
         <div className="text-center">
-          <div className="font-semibold text-sm">{gameDef.emoji} {gameDef.name}</div>
-          <div className="text-text-muted text-xs">Stage {currentStage}/{gameDef.stages}</div>
+          <div className="font-semibold text-sm">{gameMeta.emoji} {gameMeta.name}</div>
+          <div className="text-text-muted text-xs">Stage {currentStage}/{gameMeta.stages}</div>
         </div>
         <div className="text-accent font-bold min-w-[60px] text-right pr-2">{score}</div>
       </div>
@@ -165,17 +210,23 @@ export function PlayGame() {
       )}
 
       <div className="flex-1 overflow-hidden">
-        <GameComponent
-          key={`${gameId}-${currentStage}-${aiDifficulty}`}
-          stage={currentStage}
-          onScore={pts => setScore(s => s + pts)}
-          onProgress={setProgress}
-          onMessage={setMessage}
-          onEnd={handleEnd}
-          multiplayerState={isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' } : undefined}
-          onMultiplayerMove={(move) => {}}
-          aiDifficulty={aiDifficulty}
-        />
+        <Suspense fallback={
+          <div className="h-full flex items-center justify-center">
+            <div className="text-4xl animate-pulse">{gameMeta.emoji}</div>
+          </div>
+        }>
+          <GameComponent
+            key={`${gameId}-${currentStage}-${aiDifficulty}`}
+            stage={currentStage}
+            onScore={pts => setScore(s => s + pts)}
+            onProgress={setProgress}
+            onMessage={setMessage}
+            onEnd={handleEnd}
+            multiplayerState={isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' } : undefined}
+            onMultiplayerMove={(move) => {}}
+            aiDifficulty={aiDifficulty}
+          />
+        </Suspense>
       </div>
     </div>
   );

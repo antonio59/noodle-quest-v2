@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const EMOJIS = ['🔴', '🟢', '🔵', '🟡', '🟣', '🟠', '⭐', '💎', '🌸', '🍀', '🌙', '⚡', '🔥', '❄️', '🎵', '🦋', '🐢', '🐝', '🌺', '🎯', '🎪', '🚀', '🌈', '🍕', '🎸'];
 
@@ -307,14 +306,5 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     </div>
   );
 }
-
-registerGame('mirror-match', {
-  name: 'Mirror Match',
-  emoji: '🪞',
-  description: 'Two grids flash — spot the differences before they vanish!',
-  category: 'focus',
-  stages: 10,
-  component: MirrorMatchGame,
-});
 
 export default MirrorMatchGame;

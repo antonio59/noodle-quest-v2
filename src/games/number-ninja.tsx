@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number; maxRounds: number }> = {
   1: { minLen: 2, maxLen: 3, showTime: 2500, maxRounds: 4 },
@@ -268,14 +267,5 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     </div>
   );
 }
-
-registerGame('number-ninja', {
-  name: 'Number Ninja',
-  emoji: '🔢',
-  description: 'Memorize the numbers, then type them back!',
-  category: 'memory',
-  stages: 10,
-  component: NumberNinjaGame,
-});
 
 export default NumberNinjaGame;

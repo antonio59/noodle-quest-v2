@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Orb {
   id: number;
@@ -245,14 +244,5 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('focus-frenzy', {
-  name: 'Focus Frenzy',
-  emoji: '🔮',
-  description: 'Tap the glowing orbs, but ignore the tricky distractions!',
-  category: 'focus',
-  stages: 10,
-  component: FocusFrenzyGame,
-});
 
 export default FocusFrenzyGame;

@@ -1,21 +1,34 @@
-import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { Home } from '@/screens/home';
-import { GameHub } from '@/screens/game-hub';
-import { PlayGame } from '@/screens/play';
-import { Feed } from '@/screens/feed';
-import { Profile } from '@/screens/profile';
-import { Leaderboard } from '@/screens/leaderboard';
 import { Landing } from '@/screens/landing';
 import { Auth } from '@/screens/auth';
-import { InvitePage } from '@/screens/invite';
 import { useAuth } from '@/contexts/AuthContext';
 import { NavBar } from '@/components/NavBar';
+
+// Lazy-loaded route screens
+const GameHub = lazy(() => import('@/screens/game-hub').then(m => ({ default: m.GameHub })));
+const PlayGame = lazy(() => import('@/screens/play').then(m => ({ default: m.PlayGame })));
+const Feed = lazy(() => import('@/screens/feed').then(m => ({ default: m.Feed })));
+const Profile = lazy(() => import('@/screens/profile').then(m => ({ default: m.Profile })));
+const Leaderboard = lazy(() => import('@/screens/leaderboard').then(m => ({ default: m.Leaderboard })));
+const InvitePage = lazy(() => import('@/screens/invite').then(m => ({ default: m.InvitePage })));
+
+function ScreenFallback() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="text-2xl animate-pulse">🎮</div>
+    </div>
+  );
+}
 
 function AppLayout() {
   return (
     <div className="h-full flex flex-col">
       <main className="flex-1 overflow-hidden">
-        <Outlet />
+        <Suspense fallback={<ScreenFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
       <NavBar />
     </div>
@@ -37,7 +50,11 @@ export function AppRouter() {
         <Route path="/auth" element={<Auth />} />
 
         {/* Invite links (public — redirects to auth if needed) */}
-        <Route path="/invite/:code" element={<InvitePage />} />
+        <Route path="/invite/:code" element={
+          <Suspense fallback={<ScreenFallback />}>
+            <InvitePage />
+          </Suspense>
+        } />
 
         {/* App routes with navbar */}
         <Route element={<AuthGate><AppLayout /></AuthGate>}>
@@ -49,7 +66,13 @@ export function AppRouter() {
         </Route>
 
         {/* Full-screen game (no navbar) */}
-        <Route path="play/:gameId" element={<AuthGate><PlayGame /></AuthGate>} />
+        <Route path="play/:gameId" element={
+          <AuthGate>
+            <Suspense fallback={<ScreenFallback />}>
+              <PlayGame />
+            </Suspense>
+          </AuthGate>
+        } />
 
         {/* Fallback */}
         <Route path="*" element={<AuthGate><Home /></AuthGate>} />

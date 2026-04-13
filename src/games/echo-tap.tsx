@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const CONFIG: Record<number, { beats: number; tolerance: number; bpm: number }> = {
   1: { beats: 3, tolerance: 400, bpm: 80 },
@@ -396,14 +395,5 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     </div>
   );
 }
-
-registerGame('echo-tap', {
-  name: 'Echo Tap',
-  emoji: '🥁',
-  description: 'Tap the buttons to match the rhythm pattern!',
-  category: 'focus',
-  stages: 10,
-  component: EchoTapGame,
-});
 
 export default EchoTapGame;

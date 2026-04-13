@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const allScenarios: Record<number, { trigger: string; emoji: string; heat: number }[]> = {
   1: [
@@ -293,14 +292,5 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('emotion-volcano', {
-  name: 'Emotion Volcano',
-  emoji: '🌋',
-  description: 'Keep your volcano calm! Learn to cool down big feelings.',
-  category: 'social',
-  stages: 10,
-  component: EmotionVolcanoGame,
-});
 
 export default EmotionVolcanoGame;

@@ -5,49 +5,8 @@ import { ConvexClientProvider } from '@/lib/convex';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AppRouter } from './App';
 
-// Register brain games
-import '@/games/copy-cat';
-import '@/games/memory-match';
-import '@/games/number-ninja';
-import '@/games/reverse-cat';
-import '@/games/echo-tap';
-import '@/games/mirror-match';
-import '@/games/focus-frenzy';
-import '@/games/patience-pop';
-import '@/games/attention-archery';
-import '@/games/breath-bubbles';
-import '@/games/steady-hands';
-import '@/games/pixel-paint';
-import '@/games/pattern-painter';
-import '@/games/flexibility-frames';
-import '@/games/mistake-master';
-import '@/games/squish-lab';
-import '@/games/emotion-volcano';
-import '@/games/empathy-engine';
-import '@/games/feelings-faces';
-import '@/games/story-builder';
-import '@/games/routine-roadmap';
-import '@/games/just-right';
-
-// Register board games
-import '@/games/tic-tac-toe';
-import '@/games/checkers';
-import '@/games/chess';
-import '@/games/connect-four';
-import '@/games/ludo';
-import '@/games/snakes-ladders';
-import '@/features/crossword/register';
-import '@/features/wordsearch/register';
-import '@/games/flag-match';
-import '@/games/fill-blank';
-import '@/games/bingo';
-import '@/games/uno';
-
-// Register breathing exercises
-import '@/games/box-breathing';
-import '@/games/calm-breathing';
-import '@/games/triangle-breathing';
-import '@/games/coherent-breathing';
+// Register all game metadata + lazy loaders (no component code imported)
+import './lib/game-manifest';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

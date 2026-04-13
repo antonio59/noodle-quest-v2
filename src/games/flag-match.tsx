@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Country {
   code: string;
@@ -262,15 +261,5 @@ function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     </div>
   );
 }
-
-registerGame('flag-match', {
-  name: 'Flag Match',
-  emoji: '🚩',
-  description: 'Match flags to their countries!',
-  category: 'memory',
-  stages: 10,
-  component: FlagGame,
-  aiDifficulty: 'medium',
-});
 
 export default FlagGame;

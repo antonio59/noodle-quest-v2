@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface ArcheryTarget {
   id: number;
@@ -255,14 +254,5 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
     </div>
   );
 }
-
-registerGame('attention-archery', {
-  name: 'Attention Archery',
-  emoji: '🏹',
-  description: 'Hit the right targets! Watch out for sneaky decoys.',
-  category: 'focus',
-  stages: 10,
-  component: AttentionArcheryGame,
-});
 
 export default AttentionArcheryGame;

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Rule {
   name: string;
@@ -325,14 +324,5 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
     </div>
   );
 }
-
-registerGame('flexibility-frames', {
-  name: 'Flexibility Frames',
-  emoji: '🔄',
-  description: 'The rules keep changing! Stay flexible and adapt!',
-  category: 'flexibility',
-  stages: 10,
-  component: FlexibilityFramesGame,
-});
 
 export default FlexibilityFramesGame;

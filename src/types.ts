@@ -13,6 +13,9 @@ export interface GameDefinition {
   tabBenefits?: string[];
 }
 
+/** Metadata-only definition used for game hub listing (no component import). */
+export type GameMeta = Omit<GameDefinition, 'component'>;
+
 export interface GameProps {
   stage: number;
   onScore: (points: number) => void;

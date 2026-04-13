@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Scenario {
   friend: string;
@@ -381,14 +380,5 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('empathy-engine', {
-  name: 'Empathy Engine',
-  emoji: '💝',
-  description: 'Help your friends by choosing the best response!',
-  category: 'social',
-  stages: 10,
-  component: EmpathyEngineGame,
-});
 
 export default EmpathyEngineGame;

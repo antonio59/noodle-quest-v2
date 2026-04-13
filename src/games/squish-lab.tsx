@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Texture {
   name: string;
@@ -266,14 +265,5 @@ function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
     </div>
   );
 }
-
-registerGame('squish-lab', {
-  name: 'Squish Lab',
-  emoji: '🧪',
-  description: 'Touch the squishy experiments! Some feel weird — see how long you can last.',
-  category: 'flexibility',
-  stages: 10,
-  component: SquishLabGame,
-});
 
 export default SquishLabGame;

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Question {
   scenario: string;
@@ -261,14 +260,5 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('feelings-faces', {
-  name: 'Feelings Faces',
-  emoji: '😊',
-  description: "Match the emotion to what's happening!",
-  category: 'social',
-  stages: 10,
-  component: FeelingsFacesGame,
-});
 
 export default FeelingsFacesGame;

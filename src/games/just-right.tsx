@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const CONFIG: Record<number, { target: number; time: number; tolerance: number }> = {
   1: { target: 5, time: 0, tolerance: 2 },
@@ -270,14 +269,5 @@ function JustRightGame({ stage, onScore, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('just-right', {
-  name: 'Just Right',
-  emoji: '🎨',
-  description: 'Splatter paint and stop when it looks just right!',
-  category: 'flexibility',
-  stages: 10,
-  component: JustRightGame,
-});
 
 export default JustRightGame;

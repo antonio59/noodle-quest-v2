@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Challenge {
   task: string;
@@ -364,14 +363,5 @@ function MistakeMasterGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
 
   return null;
 }
-
-registerGame('mistake-master', {
-  name: 'Mistake Master',
-  emoji: '🌱',
-  description: 'Learn from mistakes and grow! Every oops is a chance to learn.',
-  category: 'flexibility',
-  stages: 10,
-  component: MistakeMasterGame,
-});
 
 export default MistakeMasterGame;

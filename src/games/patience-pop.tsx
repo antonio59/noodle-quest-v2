@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 type BubbleState = 'waiting' | 'ready' | 'trap';
 
@@ -299,14 +298,5 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('patience-pop', {
-  name: 'Patience Pop',
-  emoji: '🫧',
-  description: 'Wait for the bubbles to turn green, then pop them!',
-  category: 'focus',
-  stages: 10,
-  component: PatiencePopGame,
-});
 
 export default PatiencePopGame;

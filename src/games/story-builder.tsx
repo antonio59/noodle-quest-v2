@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Panel {
   emoji: string;
@@ -296,14 +295,5 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('story-builder', {
-  name: 'Story Builder',
-  emoji: '📖',
-  description: 'Arrange the comic panels to tell the story!',
-  category: 'sequence',
-  stages: 10,
-  component: StoryBuilderGame,
-});
 
 export default StoryBuilderGame;

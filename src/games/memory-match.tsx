@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const EMOJIS = ['🦄', '🚀', '🌈', '🍕', '🐙', '🎸', '🌺', '🎨', '🦋', '🍦', '🎪', '🌟', '🎯', '🐶', '🌻'];
 
@@ -256,14 +255,5 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     </div>
   );
 }
-
-registerGame('memory-match', {
-  name: 'Memory Match',
-  emoji: '🃏',
-  description: 'Flip cards and find the matching pairs!',
-  category: 'memory',
-  stages: 10,
-  component: MemoryMatchGame,
-});
 
 export default MemoryMatchGame;

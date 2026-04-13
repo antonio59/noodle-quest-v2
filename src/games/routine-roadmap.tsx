@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Task {
   emoji: string;
@@ -336,14 +335,5 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('routine-roadmap', {
-  name: 'Routine Roadmap',
-  emoji: '📋',
-  description: 'Put the daily tasks in the right order!',
-  category: 'sequence',
-  stages: 10,
-  component: RoutineRoadmapGame,
-});
 
 export default RoutineRoadmapGame;

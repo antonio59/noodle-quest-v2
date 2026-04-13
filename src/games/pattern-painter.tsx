@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface ShapeDef {
   type: string;
@@ -435,14 +434,5 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
     </div>
   );
 }
-
-registerGame('pattern-painter', {
-  name: 'Pattern Painter',
-  emoji: '🎨',
-  description: 'Trace the shapes with your finger or mouse!',
-  category: 'motor',
-  stages: 10,
-  component: PatternPainterGame,
-});
 
 export default PatternPainterGame;

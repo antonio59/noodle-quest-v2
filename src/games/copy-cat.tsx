@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 const COLOR_DATA = [
   { color: '#ff6e6c', emoji: '🔴' },
@@ -178,14 +177,5 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     </div>
   );
 }
-
-registerGame('copy-cat', {
-  name: 'Copy Cat',
-  emoji: '🐱',
-  description: 'Watch the pattern, then repeat it! Just like Simon Says.',
-  category: 'memory',
-  stages: 10,
-  component: CopyCatGame,
-});
 
 export default CopyCatGame;

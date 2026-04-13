@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 type Phase = 'intro' | 'playing' | 'done';
 
@@ -283,14 +282,5 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('breath-bubbles', {
-  name: 'Breath Bubbles',
-  emoji: '🫧',
-  description: 'Blow perfect bubbles by breathing slow and steady!',
-  category: 'focus',
-  stages: 10,
-  component: BreathBubblesGame,
-});
 
 export default BreathBubblesGame;

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-import { registerGame } from '@/lib/game-registry';
 
 interface Point { x: number; y: number }
 interface Checkpoint { x: number; y: number; collected: boolean }
@@ -410,14 +409,5 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     </div>
   );
 }
-
-registerGame('steady-hands', {
-  name: 'Steady Hands',
-  emoji: '🎯',
-  description: 'Guide the ball through the winding path without touching the walls!',
-  category: 'motor',
-  stages: 10,
-  component: SteadyHandsGame,
-});
 
 export default SteadyHandsGame;
