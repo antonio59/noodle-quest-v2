@@ -11,34 +11,39 @@ const PUZZLES: PuzzleDef[] = [
   {
     gridSize: 5,
     words: [
-      { word: 'APPLE', clue: 'A crunchy red fruit', row: 1, col: 0, direction: 'across' },
-      { word: 'POND', clue: 'A small lake', row: 0, col: 1, direction: 'down' },
-      { word: 'PLAN', clue: 'A method to do something', row: 0, col: 2, direction: 'down' },
-      { word: 'EAR', clue: 'You hear with this', row: 1, col: 2, direction: 'across' },
-      { word: 'END', clue: 'The finish', row: 3, col: 2, direction: 'down' },
+      { word: 'HEART', clue: 'Pumps blood', row: 0, col: 0, direction: 'across' },
+      { word: 'HAT', clue: 'Worn on your head', row: 0, col: 0, direction: 'down' },
+      { word: 'EAR', clue: 'Hearing organ', row: 0, col: 1, direction: 'down' },
+      { word: 'RAT', clue: 'Small rodent', row: 2, col: 1, direction: 'across' },
+      { word: 'TEA', clue: 'Hot drink', row: 0, col: 4, direction: 'down' },
     ],
   },
   {
     gridSize: 6,
     words: [
       { word: 'PLANET', clue: 'Earth is one of these', row: 0, col: 0, direction: 'across' },
-      { word: 'NEST', clue: 'Bird home', row: 0, col: 2, direction: 'down' },
-      { word: 'ANTE', clue: 'Initial poker bet', row: 2, col: 2, direction: 'across' },
-      { word: 'ET', clue: 'Extra-terrestrial', row: 0, col: 4, direction: 'down' },
-      { word: 'TENT', clue: 'Camping shelter', row: 2, col: 4, direction: 'down' },
-      { word: 'TEA', clue: 'Popular hot drink', row: 2, col: 5, direction: 'across' },
+      { word: 'PAT', clue: 'A light tap', row: 0, col: 0, direction: 'down' },
+      { word: 'ANT', clue: 'Tiny hard worker', row: 0, col: 2, direction: 'down' },
+      { word: 'TEA', clue: 'Hot drink', row: 0, col: 5, direction: 'down' },
+      { word: 'TAR', clue: 'Dark thick liquid', row: 2, col: 0, direction: 'across' },
+      { word: 'TEA', clue: 'Hot drink', row: 2, col: 2, direction: 'across' },
+      { word: 'EAT', clue: 'Consume food', row: 2, col: 3, direction: 'down' },
+      { word: 'TAR', clue: 'Dark thick liquid', row: 4, col: 3, direction: 'across' },
     ],
   },
   {
     gridSize: 7,
     words: [
       { word: 'CANDLE', clue: 'Makes light with a flame', row: 1, col: 0, direction: 'across' },
-      { word: 'NOTE', clue: 'A short message', row: 1, col: 3, direction: 'down' },
-      { word: 'ANT', clue: 'Tiny hard worker', row: 0, col: 3, direction: 'down' },
-      { word: 'EARTH', clue: 'Our home planet', row: 3, col: 0, direction: 'across' },
-      { word: 'THE', clue: 'Definite article', row: 3, col: 3, direction: 'down' },
-      { word: 'TREE', clue: 'It has leaves and bark', row: 5, col: 0, direction: 'across' },
-      { word: 'HAT', clue: 'Worn on your head', row: 3, col: 5, direction: 'down' },
+      { word: 'CAT', clue: 'Meows and purrs', row: 1, col: 0, direction: 'down' },
+      { word: 'ANT', clue: 'Tiny hard worker', row: 1, col: 2, direction: 'down' },
+      { word: 'ARK', clue: 'Noah\'s boat', row: 1, col: 1, direction: 'down' },
+      { word: 'KID', clue: 'A child', row: 2, col: 1, direction: 'across' },
+      { word: 'TEA', clue: 'Hot drink', row: 3, col: 2, direction: 'across' },
+      { word: 'NEW', clue: 'Not old', row: 3, col: 3, direction: 'across' },
+      { word: 'WET', clue: 'Not dry', row: 5, col: 3, direction: 'down' },
+      { word: 'EAR', clue: 'Hearing organ', row: 0, col: 6, direction: 'down' },
+      { word: 'RYE', clue: 'A grain', row: 2, col: 6, direction: 'down' },
     ],
   },
 ];
@@ -183,7 +188,7 @@ function CrosswordGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
           <>
             <div className="flex justify-center mb-4">
               <div className="flex flex-wrap gap-1 max-w-xs justify-center">
-                {'ABCDEFGHIKLMNOPRSTUVWYZX'.split('').map(l => (
+                {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => (
                   <button key={l} onClick={() => handleLetter(l)}
                     className="w-7 h-7 bg-card rounded text-xs font-bold hover:bg-card-hover active:scale-90 transition-all">{l}</button>
                 ))}

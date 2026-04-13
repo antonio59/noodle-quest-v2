@@ -77,7 +77,6 @@ const COUNTRIES: Country[] = [
   { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
   { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
   { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
   { code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
   { code: 'HK', name: 'Hong Kong', flag: '🇭🇰' },
   { code: 'MO', name: 'Macau', flag: '🇲🇴' },

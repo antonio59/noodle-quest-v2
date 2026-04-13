@@ -17,7 +17,7 @@ const WORD_BANK: string[][] = [
   // Stage 6
   ['BUTTERFLY', 'ADVENTURE', 'CHOCOLATE', 'EARTHQUAKE', 'VOLCANO', 'FIREWORK', 'DINOSAUR', 'UMBRELLA', 'TREASURE'],
   // Stage 7
-  ['EQUILIBRIUM', 'TECHNOLOGY', 'WONDERLAND', 'KALEIDOSCOPE', 'BIOLOGICAL', 'MYSTERIOUS', 'CHAMPIONSH', 'NAVIGATOR'],
+  ['EQUILIBRIUM', 'TECHNOLOGY', 'WONDERLAND', 'KALEIDOSCOPE', 'BIOLOGICAL', 'MYSTERIOUS', 'CHAMPIONSHIP', 'NAVIGATOR'],
   ['BIOGRAPHY', 'LANDSCAPE', 'ELECTRONICS'],
 ];
 
@@ -132,23 +132,26 @@ function WordSearchGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffic
 
   const handleCellOver = useCallback((r: number, c: number) => {
     if (!selecting || !startCell) return;
-    const cells = new Set<string>();
     const [sr, sc] = startCell;
     
-    // Determine direction and build highlight line
-    const dr = Math.sign(r - sr);
-    const dc = Math.sign(c - sc);
-    const steps = Math.max(Math.abs(r - sr), Math.abs(c - sc));
+    const absDr = Math.abs(r - sr);
+    const absDc = Math.abs(c - sc);
     
-    if (steps === 0) {
-      cells.add(`${sr},${sc}`);
-    } else {
-      for (let i = 0; i <= steps; i++) {
-        const cr = sr + dr * i;
-        const cc = sc + dc * i;
-        if (cr >= 0 && cr < gridSize && cc >= 0 && cc < gridSize) {
-          cells.add(`${cr},${cc}`);
-        }
+    if (absDr === 0 && absDc === 0) {
+      setCurrentHighlight(new Set([`${sr},${sc}`]));
+      return;
+    }
+    
+    const stepR = absDr === absDc ? Math.sign(r - sr) : absDr > absDc ? Math.sign(r - sr) : 0;
+    const stepC = absDr === absDc ? Math.sign(c - sc) : absDr > absDc ? 0 : Math.sign(c - sc);
+    const steps = absDr === absDc ? absDr : absDr > absDc ? absDr : absDc;
+    
+    const cells = new Set<string>();
+    for (let i = 0; i <= steps; i++) {
+      const cr = sr + stepR * i;
+      const cc = sc + stepC * i;
+      if (cr >= 0 && cr < gridSize && cc >= 0 && cc < gridSize) {
+        cells.add(`${cr},${cc}`);
       }
     }
     setCurrentHighlight(cells);

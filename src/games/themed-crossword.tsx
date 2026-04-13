@@ -9,108 +9,124 @@ interface PuzzleDef {
 }
 
 const THEMED_PUZZLES: PuzzleDef[] = [
-  // Animals theme
   {
     gridSize: 6,
     theme: 'Animals',
     words: [
-      { word: 'DOG', clue: 'Man\'s best friend', row: 0, col: 0, direction: 'across' },
-      { word: 'CAT', clue: 'Meows and purrs', row: 0, col: 3, direction: 'across' },
-      { word: 'LION', clue: 'King of the jungle', row: 2, col: 0, direction: 'down' },
-      { word: 'BEAR', clue: 'Large furry mammal', row: 2, col: 4, direction: 'down' },
-      { word: 'FISH', clue: 'Swims in water', row: 4, col: 0, direction: 'across' },
-      { word: 'BIRD', clue: 'Has feathers and wings', row: 1, col: 0, direction: 'down' },
+      { word: 'BEAR', clue: 'Large furry mammal', row: 0, col: 0, direction: 'across' },
+      { word: 'BEE', clue: 'Makes honey', row: 0, col: 0, direction: 'down' },
+      { word: 'ELK', clue: 'Large deer', row: 0, col: 1, direction: 'down' },
+      { word: 'APE', clue: 'A primate', row: 0, col: 3, direction: 'across' },
+      { word: 'EAR', clue: 'Hearing organ', row: 0, col: 5, direction: 'down' },
+      { word: 'KID', clue: 'A young goat', row: 2, col: 1, direction: 'across' },
+      { word: 'ANT', clue: 'Tiny hard worker', row: 3, col: 3, direction: 'across' },
+      { word: 'GOAT', clue: 'A farm animal', row: 4, col: 0, direction: 'across' },
+      { word: 'OWL', clue: 'A night bird', row: 4, col: 1, direction: 'down' },
+      { word: 'AXE', clue: 'A chopping tool', row: 4, col: 2, direction: 'down' },
+      { word: 'TIE', clue: 'Neckwear', row: 4, col: 3, direction: 'down' },
     ],
   },
-  // Food theme
   {
     gridSize: 6,
     theme: 'Food',
     words: [
-      { word: 'BREAD', clue: 'Used for sandwiches', row: 0, col: 0, direction: 'across' },
-      { word: 'APPLE', clue: 'Red or green fruit', row: 0, col: 0, direction: 'down' },
-      { word: 'PIZZA', clue: 'Italian round dish', row: 2, col: 0, direction: 'across' },
-      { word: 'PASTA', clue: 'Italian noodles', row: 1, col: 3, direction: 'down' },
-      { word: 'RICE', clue: 'White grains', row: 3, col: 2, direction: 'across' },
-      { word: 'CAKE', clue: 'Birthday dessert', row: 5, col: 0, direction: 'across' },
+      { word: 'SODA', clue: 'A fizzy drink', row: 0, col: 0, direction: 'across' },
+      { word: 'SOUP', clue: 'A warm liquid meal', row: 0, col: 0, direction: 'down' },
+      { word: 'OAR', clue: 'Rowing stick', row: 0, col: 1, direction: 'down' },
+      { word: 'CAKE', clue: 'Birthday dessert', row: 0, col: 4, direction: 'down' },
+      { word: 'EGG', clue: 'Breakfast oval', row: 0, col: 5, direction: 'down' },
+      { word: 'RICE', clue: 'White grains', row: 3, col: 1, direction: 'across' },
+      { word: 'PORK', clue: 'Pig meat', row: 4, col: 0, direction: 'across' },
+      { word: 'KEY', clue: 'Unlocks doors', row: 4, col: 3, direction: 'down' },
+      { word: 'YAM', clue: 'Sweet potato', row: 5, col: 3, direction: 'across' },
+      { word: 'GUM', clue: 'Chewy candy', row: 3, col: 5, direction: 'down' },
     ],
   },
-  // Sports theme
   {
-    gridSize: 7,
+    gridSize: 6,
     theme: 'Sports',
     words: [
-      { word: 'SOCCER', clue: 'Played with feet', row: 0, col: 0, direction: 'across' },
-      { word: 'TENNIS', clue: 'Played with rackets', row: 0, col: 0, direction: 'down' },
-      { word: 'GOLF', clue: 'Placed with clubs', row: 1, col: 3, direction: 'across' },
-      { word: 'SWIM', clue: 'In a pool', row: 3, col: 0, direction: 'down' },
-      { word: 'RUN', clue: 'Fast movement', row: 2, col: 0, direction: 'across' },
-      { word: 'BIKE', clue: 'Two wheels', row: 5, col: 0, direction: 'across' },
+      { word: 'GOLF', clue: 'Played with clubs', row: 0, col: 0, direction: 'across' },
+      { word: 'GAME', clue: 'A match or contest', row: 0, col: 0, direction: 'down' },
+      { word: 'POLO', clue: 'Played on horses', row: 0, col: 1, direction: 'down' },
+      { word: 'SKI', clue: 'Sliding on snow', row: 0, col: 2, direction: 'down' },
+      { word: 'TAR', clue: 'Dark thick liquid', row: 0, col: 3, direction: 'down' },
+      { word: 'RUN', clue: 'Fast movement', row: 0, col: 4, direction: 'down' },
+      { word: 'MAT', clue: 'Gym floor cover', row: 0, col: 5, direction: 'down' },
+      { word: 'SURF', clue: 'Ride ocean waves', row: 3, col: 2, direction: 'across' },
+      { word: 'SKI', clue: 'Sliding on snow', row: 3, col: 2, direction: 'down' },
+      { word: 'TEAM', clue: 'A group of players', row: 4, col: 0, direction: 'across' },
     ],
   },
-  // Nature theme
   {
-    gridSize: 7,
+    gridSize: 6,
     theme: 'Nature',
     words: [
       { word: 'TREE', clue: 'Has leaves and bark', row: 0, col: 0, direction: 'across' },
-      { word: 'FLOWER', clue: 'Blooms in spring', row: 0, col: 0, direction: 'down' },
-      { word: 'RIVER', clue: 'Flows to the sea', row: 1, col: 4, direction: 'down' },
-      { word: 'MOUNTAIN', clue: 'Very tall land', row: 3, col: 0, direction: 'across' },
-      { word: 'SUN', clue: 'Gives us light', row: 2, col: 0, direction: 'across' },
-      { word: 'RAIN', clue: 'Falls from clouds', row: 6, col: 0, direction: 'across' },
+      { word: 'TIDE', clue: 'Rises and falls', row: 0, col: 0, direction: 'down' },
+      { word: 'EEL', clue: 'A long fish', row: 0, col: 2, direction: 'down' },
+      { word: 'SEA', clue: 'A large ocean', row: 0, col: 3, direction: 'down' },
+      { word: 'SUN', clue: 'Gives us light', row: 0, col: 4, direction: 'down' },
+      { word: 'FOX', clue: 'A sly animal', row: 1, col: 5, direction: 'down' },
+      { word: 'DEER', clue: 'A woodland animal', row: 2, col: 0, direction: 'across' },
+      { word: 'MOON', clue: 'Earth\'s satellite', row: 3, col: 1, direction: 'across' },
+      { word: 'MUD', clue: 'Wet dirt', row: 3, col: 1, direction: 'down' },
     ],
   },
-  // Countries theme
   {
-    gridSize: 7,
+    gridSize: 6,
     theme: 'Countries',
     words: [
-      { word: 'FRANCE', clue: 'Eiffel Tower location', row: 0, col: 0, direction: 'across' },
-      { word: 'JAPAN', clue: 'Land of the rising sun', row: 0, col: 0, direction: 'down' },
-      { word: 'ITALY', clue: 'Shaped like a boot', row: 1, col: 3, direction: 'down' },
-      { word: 'SPAIN', clue: 'Flamenco dancers', row: 2, col: 0, direction: 'across' },
-      { word: 'INDIA', clue: 'Taj Mahal country', row: 4, col: 0, direction: 'down' },
-      { word: 'CHINA', clue: 'Great Wall location', row: 5, col: 0, direction: 'across' },
+      { word: 'ITALY', clue: 'Shaped like a boot', row: 0, col: 0, direction: 'across' },
+      { word: 'INDIA', clue: 'Taj Mahal country', row: 0, col: 0, direction: 'down' },
+      { word: 'TAN', clue: 'A light brown shade', row: 0, col: 1, direction: 'down' },
+      { word: 'CHILE', clue: 'Long South American country', row: 0, col: 5, direction: 'down' },
+      { word: 'IRAN', clue: 'Middle Eastern country', row: 2, col: 2, direction: 'down' },
+      { word: 'CUBA', clue: 'Caribbean island', row: 3, col: 1, direction: 'across' },
+      { word: 'PERU', clue: 'Machu Picchu country', row: 5, col: 0, direction: 'across' },
     ],
   },
-  // Colors theme
   {
     gridSize: 6,
     theme: 'Colors',
     words: [
       { word: 'RED', clue: 'Color of fire', row: 0, col: 0, direction: 'across' },
-      { word: 'BLUE', clue: 'Color of sky', row: 0, col: 0, direction: 'down' },
-      { word: 'GREEN', clue: 'Color of grass', row: 1, col: 2, direction: 'down' },
-      { word: 'YELLOW', clue: 'Color of sun', row: 2, col: 0, direction: 'across' },
-      { word: 'BLACK', clue: 'Darkest color', row: 4, col: 0, direction: 'down' },
-      { word: 'WHITE', clue: 'Color of snow', row: 5, col: 2, direction: 'across' },
+      { word: 'ROSE', clue: 'A pinkish color', row: 0, col: 0, direction: 'down' },
+      { word: 'SKY', clue: 'Blue above us', row: 0, col: 2, direction: 'down' },
+      { word: 'LIME', clue: 'Bright green citrus', row: 0, col: 3, direction: 'down' },
+      { word: 'BLUE', clue: 'Color of the ocean', row: 0, col: 4, direction: 'down' },
+      { word: 'CYAN', clue: 'A blue-green shade', row: 2, col: 2, direction: 'across' },
+      { word: 'GREY', clue: 'Between black and white', row: 3, col: 1, direction: 'across' },
+      { word: 'PINK', clue: 'A pale red', row: 4, col: 0, direction: 'across' },
+      { word: 'GOLD', clue: 'A shiny yellow metal', row: 5, col: 1, direction: 'across' },
     ],
   },
-  // Numbers theme
   {
     gridSize: 6,
     theme: 'Numbers',
     words: [
-      { word: 'ONE', clue: 'First number', row: 0, col: 0, direction: 'across' },
+      { word: 'TEN', clue: 'Double five', row: 0, col: 0, direction: 'across' },
       { word: 'TWO', clue: 'Second number', row: 0, col: 0, direction: 'down' },
-      { word: 'THREE', clue: 'After two', row: 1, col: 0, direction: 'across' },
-      { word: 'FIVE', clue: 'Half of ten', row: 1, col: 3, direction: 'down' },
-      { word: 'SIX', clue: 'After five', row: 3, col: 0, direction: 'across' },
-      { word: 'TEN', clue: 'Double five', row: 5, col: 0, direction: 'across' },
+      { word: 'EGG', clue: 'Breakfast oval', row: 0, col: 1, direction: 'down' },
+      { word: 'ODD', clue: 'Not even', row: 0, col: 3, direction: 'down' },
+      { word: 'GIN', clue: 'A clear spirit', row: 2, col: 1, direction: 'across' },
+      { word: 'DOG', clue: 'Man\'s best friend', row: 2, col: 3, direction: 'across' },
+      { word: 'NINE', clue: 'Before ten', row: 3, col: 0, direction: 'across' },
+      { word: 'EAT', clue: 'Consume food', row: 4, col: 3, direction: 'across' },
+      { word: 'TEA', clue: 'A hot drink', row: 3, col: 5, direction: 'down' },
     ],
   },
-  // Space theme
   {
-    gridSize: 7,
+    gridSize: 6,
     theme: 'Space',
     words: [
       { word: 'MOON', clue: 'Earth\'s satellite', row: 0, col: 0, direction: 'across' },
-      { word: 'STAR', clue: 'Twinkles at night', row: 0, col: 0, direction: 'down' },
-      { word: 'PLANET', clue: 'Orbits the sun', row: 1, col: 3, direction: 'down' },
-      { word: 'ROCKET', clue: 'Goes to space', row: 2, col: 0, direction: 'across' },
-      { word: 'EARTH', clue: 'Our home', row: 4, col: 0, direction: 'down' },
-      { word: 'COMET', clue: 'Shooting star', row: 5, col: 2, direction: 'across' },
+      { word: 'MARS', clue: 'The red planet', row: 0, col: 0, direction: 'down' },
+      { word: 'RING', clue: 'Saturn has many', row: 2, col: 0, direction: 'across' },
+      { word: 'SHIP', clue: 'A space vessel', row: 0, col: 3, direction: 'down' },
+      { word: 'SUN', clue: 'A star', row: 0, col: 4, direction: 'down' },
+      { word: 'MARS', clue: 'The red planet', row: 4, col: 0, direction: 'across' },
+      { word: 'GAS', clue: 'A state of matter', row: 5, col: 3, direction: 'across' },
     ],
   },
 ];
@@ -252,7 +268,7 @@ function ThemedCrosswordGame({ stage, onScore, onProgress, onMessage, onEnd, aiD
           <>
             <div className="flex justify-center mb-4">
               <div className="flex flex-wrap gap-1 max-w-xs justify-center">
-                {'ABCDEFGHIKLMNOPRSTUVWYZX'.split('').map(l => (
+                {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => (
                   <button key={l} onClick={() => handleLetter(l)}
                     className="w-7 h-7 bg-card rounded text-xs font-bold hover:bg-card-hover active:scale-90 transition-all">{l}</button>
                 ))}
