@@ -1,301 +1,486 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
-// Define AI difficulty levels
-const DIFFICULTY_LEVELS = {
-  easy: { jumpChance: 0.5, moveForwardChance: 0.7, randomMoveChance: 0.8 },
-  medium: { jumpChance: 0.8, moveForwardChance: 0.9, randomMoveChance: 0.3 },
-  hard: { jumpChance: 1.0, moveForwardChance: 1.0, randomMoveChance: 0.0 },
-};
-
-type Piece = { color: 'red' | 'black'; king: boolean } | null;
-type Board = Piece[][];
+type Piece = { color: 'red' | 'black'; king: boolean };
+type Board = (Piece | null)[][];
 type Pos = [number, number];
 
 const SIZE = 8;
 
 function initBoard(): Board {
-  const board: Board = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  const board: Board = Array.from({ length: SIZE }, () =>
+    Array<Piece | null>(SIZE).fill(null),
+  );
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < SIZE; c++)
       if ((r + c) % 2 === 1) board[r][c] = { color: 'black', king: false };
-    }
-  }
-  for (let r = 5; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 5; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
       if ((r + c) % 2 === 1) board[r][c] = { color: 'red', king: false };
-    }
-  }
   return board;
 }
 
 function cloneBoard(b: Board): Board {
-  return b.map(row => row.map(cell => cell ? { ...cell } : null));
+  return b.map(row => row.map(cell => (cell ? { ...cell } : null)));
 }
 
-function getMoves(b: Board, r: number, c: number): { to: Pos; jump: boolean }[] {
-  const piece = b[r][c];
-  if (!piece) return [];
-  const dirs: number[][] = piece.king
-    ? [[-1, -1], [-1, 1], [1, -1], [1, 1]]
-    : piece.color === 'red' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
-
-  const moves: { to: Pos; jump: boolean }[] = [];
-  // Jumps first
-  for (const [dr, dc] of dirs) {
-    const mr = r + dr, mc = c + dc;
-    const jr = r + dr * 2, jc = c + dc * 2;
-    if (jr >= 0 && jr < SIZE && jc >= 0 && jc < SIZE) {
-      if (b[mr]?.[mc] && b[mr][mc]!.color !== piece.color && !b[jr][jc]) {
-        moves.push({ to: [jr, jc], jump: true });
-      }
-    }
-  }
-  // Regular moves (only if no jumps available)
-  if (moves.length === 0) {
-    for (const [dr, dc] of dirs) {
-      const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !b[nr][nc]) {
-        moves.push({ to: [nr, nc], jump: false });
-      }
-    }
-  }
-  return moves;
+function getDirs(p: Piece): number[][] {
+  if (p.king) return [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+  return p.color === 'red' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
 }
 
-function hasJumps(b: Board, color: 'red' | 'black'): boolean {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+function getJumps(b: Board, r: number, c: number): Pos[] {
+  const p = b[r][c];
+  if (!p) return [];
+  const out: Pos[] = [];
+  for (const [dr, dc] of getDirs(p)) {
+    const mr = r + dr,
+      mc = c + dc,
+      jr = r + 2 * dr,
+      jc = c + 2 * dc;
+    if (
+      jr >= 0 &&
+      jr < SIZE &&
+      jc >= 0 &&
+      jc < SIZE &&
+      b[mr][mc] &&
+      b[mr][mc]!.color !== p.color &&
+      !b[jr][jc]
+    )
+      out.push([jr, jc]);
+  }
+  return out;
+}
+
+function getSteps(b: Board, r: number, c: number): Pos[] {
+  const p = b[r][c];
+  if (!p) return [];
+  const out: Pos[] = [];
+  for (const [dr, dc] of getDirs(p)) {
+    const nr = r + dr,
+      nc = c + dc;
+    if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !b[nr][nc])
+      out.push([nr, nc]);
+  }
+  return out;
+}
+
+function allMoves(
+  b: Board,
+  color: 'red' | 'black',
+): { from: Pos; to: Pos; jump: boolean }[] {
+  const jumps: { from: Pos; to: Pos; jump: boolean }[] = [];
+  const steps: { from: Pos; to: Pos; jump: boolean }[] = [];
+  for (let r = 0; r < SIZE; r++)
+    for (let c = 0; c < SIZE; c++)
       if (b[r][c]?.color === color) {
-        const moves = getMoves(b, r, c);
-        if (moves.some(m => m.jump)) return true;
+        for (const to of getJumps(b, r, c))
+          jumps.push({ from: [r, c], to, jump: true });
+        for (const to of getSteps(b, r, c))
+          steps.push({ from: [r, c], to, jump: false });
       }
-    }
+  return jumps.length > 0 ? jumps : steps;
+}
+
+function pieceTargets(
+  b: Board,
+  r: number,
+  c: number,
+  color: 'red' | 'black',
+): Pos[] {
+  const p = b[r][c];
+  if (!p || p.color !== color) return [];
+  const jumps = getJumps(b, r, c);
+  if (jumps.length > 0) return jumps;
+  if (allMoves(b, color).some(m => m.jump)) return [];
+  return getSteps(b, r, c);
+}
+
+function applyMove(b: Board, from: Pos, to: Pos): Board {
+  const nb = cloneBoard(b);
+  const p = { ...nb[from[0]][from[1]]! };
+  nb[to[0]][to[1]] = p;
+  nb[from[0]][from[1]] = null;
+  if (Math.abs(to[0] - from[0]) === 2) {
+    nb[(from[0] + to[0]) / 2][(from[1] + to[1]) / 2] = null;
   }
-  return false;
+  if (
+    (p.color === 'red' && to[0] === 0) ||
+    (p.color === 'black' && to[0] === SIZE - 1)
+  ) {
+    p.king = true;
+    nb[to[0]][to[1]] = p;
+  }
+  return nb;
 }
 
 function countPieces(b: Board, color: 'red' | 'black'): number {
-  let count = 0;
-  for (const row of b) for (const cell of row) if (cell?.color === color) count++;
-  return count;
+  let n = 0;
+  for (const row of b) for (const c of row) if (c?.color === color) n++;
+  return n;
 }
 
-// Simple AI: prefer jumps, then moves toward promotion, then random
-function aiGetMove(b: Board, difficulty: 'easy' | 'medium' | 'hard'): { from: Pos; to: Pos } | null {
-  const allMoves: { from: Pos; to: Pos; score: number }[] = [];
-  for (let r = 0; r < SIZE; r++) {
+function evaluate(b: Board): number {
+  let s = 0;
+  for (let r = 0; r < SIZE; r++)
     for (let c = 0; c < SIZE; c++) {
-      if (b[r][c]?.color === 'black') {
-        for (const m of getMoves(b, r, c)) {
-          let score = 0;
-          if (m.jump) score += 10;
-          if (m.to[0] === SIZE - 1) score += 5; // promotion
-          score += m.to[0] - r; // move forward
-          allMoves.push({ from: [r, c], to: m.to, score });
-        }
-      }
+      const p = b[r][c];
+      if (!p) continue;
+      const v = p.king ? 5 : 1;
+      const adv = p.color === 'black' ? r : 7 - r;
+      const cen = (3.5 - Math.abs(c - 3.5)) * 0.1;
+      const t = v + adv * 0.15 + cen;
+      s += p.color === 'black' ? t : -t;
+    }
+  return s;
+}
+
+function minimax(
+  b: Board,
+  depth: number,
+  alpha: number,
+  beta: number,
+  maximizing: boolean,
+): number {
+  const col: 'red' | 'black' = maximizing ? 'black' : 'red';
+  const moves = allMoves(b, col);
+  if (moves.length === 0) return maximizing ? -100 : 100;
+  if (depth === 0) return evaluate(b);
+  if (maximizing) {
+    let best = -Infinity;
+    for (const m of moves) {
+      const nb = applyMove(b, m.from, m.to);
+      const sc = minimax(nb, depth - 1, alpha, beta, false);
+      best = Math.max(best, sc);
+      alpha = Math.max(alpha, sc);
+      if (alpha >= beta) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const m of moves) {
+      const nb = applyMove(b, m.from, m.to);
+      const sc = minimax(nb, depth - 1, alpha, beta, true);
+      best = Math.min(best, sc);
+      beta = Math.min(beta, sc);
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+}
+
+function aiPick(
+  b: Board,
+  diff: 'easy' | 'medium' | 'hard',
+): { from: Pos; to: Pos; jump: boolean } | null {
+  const moves = allMoves(b, 'black');
+  if (moves.length === 0) return null;
+  if (diff === 'easy')
+    return moves[Math.floor(Math.random() * moves.length)];
+  if (diff === 'medium') {
+    const jumps = moves.filter(m => m.jump);
+    if (jumps.length > 0)
+      return jumps[Math.floor(Math.random() * jumps.length)];
+    const sorted = [...moves].sort((a, b) => b.to[0] - a.to[0]);
+    return sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
+  }
+  let best = moves[0],
+    bestSc = -Infinity;
+  for (const m of moves) {
+    const nb = applyMove(b, m.from, m.to);
+    const sc = minimax(nb, 3, -Infinity, Infinity, false);
+    if (sc > bestSc) {
+      bestSc = sc;
+      best = m;
     }
   }
-  
-  if (allMoves.length === 0) return null;
-  
-  // Apply difficulty-based filtering
-  const { jumpChance, moveForwardChance, randomMoveChance } = DIFFICULTY_LEVELS[difficulty];
-  
-  // For easy: more random moves
-  if (difficulty === 'easy' && Math.random() < randomMoveChance) {
-    return allMoves[Math.floor(Math.random() * allMoves.length)];
-  }
-  
-  // For medium: mostly best moves but with some randomness
-  if (difficulty === 'medium') {
-    allMoves.sort((a, b) => b.score - a.score);
-    const top = allMoves.slice(0, Math.min(3, allMoves.length));
-    return top[Math.floor(Math.random() * top.length)];
-  }
-  
-  // For hard: always best move
-  allMoves.sort((a, b) => b.score - a.score);
-  return allMoves[0];
+  return best;
 }
 
-function CheckersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
+function CheckersGame({
+  stage,
+  onScore,
+  onProgress,
+  onMessage,
+  onEnd,
+  aiDifficulty,
+}: GameProps) {
   const [board, setBoard] = useState<Board>(initBoard);
   const [selected, setSelected] = useState<Pos | null>(null);
+  const [targets, setTargets] = useState<Pos[]>([]);
   const [turn, setTurn] = useState<'red' | 'black'>('red');
-  const [mustJump, setMustJump] = useState<Pos | null>(null);
+  const [multiJumpPos, setMultiJumpPos] = useState<Pos | null>(null);
   const [wins, setWins] = useState(0);
+  const [boardSize, setBoardSize] = useState(320);
   const targetWins = Math.min(stage + 1, 10);
-  const difficulty = aiDifficulty || 'medium';
+  const diff = aiDifficulty || 'medium';
 
-  const doMove = useCallback((b: Board, from: Pos, to: Pos): { board: Board; wasJump: boolean } => {
-    const nb = cloneBoard(b);
-    const piece = nb[from[0]][from[1]]!;
-    nb[to[0]][to[1]] = piece;
-    nb[from[0]][from[1]] = null;
-    let wasJump = false;
-    if (Math.abs(to[0] - from[0]) === 2) {
-      const mr = (from[0] + to[0]) / 2, mc = (from[1] + to[1]) / 2;
-      nb[mr][mc] = null;
-      wasJump = true;
-    }
-    // Promotion
-    if ((piece.color === 'red' && to[0] === 0) || (piece.color === 'black' && to[0] === SIZE - 1)) {
-      piece.king = true;
-    }
-    return { board: nb, wasJump };
+  useEffect(() => {
+    const u = () => setBoardSize(Math.min(window.innerWidth - 24, 400));
+    u();
+    window.addEventListener('resize', u);
+    return () => window.removeEventListener('resize', u);
   }, []);
 
-  const handleCell = (r: number, c: number) => {
-    if (turn !== 'red') return;
+  const resetBoard = useCallback(() => {
+    setBoard(initBoard());
+    setSelected(null);
+    setTargets([]);
+    setTurn('red');
+    setMultiJumpPos(null);
+    onMessage('Your turn! (Red pieces)');
+  }, [onMessage]);
 
-    const piece = board[r][c];
+  const handleEnd = useCallback(
+    (b: Board): boolean => {
+      const bk = countPieces(b, 'black'),
+        rd = countPieces(b, 'red');
+      if (bk === 0 || allMoves(b, 'black').length === 0) {
+        const w = wins + 1;
+        setWins(w);
+        onScore(150);
+        onProgress(w / targetWins);
+        if (w >= targetWins) {
+          onEnd({
+            score: w * 150,
+            stars: 3,
+            summary: `Won ${w} checkers games!`,
+          });
+        } else {
+          onMessage(`You win! (${w}/${targetWins})`);
+          setTimeout(resetBoard, 1500);
+        }
+        return true;
+      }
+      if (rd === 0 || allMoves(b, 'red').length === 0) {
+        onMessage('You lost — try again!');
+        setTimeout(resetBoard, 1500);
+        return true;
+      }
+      return false;
+    },
+    [wins, targetWins, onScore, onProgress, onMessage, onEnd, resetBoard],
+  );
 
-    // Select own piece
-    if (piece?.color === 'red' && !mustJump) {
-      setSelected([r, c]);
-      return;
-    }
+  const doAiTurn = useCallback(
+    (b: Board) => {
+      onMessage('AI thinking...');
 
-    // Move selected piece
-    if (selected) {
-      const moves = getMoves(board, selected[0], selected[1]);
-      const move = moves.find(m => m.to[0] === r && m.to[1] === c);
-      if (move) {
-        const jumpsAvailable = hasJumps(board, 'red');
-        if (jumpsAvailable && !move.jump) return; // must jump if possible
+      const step = (cb: Board, pos: Pos | null, wasJump: boolean) => {
+        if (wasJump && pos) {
+          const more = getJumps(cb, pos[0], pos[1]);
+          if (more.length > 0) {
+            const pick = more[Math.floor(Math.random() * more.length)];
+            const nb = applyMove(cb, pos, pick);
+            setBoard(nb);
+            setTimeout(() => step(nb, pick, true), 350);
+            return;
+          }
+        }
+        if (handleEnd(cb)) return;
+        setTurn('red');
+        onMessage('Your turn!');
+      };
 
-        const { board: nb, wasJump } = doMove(board, selected, move.to);
+      setTimeout(() => {
+        const m = aiPick(b, diff);
+        if (!m) {
+          handleEnd(b);
+          return;
+        }
+        const nb = applyMove(b, m.from, m.to);
         setBoard(nb);
-        setSelected(null);
+        setTimeout(() => step(nb, m.to, m.jump), 350);
+      }, 400);
+    },
+    [diff, onMessage, handleEnd],
+  );
 
-        // Multi-jump
-        if (wasJump) {
-          const moreJumps = getMoves(nb, move.to[0], move.to[1]).filter(m => m.jump);
-          if (moreJumps.length > 0) {
-            setMustJump(move.to);
-            setSelected(move.to);
+  const handleClick = useCallback(
+    (r: number, c: number) => {
+      if (turn !== 'red') return;
+      const p = board[r][c];
+
+      if (multiJumpPos) {
+        if (targets.some(([tr, tc]) => tr === r && tc === c)) {
+          const nb = applyMove(board, multiJumpPos, [r, c]);
+          setBoard(nb);
+          const more = getJumps(nb, r, c);
+          if (more.length > 0) {
+            setMultiJumpPos([r, c]);
+            setSelected([r, c]);
+            setTargets(more);
+            onMessage('Continue jumping!');
+          } else {
+            setSelected(null);
+            setTargets([]);
+            setMultiJumpPos(null);
+            if (!handleEnd(nb)) {
+              setTurn('black');
+              doAiTurn(nb);
+            }
+          }
+        }
+        return;
+      }
+
+      if (p?.color === 'red') {
+        const t = pieceTargets(board, r, c, 'red');
+        setSelected([r, c]);
+        setTargets(t);
+        return;
+      }
+
+      if (selected && targets.some(([tr, tc]) => tr === r && tc === c)) {
+        const nb = applyMove(board, selected, [r, c]);
+        setBoard(nb);
+        const isJump = Math.abs(r - selected[0]) === 2;
+        if (isJump) {
+          const more = getJumps(nb, r, c);
+          if (more.length > 0) {
+            setMultiJumpPos([r, c]);
+            setSelected([r, c]);
+            setTargets(more);
             onMessage('Continue jumping!');
             return;
           }
         }
-        setMustJump(null);
-        finishTurn(nb, 'black');
-      } else {
-        setSelected([r, c]);
-      }
-    }
-  };
-
-  const finishTurn = (b: Board, nextTurn: 'red' | 'black') => {
-    const redCount = countPieces(b, 'red');
-    const blackCount = countPieces(b, 'black');
-
-    if (blackCount === 0) {
-      const newWins = wins + 1;
-      setWins(newWins);
-      onScore(150);
-      onProgress(newWins / targetWins);
-      if (newWins >= targetWins) {
-        onEnd({ score: newWins * 150, stars: 3, summary: `Won ${newWins} checkers games!` });
-      } else {
-        onMessage(`You captured all pieces! (${newWins}/${targetWins})`);
-        setTimeout(() => resetBoard(), 1500);
-      }
-      return;
-    }
-    if (redCount === 0) {
-      onMessage('You lost — try again!');
-      setTimeout(() => resetBoard(), 1500);
-      return;
-    }
-
-    setTurn(nextTurn);
-    if (nextTurn === 'black') {
-      onMessage('AI thinking...');
-      setTimeout(() => {
-        const aiM = aiGetMove(b, difficulty);
-        if (aiM) {
-          const { board: nb } = doMove(b, aiM.from, aiM.to);
-          setBoard(nb);
-          setTurn('red');
-          onMessage('Your turn!');
-        } else {
-          // AI has no moves — player wins
-          const newWins = wins + 1;
-          setWins(newWins);
-          onScore(150);
-          onProgress(newWins / targetWins);
-          onMessage('AI has no moves — you win!');
-          setTimeout(() => {
-            if (newWins >= targetWins) {
-              onEnd({ score: newWins * 150, stars: 3, summary: `Won ${newWins} checkers games!` });
-            } else {
-              resetBoard();
-            }
-          }, 1500);
+        setSelected(null);
+        setTargets([]);
+        if (!handleEnd(nb)) {
+          setTurn('black');
+          doAiTurn(nb);
         }
-      }, 500);
-    } else {
-      onMessage('Your turn!');
-    }
-  };
+      }
+    },
+    [board, selected, targets, turn, multiJumpPos, onMessage, handleEnd, doAiTurn],
+  );
 
-  const resetBoard = () => {
-    setBoard(initBoard());
-    setSelected(null);
-    setTurn('red');
-    setMustJump(null);
-    onMessage('Your turn! (Red pieces)');
-  };
-
-  const allMoves = selected ? getMoves(board, selected[0], selected[1]) : [];
+  const cs = boardSize / SIZE;
+  const redCount = countPieces(board, 'red');
+  const blackCount = countPieces(board, 'black');
 
   return (
-    <div className="h-full flex flex-col items-center p-3">
-      <div className="flex gap-3 mb-3 text-sm">
+    <div className="h-full flex flex-col items-center p-2">
+      <div className="flex gap-3 mb-2 text-sm">
         <span className="bg-card rounded-lg px-3 py-1.5">
-          <span className="text-danger font-bold">You: {countPieces(board, 'red')}</span>
+          <span className="text-red-500 font-bold">You: {redCount}</span>
         </span>
         <span className="bg-card rounded-lg px-3 py-1.5">
-          <span className="text-text-muted font-bold">AI: {countPieces(board, 'black')}</span>
+          <span className="text-gray-400 font-bold">AI: {blackCount}</span>
         </span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
           {wins}/{targetWins}
         </span>
       </div>
 
-      <div className="grid grid-cols-8 gap-0 border-2 border-card-hover rounded-lg overflow-hidden">
+      <svg
+        width={boardSize}
+        height={boardSize}
+        viewBox={`0 0 ${boardSize} ${boardSize}`}
+        className="rounded-lg overflow-hidden shadow-lg"
+      >
         {board.map((row, r) =>
           row.map((cell, c) => {
-            const isDark = (r + c) % 2 === 1;
-            const isSelected = selected && selected[0] === r && selected[1] === c;
-            const isMovable = allMoves.some(m => m.to[0] === r && m.to[1] === c);
-            return (
-              <button
-                key={`${r}-${c}`}
-                onClick={() => handleCell(r, c)}
-                className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-lg relative ${
-                  isDark ? 'bg-[#5c4033]' : 'bg-[#deb887]'
-                } ${isSelected ? 'ring-2 ring-accent' : ''} ${isMovable ? 'ring-2 ring-success' : ''}`}
-              >
-                {cell && (
-                  <span className={`text-xl ${cell.king ? 'font-bold' : ''}`}>
-                    {cell.color === 'red' ? '🔴' : '⚫'}
-                    {cell.king && '👑'}
-                  </span>
-                )}
-                {isMovable && !cell && <span className="w-3 h-3 rounded-full bg-success/50" />}
-              </button>
+            const dark = (r + c) % 2 === 1;
+            const isSel =
+              selected?.[0] === r && selected?.[1] === c;
+            const isTarget = targets.some(
+              ([tr, tc]) => tr === r && tc === c,
             );
-          })
+            return (
+              <g
+                key={`${r}-${c}`}
+                onClick={() => handleClick(r, c)}
+                style={{ cursor: turn === 'red' ? 'pointer' : 'default' }}
+              >
+                <rect
+                  x={c * cs}
+                  y={r * cs}
+                  width={cs}
+                  height={cs}
+                  fill={isSel ? '#FBBF24' : dark ? '#5c4033' : '#DEB887'}
+                />
+                {isTarget && !cell && (
+                  <circle
+                    cx={c * cs + cs / 2}
+                    cy={r * cs + cs / 2}
+                    r={cs * 0.15}
+                    fill="rgba(34,197,94,0.6)"
+                  />
+                )}
+                {isTarget && cell && (
+                  <circle
+                    cx={c * cs + cs / 2}
+                    cy={r * cs + cs / 2}
+                    r={cs * 0.42}
+                    fill="none"
+                    stroke="rgba(34,197,94,0.7)"
+                    strokeWidth={3}
+                  />
+                )}
+                {cell && (
+                  <>
+                    <circle
+                      cx={c * cs + cs / 2}
+                      cy={r * cs + cs / 2}
+                      r={cs * 0.38}
+                      fill={cell.color === 'red' ? '#DC2626' : '#1F2937'}
+                      stroke={cell.color === 'red' ? '#991B1B' : '#111827'}
+                      strokeWidth={2}
+                    />
+                    <circle
+                      cx={c * cs + cs / 2}
+                      cy={r * cs + cs / 2}
+                      r={cs * 0.28}
+                      fill={
+                        cell.color === 'red'
+                          ? 'rgba(255,255,255,0.15)'
+                          : 'rgba(255,255,255,0.08)'
+                      }
+                    />
+                    {cell.king && (
+                      <>
+                        <circle
+                          cx={c * cs + cs / 2}
+                          cy={r * cs + cs / 2}
+                          r={cs * 0.24}
+                          fill="none"
+                          stroke="#FCD34D"
+                          strokeWidth={2}
+                        />
+                        <text
+                          x={c * cs + cs / 2}
+                          y={r * cs + cs / 2}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fontSize={cs * 0.28}
+                          fill="#FCD34D"
+                          fontWeight="bold"
+                          style={{
+                            pointerEvents: 'none',
+                            userSelect: 'none',
+                          }}
+                        >
+                          ♛
+                        </text>
+                      </>
+                    )}
+                  </>
+                )}
+              </g>
+            );
+          }),
         )}
-      </div>
+      </svg>
 
-      <div className="mt-3 text-xs text-text-muted text-center">
-        {turn === 'red' ? 'Your turn — tap a piece then tap a square' : 'AI is thinking...'}
+      <div className="mt-2 text-xs text-text-muted text-center">
+        {turn === 'red'
+          ? multiJumpPos
+            ? 'Continue your jump!'
+            : 'Your turn — tap a piece then tap a square'
+          : 'AI is thinking...'}
       </div>
     </div>
   );
@@ -303,8 +488,8 @@ function CheckersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
 
 registerGame('checkers', {
   name: 'Checkers',
-  emoji: '🔴',
-  description: 'Classic draughts — capture all enemy pieces!',
+  emoji: '⬤',
+  description: 'Jump and capture your way to victory!',
   category: 'board',
   stages: 10,
   component: CheckersGame,

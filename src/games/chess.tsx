@@ -1,369 +1,215 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Chess, Square } from 'chess.js';
 import type { GameProps } from '@/types';
 import { registerGame } from '@/lib/game-registry';
 
-// Define AI difficulty levels
-const DIFFICULTY_LEVELS = {
-  easy: { captureChance: 0.4, centerControlChance: 0.6, forwardMoveChance: 0.7 },
-  medium: { captureChance: 0.8, centerControlChance: 0.9, forwardMoveChance: 0.95 },
-  hard: { captureChance: 1.0, centerControlChance: 1.0, forwardMoveChance: 1.0 },
+const PIECE_UNICODE: Record<string, string> = {
+  wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
+  bk: '♚', bq: '♛', br: '♜', bb: '♝', bn: '♞', bp: '♟',
 };
 
-type PieceType = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P';
-type Piece = { type: PieceType; color: 'w' | 'b' } | null;
-type Board = Piece[][];
-type Pos = [number, number];
+const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
-const PIECE_SYMBOLS: Record<string, string> = {
-  'wK': '♔', 'wQ': '♕', 'wR': '♖', 'wB': '♗', 'wN': '♘', 'wP': '♙',
-  'bK': '♚', 'bQ': '♛', 'bR': '♜', 'bB': '♝', 'bN': '♞', 'bP': '♟',
-};
-
-function initBoard(): Board {
-  const back = (c: 'w' | 'b'): Piece[] => [
-    { type: 'R', color: c }, { type: 'N', color: c }, { type: 'B', color: c }, { type: 'Q', color: c },
-    { type: 'K', color: c }, { type: 'B', color: c }, { type: 'N', color: c }, { type: 'R', color: c },
-  ];
-  return [
-    back('b'),
-    Array.from({ length: 8 }, () => ({ type: 'P' as PieceType, color: 'b' })),
-    ...Array.from({ length: 4 }, () => Array<Piece>(8).fill(null)),
-    Array.from({ length: 8 }, () => ({ type: 'P' as PieceType, color: 'w' })),
-    back('w'),
-  ];
-}
-
-function cloneBoard(b: Board): Board {
-  return b.map(row => row.map(c => c ? { ...c } : null));
-}
-
-function inBounds(r: number, c: number) {
-  return r >= 0 && r < 8 && c >= 0 && c < 8;
-}
-
-function getRawMoves(b: Board, r: number, c: number): Pos[] {
-  const piece = b[r][c];
-  if (!piece) return [];
-  const moves: Pos[] = [];
-  const { type, color } = piece;
-  const dir = color === 'w' ? -1 : 1;
-
-  const addIfValid = (nr: number, nc: number) => {
-    if (inBounds(nr, nc) && b[nr][nc]?.color !== color) moves.push([nr, nc]);
-  };
-  const addSliding = (dirs: number[][]) => {
-    for (const [dr, dc] of dirs) {
-      for (let i = 1; i < 8; i++) {
-        const nr = r + dr * i, nc = c + dc * i;
-        if (!inBounds(nr, nc)) break;
-        if (b[nr][nc]?.color === color) break;
-        moves.push([nr, nc]);
-        if (b[nr][nc]) break;
-      }
-    }
-  };
-
-  switch (type) {
-    case 'P': {
-      const startRow = color === 'w' ? 6 : 1;
-      if (inBounds(r + dir, c) && !b[r + dir][c]) {
-        moves.push([r + dir, c]);
-        if (r === startRow && !b[r + dir * 2][c]) moves.push([r + dir * 2, c]);
-      }
-      for (const dc of [-1, 1]) {
-        if (inBounds(r + dir, c + dc) && b[r + dir][c + dc]?.color && b[r + dir][c + dc]?.color !== color) {
-          moves.push([r + dir, c + dc]);
-        }
-      }
-      break;
-    }
-    case 'N':
-      for (const [dr, dc] of [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]) addIfValid(r+dr, c+dc);
-      break;
-    case 'B': addSliding([[-1,-1],[-1,1],[1,-1],[1,1]]); break;
-    case 'R': addSliding([[-1,0],[1,0],[0,-1],[0,1]]); break;
-    case 'Q': addSliding([[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]]); break;
-    case 'K':
-      for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) addIfValid(r+dr, c+dc);
-      break;
-  }
-  return moves;
-}
-
-function findKing(b: Board, color: 'w' | 'b'): Pos | null {
-  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
-    if (b[r][c]?.type === 'K' && b[r][c]?.color === color) return [r, c];
-  }
-  return null;
-}
-
-function isInCheck(b: Board, color: 'w' | 'b'): boolean {
-  const king = findKing(b, color);
-  if (!king) return false;
-  const enemy = color === 'w' ? 'b' : 'w';
-  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
-    if (b[r][c]?.color === enemy) {
-      if (getRawMoves(b, r, c).some(m => m[0] === king[0] && m[1] === king[1])) return true;
-    }
-  }
-  return false;
-}
-
-function getLegalMoves(b: Board, r: number, c: number): Pos[] {
-  const piece = b[r][c];
-  if (!piece) return [];
-  return getRawMoves(b, r, c).filter(([nr, nc]) => {
-    const nb = cloneBoard(b);
-    nb[nr][nc] = nb[r][c];
-    nb[r][c] = null;
-    return !isInCheck(nb, piece.color);
-  });
-}
-
-function hasAnyLegalMoves(b: Board, color: 'w' | 'b'): boolean {
-  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
-    if (b[r][c]?.color === color && getLegalMoves(b, r, c).length > 0) return true;
-  }
-  return false;
-}
-
-// Piece values for AI scoring
-const PIECE_VALUES: Record<PieceType, number> = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 100 };
-
-function aiMove(b: Board, difficulty: 'easy' | 'medium' | 'hard'): { from: Pos; to: Pos } | null {
-  const allMoves: { from: Pos; to: Pos; score: number }[] = [];
-  
-  // Apply difficulty-based filtering
-  const { captureChance, centerControlChance, forwardMoveChance } = DIFFICULTY_LEVELS[difficulty];
-  
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      if (b[r][c]?.color === 'b') {
-        for (const [nr, nc] of getLegalMoves(b, r, c)) {
-          let score = 0;
-          if (b[nr][nc]) score += PIECE_VALUES[b[nr][nc]!.type] * 10; // capture
-          if (nr === 7 && b[r][c]?.type === 'P') score += 80; // promotion
-          
-          // Center control (with probability based on difficulty)
-          if (Math.random() < centerControlChance && (nr === 3 || nr === 4) && (nc === 3 || nc === 4)) {
-            score += 2;
-          }
-          
-          // Forward movement (with probability based on difficulty)
-          if (Math.random() < forwardMoveChance) {
-            score += (nr - r);
-          }
-          
-          // Capture preference (with probability based on difficulty)
-          if (Math.random() < captureChance && b[nr][nc]) {
-            score += PIECE_VALUES[b[nr][nc]!.type] * 10;
-          }
-          
-          allMoves.push({ from: [r, c], to: [nr, nc], score });
-        }
+function evaluateBoard(game: Chess): number {
+  const board = game.board();
+  let score = 0;
+  for (const row of board) {
+    for (const cell of row) {
+      if (cell) {
+        const val = PIECE_VALUES[cell.type] || 0;
+        score += cell.color === 'w' ? val : -val;
       }
     }
   }
-  
-  if (allMoves.length === 0) return null;
-  
-  // For easy: more random moves
-  if (difficulty === 'easy') {
-    return allMoves[Math.floor(Math.random() * allMoves.length)];
+  return game.turn() === 'w' ? score : -score;
+}
+
+function minimax(game: Chess, depth: number, alpha: number, beta: number): number {
+  if (depth === 0) return evaluateBoard(game);
+  const moves = game.moves();
+  if (moves.length === 0) return game.isCheckmate() ? -1000 : 0;
+  let best = -Infinity;
+  for (const m of moves) {
+    game.move(m);
+    const score = -minimax(game, depth - 1, -beta, -alpha);
+    game.undo();
+    best = Math.max(best, score);
+    alpha = Math.max(alpha, score);
+    if (alpha >= beta) break;
   }
-  
-  // For medium: mostly best moves but with some randomness
+  return best;
+}
+
+function getAiMove(game: Chess, difficulty: string): string | null {
+  const moves = game.moves();
+  if (moves.length === 0) return null;
+  if (difficulty === 'easy') return moves[Math.floor(Math.random() * moves.length)];
   if (difficulty === 'medium') {
-    allMoves.sort((a, b) => b.score - a.score);
-    const top = allMoves.slice(0, Math.min(5, allMoves.length));
-    return top[Math.floor(Math.random() * top.length)];
+    const captures = moves.filter(m => m.includes('x'));
+    const checks = moves.filter(m => m.includes('+'));
+    const pool = checks.length > 0 ? checks : captures.length > 0 ? captures : moves;
+    return pool[Math.floor(Math.random() * pool.length)];
   }
-  
-  // For hard: always best move
-  allMoves.sort((a, b) => b.score - a.score);
-  return allMoves[0];
+  let bestMove = moves[0];
+  let bestScore = -Infinity;
+  for (const m of moves) {
+    game.move(m);
+    const score = -minimax(game, 2, -Infinity, Infinity);
+    game.undo();
+    if (score > bestScore) { bestScore = score; bestMove = m; }
+  }
+  return bestMove;
 }
 
-function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
-  const [board, setBoard] = useState<Board>(initBoard);
-  const [selected, setSelected] = useState<Pos | null>(null);
+function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+  const [game] = useState(() => new Chess());
+  const [fen, setFen] = useState(game.fen());
+  const [selected, setSelected] = useState<Square | null>(null);
+  const [legalMoves, setLegalMoves] = useState<Square[]>([]);
+  const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   const [turn, setTurn] = useState<'w' | 'b'>('w');
   const [wins, setWins] = useState(0);
-  const [captured, setCaptured] = useState<{ w: PieceType[]; b: PieceType[] }>({ w: [], b: [] });
+  const [captured, setCaptured] = useState<{ w: string[]; b: string[] }>({ w: [], b: [] });
+  const [status, setStatus] = useState<string>('');
   const targetWins = Math.min(stage, 10);
   const difficulty = aiDifficulty || 'medium';
+  const [boardSize, setBoardSize] = useState(320);
 
-  const handleCell = (r: number, c: number) => {
-    if (turn !== 'w') return;
-    const piece = board[r][c];
+  useEffect(() => {
+    const update = () => setBoardSize(Math.min(window.innerWidth - 24, 400));
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
-    if (piece?.color === 'w') {
-      setSelected([r, c]);
-      return;
-    }
-
-    if (selected) {
-      const moves = getLegalMoves(board, selected[0], selected[1]);
-      if (moves.some(m => m[0] === r && m[1] === c)) {
-        const nb = cloneBoard(board);
-        const capturedPiece = nb[r][c];
-        if (capturedPiece) {
-          setCaptured(prev => ({ ...prev, w: [...prev.w, capturedPiece.type] }));
-        }
-        // Pawn promotion
-        if (nb[selected[0]][selected[1]]?.type === 'P' && r === 0) {
-          nb[r][c] = { type: 'Q', color: 'w' };
-        } else {
-          nb[r][c] = nb[selected[0]][selected[1]];
-        }
-        nb[selected[0]][selected[1]] = null;
-        setBoard(nb);
-        setSelected(null);
-        finishTurn(nb, 'b');
-      } else {
-        setSelected([r, c]);
-      }
-    }
-  };
-
-  const finishTurn = (b: Board, next: 'w' | 'b') => {
-    // Check game state
-    const enemyHasMoves = hasAnyLegalMoves(b, next);
-    const inCheck = isInCheck(b, next);
-
-    if (!enemyHasMoves) {
-      if (inCheck) {
-        // Checkmate!
-        const newWins = wins + 1;
-        setWins(newWins);
-        onScore(200);
-        onProgress(newWins / targetWins);
-        onMessage('Checkmate! You win!');
-        if (newWins >= targetWins) {
-          setTimeout(() => onEnd({ score: newWins * 200, stars: 3, summary: `Won ${newWins} chess games!` }), 1000);
-        } else {
-          setTimeout(() => resetBoard(), 1500);
-        }
-      } else {
-        onMessage('Stalemate — draw!');
-        setTimeout(() => resetBoard(), 1500);
-      }
-      return;
-    }
-
-      setTurn(next);
-    if (next === 'b') {
-      onMessage('AI thinking...');
-      setTimeout(() => {
-        const aiM = aiMove(b, difficulty);
-        
-        if (!aiM) {
-          // AI has no legal moves - check for checkmate or stalemate
-          const inCheck = isInCheck(b, 'b');
-          if (inCheck) {
-            const newWins = wins + 1;
-            setWins(newWins);
-            onScore(200);
-            onProgress(newWins / targetWins);
-            onMessage('Checkmate! You win!');
-            if (newWins >= targetWins) {
-              setTimeout(() => onEnd({ score: newWins * 200, stars: 3, summary: `Won ${newWins} chess games!` }), 1000);
-            } else {
-              setTimeout(() => resetBoard(), 1500);
-            }
-          } else {
-            onMessage('Stalemate — draw!');
-            setTimeout(() => resetBoard(), 1500);
-          }
-          return;
-        }
-        
-        const nb = cloneBoard(b);
-        const capturedPiece = nb[aiM.to[0]][aiM.to[1]];
-        if (capturedPiece) {
-          setCaptured(prev => ({ ...prev, b: [...prev.b, capturedPiece.type] }));
-        }
-        if (nb[aiM.from[0]][aiM.from[1]]?.type === 'P' && aiM.to[0] === 7) {
-          nb[aiM.to[0]][aiM.to[1]] = { type: 'Q', color: 'b' };
-        } else {
-          nb[aiM.to[0]][aiM.to[1]] = nb[aiM.from[0]][aiM.from[1]];
-        }
-        nb[aiM.from[0]][aiM.from[1]] = null;
-        setBoard(nb);
-
-        const playerHasMoves = hasAnyLegalMoves(nb, 'w');
-        const playerInCheck = isInCheck(nb, 'w');
-        if (!playerHasMoves) {
-          if (playerInCheck) {
-            onMessage('Checkmate — AI wins!');
-          } else {
-            onMessage('Stalemate — draw!');
-          }
-          setTimeout(() => resetBoard(), 1500);
-          return;
-        }
-        if (playerInCheck) onMessage('Check! Your turn');
-        else onMessage('Your turn!');
-        setTurn('w');
-      }, 400);
-    }
-  };
-
-  const resetBoard = () => {
-    setBoard(initBoard());
+  const resetBoard = useCallback(() => {
+    game.reset();
+    setFen(game.fen());
     setSelected(null);
+    setLegalMoves([]);
+    setLastMove(null);
     setTurn('w');
+    setStatus('');
     setCaptured({ w: [], b: [] });
     onMessage('Your turn! (White)');
-  };
+  }, [game, onMessage]);
 
-  const legalMoves = selected ? getLegalMoves(board, selected[0], selected[1]) : [];
+  const doAiMove = useCallback(() => {
+    if (game.isGameOver()) return;
+    const moveStr = getAiMove(game, difficulty);
+    if (!moveStr) return;
+    const move = game.move(moveStr);
+    if (!move) return;
+    if (move.captured) setCaptured(p => ({ ...p, b: [...p.b, move.captured] }));
+    setLastMove({ from: move.from as Square, to: move.to as Square });
+    setFen(game.fen());
+    if (game.isGameOver()) {
+      if (game.isCheckmate()) { setStatus('checkmate'); onMessage('Checkmate — AI wins!'); setTimeout(resetBoard, 2000); }
+      else { setStatus('draw'); onMessage('Draw!'); setTimeout(resetBoard, 2000); }
+      return;
+    }
+    onMessage(game.isCheck() ? 'Check! Your turn' : 'Your turn!');
+    setTurn('w');
+  }, [game, difficulty, onMessage, resetBoard]);
+
+  const handleSquareClick = useCallback((sq: Square) => {
+    if (turn !== 'w' || game.isGameOver()) return;
+
+    if (selected) {
+      if (sq === selected) { setSelected(null); setLegalMoves([]); return; }
+      const moves = game.moves({ square: selected, verbose: true });
+      const target = moves.find(m => m.to === sq);
+      if (target) {
+        const move = game.move({ from: selected, to: sq, promotion: 'q' });
+        if (move) {
+          if (move.captured) setCaptured(p => ({ ...p, w: [...p.w, move.captured] }));
+          setLastMove({ from: move.from as Square, to: move.to as Square });
+          setFen(game.fen());
+          setSelected(null);
+          setLegalMoves([]);
+
+          if (game.isGameOver()) {
+            if (game.isCheckmate()) {
+              const newWins = wins + 1;
+              setWins(newWins);
+              onScore(200);
+              onProgress(newWins / targetWins);
+              onMessage('Checkmate! You win!');
+              if (newWins >= targetWins) {
+                setTimeout(() => onEnd({ score: newWins * 200, stars: 3, summary: `Won ${newWins} chess games!` }), 1500);
+              } else {
+                setTimeout(resetBoard, 2000);
+              }
+              return;
+            }
+            onMessage('Draw!');
+            setTimeout(resetBoard, 2000);
+            return;
+          }
+          setTurn('b');
+          onMessage('AI thinking...');
+          setTimeout(doAiMove, 300);
+          return;
+        }
+      }
+    }
+
+    const piece = game.get(sq);
+    if (piece && piece.color === 'w') {
+      setSelected(sq);
+      setLegalMoves(game.moves({ square: sq, verbose: true }).map(m => m.to as Square));
+    } else {
+      setSelected(null);
+      setLegalMoves([]);
+    }
+  }, [turn, selected, game, wins, targetWins, onScore, onProgress, onMessage, onEnd, doAiMove, resetBoard]);
+
+  const board = game.board();
+  const cs = boardSize / 8;
+  const files = 'abcdefgh'.split('');
+  const ranks = '87654321'.split('');
 
   return (
     <div className="h-full flex flex-col items-center p-2">
       <div className="flex gap-3 mb-2 text-sm items-center">
         <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-          Captured: {captured.b.map(p => PIECE_SYMBOLS['b' + p]).join('')}
+          AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('')}
         </span>
-        <span className="bg-card rounded-lg px-3 py-1 text-accent text-xs font-bold">
-          {wins}/{targetWins}
-        </span>
+        <span className="bg-card rounded-lg px-3 py-1 text-accent text-xs font-bold">{wins}/{targetWins}</span>
       </div>
 
-      <div className="grid grid-cols-8 border-2 border-card-hover rounded-lg overflow-hidden">
-        {board.map((row, r) =>
-          row.map((cell, c) => {
-            const isLight = (r + c) % 2 === 0;
-            const isSelected = selected && selected[0] === r && selected[1] === c;
-            const isMovable = legalMoves.some(m => m[0] === r && m[1] === c);
-            return (
-              <button
-                key={`${r}-${c}`}
-                onClick={() => handleCell(r, c)}
-                className={`w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-xl sm:text-2xl relative ${
-                  isLight ? 'bg-[#f0d9b5]' : 'bg-[#b58863]'
-                } ${isSelected ? 'ring-2 ring-accent ring-inset' : ''}`}
-              >
-                {cell && (
-                  <span style={{ textShadow: cell.color === 'w' ? '0 0 2px #000' : '0 0 2px #fff' }}>
-                    {PIECE_SYMBOLS[cell.color + cell.type]}
-                  </span>
-                )}
-                {isMovable && (
-                  <span className={`absolute w-3 h-3 rounded-full ${cell ? 'ring-2 ring-success ring-inset' : 'bg-success/40'}`} />
-                )}
-              </button>
-            );
-          })
-        )}
-      </div>
+      <svg width={boardSize} height={boardSize} viewBox={`0 0 ${boardSize} ${boardSize}`} className="rounded-lg overflow-hidden shadow-lg">
+        {board.map((row, r) => row.map((cell, c) => {
+          const isLight = (r + c) % 2 === 0;
+          const sqName = `${files[c]}${ranks[r]}` as Square;
+          const isSel = selected === sqName;
+          const isLegal = legalMoves.includes(sqName);
+          const isLast = lastMove?.from === sqName || lastMove?.to === sqName;
+          const pk = cell ? `${cell.color}${cell.type}` : null;
+          return (
+            <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: turn === 'w' ? 'pointer' : 'default' }}>
+              <rect x={c * cs} y={r * cs} width={cs} height={cs}
+                fill={isSel ? '#7b61ff' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
+                opacity={isSel ? 0.8 : 1} />
+              {isLegal && (cell
+                ? <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.44} fill="none" stroke="#7b61ff" strokeWidth={3} opacity={0.6} />
+                : <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.16} fill="#7b61ff" opacity={0.5} />)}
+              {cell && pk && (
+                <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
+                  fontSize={cs * 0.7} style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+              )}
+            </g>
+          );
+        }))}
+        {files.map((f, i) => <text key={`f${f}`} x={i * cs + cs - 3} y={boardSize - 3} fontSize={9} fill={(i + 7) % 2 === 0 ? '#b58863' : '#f0d9b5'} textAnchor="end" style={{ pointerEvents: 'none' }}>{f}</text>)}
+        {ranks.map((r, i) => <text key={`r${r}`} x={3} y={i * cs + 11} fontSize={9} fill={i % 2 === 0 ? '#f0d9b5' : '#b58863'} style={{ pointerEvents: 'none' }}>{r}</text>)}
+      </svg>
 
       <div className="mt-2 flex gap-3 text-sm items-center">
         <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-          {captured.w.map(p => PIECE_SYMBOLS['w' + p]).join('') || '—'}
+          You took: {captured.w.map(p => PIECE_UNICODE['w' + p] || p).join('') || '—'}
         </span>
       </div>
-
       <div className="mt-2 text-xs text-text-muted text-center">
         {turn === 'w' ? 'Your turn — tap a piece then tap a square' : 'AI is thinking...'}
       </div>

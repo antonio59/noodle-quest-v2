@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllGames } from '@/lib/game-registry';
-import { Trophy, Star } from 'lucide-react';
+import { getAllGames, getGame } from '@/lib/game-registry';
+import { Trophy, Star, X } from 'lucide-react';
 
 interface LeaderboardEntry {
   playerId: string;
@@ -12,12 +12,14 @@ interface LeaderboardEntry {
   totalStars: number;
   totalScore: number;
   gamesPlayed: number;
+  topGames: { gameId: string; stars: number; score: number }[];
 }
 
 export function Leaderboard() {
   const { player } = useAuth();
   const [tab, setTab] = useState<'overall' | 'game'>('overall');
   const [selectedGame, setSelectedGame] = useState<string>('');
+  const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
   const games = getAllGames();
 
   const overallData = useQuery(api.games.getLeaderboard, {});
@@ -28,6 +30,11 @@ export function Leaderboard() {
   const sorted = entries.filter(e => e && e.playerName).sort((a, b) => b.totalStars - a.totalStars);
   const top3 = sorted.slice(0, 3);
   const rest = sorted.slice(3);
+
+  const getGameName = (gameId: string) => {
+    const game = getGame(gameId);
+    return game ? `${game.emoji} ${game.name}` : gameId;
+  };
 
   const medalEmoji = ['🥇', '🥈', '🥉'];
   const podiumHeights = ['h-20', 'h-28', 'h-16'];
@@ -83,14 +90,18 @@ export function Leaderboard() {
                   const e = top3[idx];
                   if (!e) return null;
                   return (
-                    <div key={idx} className="flex flex-col items-center">
+                    <button 
+                      key={idx} 
+                      onClick={() => setSelectedPlayer(e)}
+                      className="flex flex-col items-center hover:opacity-80 transition-opacity"
+                    >
                       <div className="text-3xl mb-1">{e.avatar || '🎮'}</div>
                       <div className="text-xs font-semibold truncate max-w-[80px]">{e.playerName}</div>
                       <div className="text-accent text-xs font-bold">{e.totalStars} stars</div>
                       <div className={`w-16 ${podiumHeights[idx]} bg-card-hover rounded-t-lg mt-2 flex items-start justify-center pt-1`}>
                         <span className="text-lg">{medalEmoji[idx]}</span>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -103,9 +114,10 @@ export function Leaderboard() {
                 </h3>
                 <div className="space-y-2">
                   {top3.map((e, i) => (
-                    <div
+                    <button
                       key={e.playerId}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${
+                      onClick={() => setSelectedPlayer(e)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl text-left hover:bg-card-hover transition-colors ${
                         e.playerName === player?.name ? 'bg-accent/10 ring-1 ring-accent/30' : 'bg-card'
                       }`}
                     >
@@ -116,7 +128,7 @@ export function Leaderboard() {
                         <div className="text-text-muted text-xs">{e.gamesPlayed} games played</div>
                       </div>
                       <span className="text-accent font-bold">{e.totalStars}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -135,7 +147,8 @@ export function Leaderboard() {
                 rest.map((e, i) => (
                   <div
                     key={e.playerId}
-                    className={`flex items-center gap-3 p-3 rounded-xl ${
+                    onClick={() => setSelectedPlayer(e)}
+                    className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-card-hover transition-colors ${
                       e.playerName === player?.name ? 'bg-accent/10 ring-1 ring-accent/30' : 'bg-card'
                     }`}
                   >
@@ -168,6 +181,53 @@ export function Leaderboard() {
           </>
         )}
       </div>
+
+      {/* Player Detail Modal */}
+      {selectedPlayer && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setSelectedPlayer(null)}>
+          <div className="bg-surface rounded-2xl p-6 max-w-sm w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{selectedPlayer.avatar || '🎮'}</span>
+                <div>
+                  <h2 className="text-xl font-bold">{selectedPlayer.playerName}</h2>
+                  <div className="text-accent font-semibold">{selectedPlayer.totalStars} stars</div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedPlayer(null)} className="p-2 hover:bg-card rounded-lg">
+                <X size={20} className="text-text-muted" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="text-sm text-text-muted">
+                Total Score: <span className="text-text font-semibold">{selectedPlayer.totalScore.toLocaleString()}</span>
+              </div>
+              <div className="text-sm text-text-muted">
+                Games Played: <span className="text-text font-semibold">{selectedPlayer.gamesPlayed}</span>
+              </div>
+
+              <div className="mt-4">
+                <h3 className="text-sm font-bold text-text-dim mb-2">Top Games</h3>
+                <div className="space-y-2">
+                  {selectedPlayer.topGames?.map((game, i) => (
+                    <div key={i} className="flex items-center justify-between bg-card rounded-lg p-3">
+                      <span className="text-sm">{getGameName(game.gameId)}</span>
+                      <div className="text-right">
+                        <div className="text-accent font-bold">{game.stars} ⭐</div>
+                        <div className="text-text-muted text-xs">{game.score} pts</div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!selectedPlayer.topGames || selectedPlayer.topGames.length === 0) && (
+                    <div className="text-text-muted text-sm text-center py-2">No games yet</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

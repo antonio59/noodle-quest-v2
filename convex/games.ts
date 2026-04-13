@@ -48,21 +48,37 @@ export const getLeaderboard = query({
   args: { gameId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const scores = args.gameId
-      ? await ctx.db.query("scores").withIndex("by_game_score", q => q.eq("gameId", args.gameId!)).order("desc").take(100)
-      : await ctx.db.query("scores").order("desc").take(500);
+      ? await ctx.db.query("scores").withIndex("by_game_score", q => q.eq("gameId", args.gameId!)).collect()
+      : await ctx.db.query("scores").collect();
 
-    const playerMap = new Map<string, { name: string; avatar: string; totalStars: number; totalScore: number; games: Set<string> }>();
+    const playerMap = new Map<string, { name: string; avatar: string; totalStars: number; totalScore: number; games: Map<string, { stars: number; score: number }> }>();
     for (const s of scores) {
       const existing = playerMap.get(s.playerId);
+      const gameStats = existing?.games.get(s.gameId) || { stars: 0, score: 0 };
+      const newStars = gameStats.stars + s.stars;
+      const newScore = gameStats.score + s.score;
+      
       if (existing) {
         existing.totalStars += s.stars;
         existing.totalScore += s.score;
-        existing.games.add(s.gameId);
+        existing.games.set(s.gameId, { stars: newStars, score: newScore });
       } else {
         const player = await ctx.db.get(s.playerId);
-        playerMap.set(s.playerId, { name: player?.name || "?", avatar: player?.avatar || "🎮", totalStars: s.stars, totalScore: s.score, games: new Set([s.gameId]) });
+        const gamesMap = new Map<string, { stars: number; score: number }>();
+        gamesMap.set(s.gameId, { stars: s.stars, score: s.score });
+        playerMap.set(s.playerId, { name: player?.name || "?", avatar: player?.avatar || "🎮", totalStars: s.stars, totalScore: s.score, games: gamesMap });
       }
     }
-    return Array.from(playerMap.entries()).map(([id, p]) => ({ playerId: id, playerName: p.name, avatar: p.avatar, totalStars: p.totalStars, totalScore: p.totalScore, gamesPlayed: p.games.size })).sort((a, b) => b.totalStars - a.totalStars).slice(0, 50);
+    
+    return Array.from(playerMap.entries())
+      .map(([id, p]) => {
+        const topGames = Array.from(p.games.entries())
+          .map(([gameId, stats]) => ({ gameId, stars: stats.stars, score: stats.score }))
+          .sort((a, b) => b.stars - a.stars)
+          .slice(0, 5);
+        return { playerId: id, playerName: p.name, avatar: p.avatar, totalStars: p.totalStars, totalScore: p.totalScore, gamesPlayed: p.games.size, topGames };
+      })
+      .sort((a, b) => b.totalStars - a.totalStars)
+      .slice(0, 50);
   },
 });
