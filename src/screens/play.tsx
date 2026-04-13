@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, createElement, Suspense } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, ChevronRight, ArrowRight } from 'lucide-react';
 import { useMutation } from 'convex/react';
@@ -209,17 +209,17 @@ export function PlayGame() {
             <div className="text-4xl animate-pulse">{gameMeta.emoji}</div>
           </div>
         }>
-          <GameComponent
-            key={`${gameId}-${currentStage}-${aiDifficulty}`}
-            stage={currentStage}
-            onScore={pts => setScore(s => s + pts)}
-            onProgress={setProgress}
-            onMessage={setMessage}
-            onEnd={handleEnd}
-            multiplayerState={isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' } : undefined}
-            onMultiplayerMove={(move) => {}}
-            aiDifficulty={aiDifficulty}
-          />
+          {GameComponent && createElement(GameComponent, {
+            key: `${gameId}-${currentStage}-${aiDifficulty}`,
+            stage: currentStage,
+            onScore: (pts: number) => setScore(s => s + pts),
+            onProgress: setProgress,
+            onMessage: setMessage,
+            onEnd: handleEnd,
+            multiplayerState: isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' as const } : undefined,
+            onMultiplayerMove: (_move: unknown) => {},
+            aiDifficulty,
+          })}
         </Suspense>
       </div>
     </div>
