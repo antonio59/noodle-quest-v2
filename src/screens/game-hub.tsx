@@ -137,21 +137,18 @@ export function GameHub() {
       </div>
 
       {/* Tab description and benefits */}
-      <div className="p-4 pb-0 bg-card rounded-xl mx-4 mb-4">
-        <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
+      <div className="px-4 py-3 border-b border-white/5 flex-shrink-0">
+        <h2 className="text-base font-bold mb-1 flex items-center gap-2">
           {currentTab.emoji} {currentTab.label}
         </h2>
-        <p className="text-text-dim mb-3">{currentTab.description}</p>
-        <div className="mb-3">
-          <h3 className="text-sm font-bold text-text-dim mb-2">Key Benefits</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {currentTab.benefits.map((benefit, i) => (
-              <div key={i} className="flex items-start gap-2 bg-card-hover rounded-lg p-2">
-                <span className="text-accent text-xs mt-0.5">•</span>
-                <span className="text-sm text-text">{benefit}</span>
-              </div>
-            ))}
-          </div>
+        <p className="text-text-muted text-xs mb-2 line-clamp-1">{currentTab.description}</p>
+        <div className="flex gap-2 overflow-x-auto scrollbar-none">
+          {currentTab.benefits.map((benefit, i) => (
+            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-card text-[10px] text-text-muted whitespace-nowrap">
+              <span className="text-accent">•</span>
+              {benefit}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -243,35 +240,37 @@ export function GameHub() {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 grid grid-cols-2 gap-3">
             {allGames.filter(g => g.category === 'board').map(g => (
-              <div key={g.id} className="bg-card rounded-xl p-4">
-                <button onClick={() => navigateToGame(g.id)} className="text-left w-full">
-                  <div className="text-3xl mb-2">{g.emoji}</div>
-                  <div className="font-semibold text-sm mb-1">{g.name}</div>
-                  <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-                </button>
+              <div
+                key={g.id}
+                onClick={() => navigateToGame(g.id)}
+                className="bg-card hover:bg-card-hover rounded-xl p-4 relative cursor-pointer transition-colors"
+              >
                 <button
-                  onClick={() => navigateToMultiplayer(g.id)}
-                  className="mt-3 w-full flex items-center justify-center gap-1.5 bg-accent/10 text-accent text-xs font-semibold py-2 rounded-lg hover:bg-accent/20 transition-colors"
+                  onClick={e => { e.stopPropagation(); navigateToMultiplayer(g.id); }}
+                  className="absolute top-2 right-2 p-2 text-text-muted hover:text-accent transition-colors"
+                  title="Play with Friend"
                 >
-                  <Users size={14} /> Play with Friend
+                  <Users size={16} />
                 </button>
-                <div className="mt-3 text-xs text-text-muted">Play vs AI:</div>
-                <div className="flex gap-1 mt-1">
+                <div className="text-3xl mb-2">{g.emoji}</div>
+                <div className="font-semibold text-sm mb-1">{g.name}</div>
+                <div className="text-text-muted text-xs line-clamp-2 mb-3">{g.description}</div>
+                <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'easy')}
-                    className="flex-1 bg-card text-text-muted text-xs py-1.5 rounded-lg hover:bg-card-hover transition-colors"
+                    className="flex-1 bg-surface text-text-muted text-[10px] font-semibold py-1.5 rounded-lg hover:bg-card-hover transition-colors"
                   >
                     Easy
                   </button>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'medium')}
-                    className="flex-1 bg-accent/20 text-accent text-xs py-1.5 rounded-lg hover:bg-accent/30 transition-colors"
+                    className="flex-1 bg-accent/20 text-accent text-[10px] font-semibold py-1.5 rounded-lg hover:bg-accent/30 transition-colors"
                   >
                     Medium
                   </button>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'hard')}
-                    className="flex-1 bg-danger/20 text-danger text-xs py-1.5 rounded-lg hover:bg-danger/30 transition-colors"
+                    className="flex-1 bg-danger/20 text-danger text-[10px] font-semibold py-1.5 rounded-lg hover:bg-danger/30 transition-colors"
                   >
                     Hard
                   </button>

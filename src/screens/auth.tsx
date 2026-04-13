@@ -102,7 +102,7 @@ export function Auth() {
 
   if (showSignup) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-bg dark:via-surface dark:to-bg">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-bg via-surface to-bg">
         <div className="bg-card rounded-3xl shadow-2xl p-8 w-full max-w-sm">
           <div className="flex items-center justify-between mb-6">
             <button onClick={() => { setShowSignup(false); setError(''); }} className="text-text-muted hover:text-text p-2 -ml-2">
@@ -172,7 +172,7 @@ export function Auth() {
 
   if (selectedProfile) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-bg dark:via-surface dark:to-bg">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-bg via-surface to-bg">
         <div className="bg-card rounded-3xl shadow-2xl p-8 w-full max-w-sm">
           <div className="flex items-center justify-between mb-8">
             <button onClick={handleBack} className="text-text-muted hover:text-text">
@@ -232,7 +232,7 @@ export function Auth() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-bg dark:via-surface dark:to-bg">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-bg via-surface to-bg">
       <div className="text-center w-full max-w-lg">
         <h1 className="text-3xl font-bold mb-2 text-text">Who's playing? 🎮</h1>
         <p className="text-text-muted text-sm mb-8">Pick your profile</p>
