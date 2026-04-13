@@ -21,8 +21,8 @@ const PUZZLE_SETS: PuzzleSet[] = [
       clue: 'The smallest continent',
       blanks: [
         { start: 0, length: 3, answer: 'AUS' },
-        { start: 4, length: 3, answer: 'ALI' },
-        { start: 7, length: 3, answer: 'IA' },
+        { start: 4, length: 3, answer: 'RAL' },
+        { start: 7, length: 2, answer: 'IA' },
       ],
     },
   },
@@ -46,7 +46,7 @@ const PUZZLE_SETS: PuzzleSet[] = [
       blanks: [
         { start: 0, length: 3, answer: 'DOL' },
         { start: 3, length: 3, answer: 'PHI' },
-        { start: 6, length: 2, answer: 'IN' },
+        { start: 6, length: 1, answer: 'N' },
       ],
     },
   },
@@ -57,8 +57,8 @@ const PUZZLE_SETS: PuzzleSet[] = [
       clue: 'Orbits a planet',
       blanks: [
         { start: 0, length: 3, answer: 'SAT' },
-        { start: 4, length: 3, answer: 'ELL' },
-        { start: 7, length: 3, answer: 'ITE' },
+        { start: 4, length: 3, answer: 'LLI' },
+        { start: 7, length: 2, answer: 'TE' },
       ],
     },
   },
@@ -70,7 +70,7 @@ const PUZZLE_SETS: PuzzleSet[] = [
       blanks: [
         { start: 0, length: 3, answer: 'SPA' },
         { start: 4, length: 3, answer: 'HET' },
-        { start: 7, length: 3, answer: 'TI' },
+        { start: 7, length: 2, answer: 'TI' },
       ],
     },
   },
@@ -81,8 +81,7 @@ const PUZZLE_SETS: PuzzleSet[] = [
       clue: 'Six-string instrument',
       blanks: [
         { start: 0, length: 3, answer: 'GUI' },
-        { start: 4, length: 2, answer: 'TA' },
-        { start: 5, length: 2, answer: 'AR' },
+        { start: 3, length: 3, answer: 'TAR' },
       ],
     },
   },
@@ -93,7 +92,7 @@ const PUZZLE_SETS: PuzzleSet[] = [
       clue: 'Played with hands and ball',
       blanks: [
         { start: 0, length: 3, answer: 'FOO' },
-        { start: 4, length: 3, answer: 'BALL' },
+        { start: 4, length: 4, answer: 'BALL' },
       ],
     },
   },
@@ -104,7 +103,7 @@ const PUZZLE_SETS: PuzzleSet[] = [
       clue: 'Tropical storm',
       blanks: [
         { start: 0, length: 3, answer: 'HUR' },
-        { start: 4, length: 3, answer: 'RICA' },
+        { start: 4, length: 3, answer: 'ICA' },
         { start: 7, length: 2, answer: 'NE' },
       ],
     },
@@ -153,14 +152,24 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
 
   const handleInput = (idx: number, val: string) => {
     if (val.length > 1) val = val[0];
-    setInputs(prev => ({ ...prev, [idx]: val.toUpperCase() }));
+    const upper = val.toUpperCase();
+    setInputs(prev => ({ ...prev, [idx]: upper }));
     
-    if (val) {
-      const currentBlank = puzzle.blanks.find(b => b.start === idx);
+    if (upper) {
+      // Find the blank containing this index
+      const currentBlank = puzzle.blanks.find(b => idx >= b.start && idx < b.start + b.length);
       if (currentBlank) {
-        const nextStart = puzzle.blanks.find(b => b.start > idx);
-        if (nextStart) {
-          const input = document.getElementById(`input-${nextStart.start}`);
+        // Try next empty box within the same blank
+        for (let i = idx + 1; i < currentBlank.start + currentBlank.length; i++) {
+          if (!inputs[i]) {
+            const input = document.getElementById(`input-${i}`);
+            if (input) { input.focus(); return; }
+          }
+        }
+        // Otherwise jump to the next blank's first empty box
+        const nextBlank = puzzle.blanks.find(b => b.start > currentBlank.start);
+        if (nextBlank) {
+          const input = document.getElementById(`input-${nextBlank.start}`);
           input?.focus();
         }
       }
