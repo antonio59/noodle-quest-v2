@@ -95,3 +95,13 @@ button {
   25% { transform: translateX(-6px); }
   75% { transform: translateX(6px); }
 }
+
+@keyframes equalizer {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.4); }
+}
+
+@keyframes progressLoop {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}

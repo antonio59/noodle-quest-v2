@@ -197,7 +197,7 @@ export function GameHub() {
               >
                 All
               </button>
-              {GAME_CATEGORIES.map(c => (
+              {GAME_CATEGORIES.filter(c => c.id !== 'board' && c.id !== 'breathe').map(c => (
                 <button
                   key={c.id}
                   onClick={() => setCategory(c.id)}
@@ -228,7 +228,7 @@ export function GameHub() {
                   <div className="text-3xl mb-2">{g.emoji}</div>
                   <div className="font-semibold text-sm mb-1">{g.name}</div>
                   <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-                  <div className="text-text-muted text-xs mt-2">{g.stages} stages</div>
+                  <div className="text-text-muted text-xs mt-2">{g.stages} levels</div>
                 </button>
               </div>
             ))}
@@ -300,7 +300,7 @@ export function GameHub() {
                 <div className="text-3xl mb-2">{g.emoji}</div>
                 <div className="font-semibold text-sm mb-1">{g.name}</div>
                 <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-                <div className="text-text-muted text-xs mt-2">{g.stages} stages</div>
+                <div className="text-text-muted text-xs mt-2">{g.stages} levels</div>
               </button>
             ))}
           </div>
@@ -354,7 +354,16 @@ function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
                 {track.emoji}
               </div>
               <div className="flex-1 text-left">
-                <div className="font-semibold text-sm">{track.name}</div>
+                <div className="font-semibold text-sm flex items-center gap-2">
+                  {track.name}
+                  {isPlaying && (
+                    <span className="inline-flex items-end gap-[2px] h-3">
+                      <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.6s_ease-in-out_infinite]" style={{ height: '60%' }} />
+                      <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s]" style={{ height: '100%' }} />
+                      <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '40%' }} />
+                    </span>
+                  )}
+                </div>
                 <div className="text-text-muted text-xs">{track.description}</div>
               </div>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
@@ -369,10 +378,17 @@ function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
 
       {audio.isPlaying && (
         <div className="sticky bottom-0 p-3 bg-surface/80 backdrop-blur border-t border-white/5">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <div className="text-xl animate-[celebrate_2s_ease_infinite]">🎵</div>
             <div className="flex-1">
-              <div className="text-xs font-semibold text-accent">Now Playing</div>
+              <div className="text-xs font-semibold text-accent flex items-center gap-2">
+                Now Playing
+                <span className="inline-flex items-end gap-[2px] h-3">
+                  <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.6s_ease-in-out_infinite]" style={{ height: '60%' }} />
+                  <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s]" style={{ height: '100%' }} />
+                  <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '40%' }} />
+                </span>
+              </div>
               <div className="text-xs text-text-muted">
                 {TRACKS.find(t => t.id === audio.currentTrack)?.name}
               </div>
@@ -383,6 +399,9 @@ function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
             >
               Stop
             </button>
+          </div>
+          <div className="w-full h-1 bg-card rounded-full overflow-hidden">
+            <div className="h-full bg-accent animate-[progressLoop_8s_linear_infinite]" style={{ width: '30%' }} />
           </div>
         </div>
       )}

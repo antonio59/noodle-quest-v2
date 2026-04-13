@@ -22,7 +22,7 @@ export function NavBar() {
           <button
             key={t.path}
             onClick={() => navigate(t.path)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors ${
+            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors focus:outline-none ${
               active ? 'text-accent' : 'text-text-muted hover:text-text'
             }`}
           >

@@ -33,7 +33,7 @@ export function Home() {
           {[
             { icon: Star, label: 'Stars', value: String(totalStars), color: 'text-warning' },
             { icon: Zap, label: 'Games', value: String(gamesPlayed), color: 'text-success' },
-            { icon: Trophy, label: 'Available', value: String(games.length), color: 'text-accent' },
+            { icon: Trophy, label: 'Games Unlocked', value: String(games.length), color: 'text-accent' },
           ].map(s => (
             <div key={s.label} className="bg-card rounded-xl p-3 text-center shadow-sm">
               <s.icon className={`mx-auto mb-1 ${s.color}`} size={20} />

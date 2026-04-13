@@ -10,6 +10,11 @@ export function getGame(id: string) {
   return registry.get(id);
 }
 
+export function getGameName(id: string) {
+  const game = registry.get(id);
+  return game ? `${game.emoji} ${game.name}` : id;
+}
+
 export function getAllGames() {
   return Array.from(registry.entries()).map(([id, game]) => ({ id, ...game }));
 }

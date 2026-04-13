@@ -39,6 +39,8 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const [message, setMessage] = useState('🧠 Memorize!');
   const [messageColor, setMessageColor] = useState('#67e8f9');
   const [displayColor, setDisplayColor] = useState('#ff6e6c');
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [memorizeDuration, setMemorizeDuration] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -60,7 +62,22 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     setPhase('memorize');
 
     const showDuration = config.showTime + (round * 150);
-    setTimeout(() => {
+    setMemorizeDuration(showDuration);
+    setTimeLeft(showDuration);
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        const next = prev - 50;
+        if (next <= 0) {
+          clearInterval(timer);
+          return 0;
+        }
+        return next;
+      });
+    }, 50);
+
+    const timeout = setTimeout(() => {
+      clearInterval(timer);
       setPhase('input');
       setDisplayColor('#6b7280');
       setMessage('⌨️ Type the numbers!');
@@ -68,6 +85,11 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       setFeedback('');
       setTimeout(() => inputRef.current?.focus(), 50);
     }, showDuration);
+
+    return () => {
+      clearInterval(timer);
+      clearTimeout(timeout);
+    };
   }, [round, generateSequence, config.showTime]);
 
   const startGame = useCallback(() => {
@@ -171,9 +193,9 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
 
         <button
           onClick={startGame}
-          className="bg-error text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 flex items-center gap-2"
         >
-          Start Game! 🥷
+          <span>▶</span> Start Game
         </button>
       </div>
     );
@@ -193,6 +215,18 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
         {phase === 'memorize' && sequence.split('').join(' ')}
         {(phase === 'input' || phase === 'result') && '? '.repeat(sequence.length).trim()}
       </div>
+
+      {phase === 'memorize' && memorizeDuration > 0 && (
+        <div className="mb-4 flex flex-col items-center gap-2">
+          <div className="w-32 h-1.5 bg-card rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent transition-all"
+              style={{ width: `${Math.max(0, Math.min(100, (timeLeft / memorizeDuration) * 100))}%` }}
+            />
+          </div>
+          <span className="text-text-muted text-xs">Memorize quickly!</span>
+        </div>
+      )}
 
       {phase === 'input' && (
         <div className="flex flex-col items-center gap-3 w-full max-w-xs">

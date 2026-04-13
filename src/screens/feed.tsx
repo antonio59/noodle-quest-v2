@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Smile, Image, AtSign, X } from 'lucide-react';
+import { Send, Smile, Image, AtSign, X, Play } from 'lucide-react';
+import { getGameName } from '@/lib/game-registry';
 
 // Quick emoji set for the picker
 const QUICK_EMOJIS = [
@@ -12,14 +13,14 @@ const QUICK_EMOJIS = [
   '👍','👎','🤝','✌️','🫡','💀','😭','🫠',
 ];
 
-// Simple sticker-style GIFs (Tenor-style search terms mapped to static fallback)
+// Simple sticker-style GIFs mapped to real Giphy URLs
 const STICKER_CATEGORIES = [
-  { label: 'Happy', search: 'happy celebration', emoji: '🎉' },
-  { label: 'GG', search: 'good game', emoji: '🎮' },
-  { label: 'Fire', search: 'fire flames', emoji: '🔥' },
-  { label: 'Clap', search: 'clapping', emoji: '👏' },
-  { label: 'LOL', search: 'laughing', emoji: '😂' },
-  { label: 'Love', search: 'love hearts', emoji: '❤️' },
+  { label: 'Happy', search: 'happy celebration', emoji: '🎉', gifUrl: 'https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif' },
+  { label: 'GG', search: 'good game', emoji: '🎮', gifUrl: 'https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif' },
+  { label: 'Fire', search: 'fire flames', emoji: '🔥', gifUrl: 'https://media.giphy.com/media/l2Sqir5ZxfoS27EvS/giphy.gif' },
+  { label: 'Clap', search: 'clapping', emoji: '👏', gifUrl: 'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif' },
+  { label: 'LOL', search: 'laughing', emoji: '😂', gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif' },
+  { label: 'Love', search: 'love hearts', emoji: '❤️', gifUrl: 'https://media.giphy.com/media/3o7TKu8D1d12Eo9wSQ/giphy.gif' },
 ];
 
 interface MentionSuggestion {
@@ -132,13 +133,32 @@ export function Feed() {
     return d.toLocaleDateString();
   };
 
-  // Render content with @mentions highlighted
+  // Render content with @mentions and media URLs highlighted
   const renderContent = (content: string) => {
-    return content.split(/(@\w+)/g).map((part, i) =>
-      part.startsWith('@')
-        ? <span key={i} className="text-accent font-semibold">{part}</span>
-        : <span key={i}>{part}</span>
-    );
+    const urlRegex = /(https?:\/\/[^\s]+\.(?:gif|jpg|jpeg|png|webp))|(https?:\/\/[^\s]+)/gi;
+    const parts = content.split(urlRegex);
+    return parts.map((part, i) => {
+      if (!part) return null;
+      if (part.startsWith('@')) return <span key={i} className="text-accent font-semibold">{part}</span>;
+      if (/\.(gif|jpg|jpeg|png|webp)$/i.test(part)) {
+        return <img key={i} src={part} alt="" className="mt-2 rounded-xl max-h-40 object-cover" />;
+      }
+      if (/^https?:\/\//i.test(part)) {
+        return <a key={i} href={part} target="_blank" rel="noreferrer" className="text-accent underline break-all">{part}</a>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
+  const formatActivityContent = (content: string) => {
+    // Replace game slugs with formatted names
+    let formatted = content;
+    const slugMatch = content.match(/on\s+([a-z0-9-]+)!/);
+    if (slugMatch) {
+      const gameName = getGameName(slugMatch[1]);
+      formatted = content.replace(slugMatch[1], gameName.replace(/^\S+\s/, '')); // remove emoji prefix for inline text
+    }
+    return formatted;
   };
 
   return (
@@ -181,11 +201,12 @@ export function Feed() {
                   </div>
                   <div className="text-sm text-text break-words">
                     {post.type === 'gif' ? (
-                      <div className="mt-1 bg-card rounded-xl p-3 text-text-muted text-xs italic">
-                        GIF: {post.content}
-                        <div className="mt-2 text-2xl">
-                          {STICKER_CATEGORIES.find(s => s.search === post.content)?.emoji ?? '🎬'}
-                        </div>
+                      <div className="mt-1 rounded-xl overflow-hidden max-w-[200px]">
+                        <img
+                          src={STICKER_CATEGORIES.find(s => s.search === post.content)?.gifUrl || 'https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif'}
+                          alt="GIF"
+                          className="w-full h-auto max-h-40 object-cover rounded-xl"
+                        />
                       </div>
                     ) : (
                       renderContent(post.content)
@@ -211,7 +232,7 @@ export function Feed() {
                     <span className="font-semibold text-sm">{post.authorName}</span>
                     <span className="text-text-muted text-xs">{formatTime(post.createdAt)}</span>
                   </div>
-                  <div className="text-sm text-text mt-0.5">{post.content}</div>
+                  <div className="text-sm text-text mt-0.5">{formatActivityContent(post.content)}</div>
                 </div>
               </div>
             ))

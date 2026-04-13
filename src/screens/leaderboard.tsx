@@ -17,10 +17,10 @@ interface LeaderboardEntry {
 
 export function Leaderboard() {
   const { player } = useAuth();
-  const [tab, setTab] = useState<'overall' | 'game'>('overall');
-  const [selectedGame, setSelectedGame] = useState<string>('');
-  const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
   const games = getAllGames();
+  const [tab, setTab] = useState<'overall' | 'game'>('overall');
+  const [selectedGame, setSelectedGame] = useState<string>(games[0]?.id || '');
+  const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
 
   const overallData = useQuery(api.games.getLeaderboard, {});
   const gameData = useQuery(api.games.getLeaderboard, selectedGame ? { gameId: selectedGame } : 'skip' as any);
@@ -37,7 +37,7 @@ export function Leaderboard() {
   };
 
   const medalEmoji = ['🥇', '🥈', '🥉'];
-  const podiumHeights = ['h-20', 'h-28', 'h-16'];
+  const podiumHeights = ['h-32', 'h-24', 'h-20'];
   const podiumOrder = [1, 0, 2]; // silver, gold, bronze display order
 
   return (
