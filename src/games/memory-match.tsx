@@ -72,7 +72,7 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [phase, config.time]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phase, config.time]);  
 
   const startGame = useCallback(() => {
     const deck: Card[] = [];
