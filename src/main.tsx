@@ -41,6 +41,8 @@ import '@/games/wordsearch';
 import '@/games/flag-match';
 import '@/games/themed-crossword';
 import '@/games/fill-blank';
+import '@/games/bingo';
+import '@/games/uno';
 
 // Register breathing exercises
 import '@/games/box-breathing';
