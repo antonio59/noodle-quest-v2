@@ -131,7 +131,10 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     if (isComplete) return;
     let allCorrect = true;
     for (const blank of puzzle.blanks) {
-      const entered = inputs[blank.start] || '';
+      let entered = '';
+      for (let i = blank.start; i < blank.start + blank.length; i++) {
+        entered += inputs[i] || '';
+      }
       if (entered.toUpperCase() !== blank.answer) {
         allCorrect = false;
         break;
@@ -168,9 +171,14 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     const wrong: Record<number, boolean> = {};
     let allCorrect = true;
     for (const blank of puzzle.blanks) {
-      const entered = inputs[blank.start] || '';
+      let entered = '';
+      for (let i = blank.start; i < blank.start + blank.length; i++) {
+        entered += inputs[i] || '';
+      }
       if (entered.toUpperCase() !== blank.answer) {
-        wrong[blank.start] = true;
+        for (let i = blank.start; i < blank.start + blank.length; i++) {
+          wrong[i] = true;
+        }
         allCorrect = false;
       }
     }
