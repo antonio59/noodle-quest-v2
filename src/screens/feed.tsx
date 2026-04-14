@@ -1,9 +1,56 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Smile, Image, AtSign, X, Play } from 'lucide-react';
+import { Send, Smile, Image, AtSign, X, Play, Search } from 'lucide-react';
 import { getGameName } from '@/lib/game-registry';
+
+const TENOR_API_KEY = import.meta.env.VITE_TENOR_API_KEY as string | undefined;
+
+interface TenorGif {
+  id: string;
+  title: string;
+  preview: string;
+  url: string;
+}
+
+async function searchTenorGifs(query: string): Promise<TenorGif[]> {
+  if (!TENOR_API_KEY) return [];
+  try {
+    const res = await fetch(
+      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&limit=20&contentfilter=medium`
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results ?? []).map((g: any) => ({
+      id: g.id,
+      title: g.title ?? '',
+      preview: g.media_formats?.tinygif?.url ?? g.media_formats?.gif?.url ?? '',
+      url: g.media_formats?.mediumgif?.url ?? g.media_formats?.gif?.url ?? '',
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function getTenorTrending(): Promise<TenorGif[]> {
+  if (!TENOR_API_KEY) return [];
+  try {
+    const res = await fetch(
+      `https://tenor.googleapis.com/v2/featured?key=${TENOR_API_KEY}&limit=20&contentfilter=medium`
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results ?? []).map((g: any) => ({
+      id: g.id,
+      title: g.title ?? '',
+      preview: g.media_formats?.tinygif?.url ?? g.media_formats?.gif?.url ?? '',
+      url: g.media_formats?.mediumgif?.url ?? g.media_formats?.gif?.url ?? '',
+    }));
+  } catch {
+    return [];
+  }
+}
 
 // Quick emoji set for the picker
 const QUICK_EMOJIS = [
@@ -41,6 +88,11 @@ export function Feed() {
   const [message, setMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
+  const [gifTab, setGifTab] = useState<'gif' | 'sticker'>(TENOR_API_KEY ? 'gif' : 'sticker');
+  const [gifQuery, setGifQuery] = useState('');
+  const [gifResults, setGifResults] = useState<TenorGif[]>([]);
+  const [gifLoading, setGifLoading] = useState(false);
+  const gifSearchTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const [showMention, setShowMention] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
@@ -53,6 +105,23 @@ export function Feed() {
   const searchResults = useQuery(api.auth.searchPlayers as any, mentionQuery.length >= 2 && player ? { query: mentionQuery, currentPlayerId: player.playerId } : 'skip' as any);
   // Mutations
   const createPost = useMutation(api.feed.createPost);
+
+  // Load trending GIFs when picker opens, search on query change
+  const loadGifs = useCallback(async (query: string) => {
+    setGifLoading(true);
+    const results = query.trim()
+      ? await searchTenorGifs(query.trim())
+      : await getTenorTrending();
+    setGifResults(results);
+    setGifLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (!showGif || gifTab !== 'gif' || !TENOR_API_KEY) return;
+    if (gifSearchTimer.current) clearTimeout(gifSearchTimer.current);
+    gifSearchTimer.current = setTimeout(() => loadGifs(gifQuery), gifQuery ? 400 : 0);
+    return () => { if (gifSearchTimer.current) clearTimeout(gifSearchTimer.current); };
+  }, [showGif, gifTab, gifQuery, loadGifs]);
 
   // Update mention suggestions when search results change
   useEffect(() => {
@@ -114,20 +183,21 @@ export function Feed() {
     inputRef.current?.focus();
   };
 
-  const insertGif = async (searchTerm: string) => {
+  const insertGif = async (content: string, isUrl: boolean = false) => {
     if (!player || !createPost) return;
     try {
       await createPost({
         authorId: player.playerId as any,
-        type: 'gif',
-        content: searchTerm,
+        type: isUrl ? 'gif_url' : 'gif',
+        content,
       });
       setShowGif(false);
+      setGifQuery('');
     } catch { /* send failed */ }
   };
 
   // Feed comes in desc order from Convex; reverse for chronological chat display
-  const chatPosts = [...(feedPosts?.filter((p: any) => p.type === 'chat' || p.type === 'gif') ?? [])].reverse();
+  const chatPosts = [...(feedPosts?.filter((p: any) => p.type === 'chat' || p.type === 'gif' || p.type === 'gif_url') ?? [])].reverse();
   const activityPosts = feedPosts?.filter((p: any) => p.type === 'score') ?? [];
 
   const formatTime = (ts: number) => {
@@ -207,7 +277,14 @@ export function Feed() {
                     <span className="text-text-muted text-xs">{formatTime(post.createdAt)}</span>
                   </div>
                   <div className="text-sm text-text break-words">
-                    {post.type === 'gif' ? (
+                    {post.type === 'gif_url' ? (
+                      <img
+                        src={post.content}
+                        alt="GIF"
+                        className="mt-1 rounded-xl max-h-48 max-w-[200px] object-cover"
+                        loading="lazy"
+                      />
+                    ) : post.type === 'gif' ? (
                       <div className="mt-1 text-4xl leading-none">
                         {STICKER_CATEGORIES.find(s => s.search === post.content)?.display || '🎉🥳🎊'}
                       </div>
@@ -282,20 +359,94 @@ export function Feed() {
 
           {/* GIF/Sticker picker */}
           {showGif && (
-            <div className="mb-2 bg-card rounded-xl border border-white/10 p-3">
-              <div className="text-xs text-text-muted mb-2 font-semibold">Sticker Reactions</div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {STICKER_CATEGORIES.map(s => (
+            <div className="mb-2 bg-card rounded-xl border border-white/10 overflow-hidden">
+              {/* Tabs: GIF / Stickers */}
+              <div className="flex border-b border-white/5">
+                {TENOR_API_KEY && (
                   <button
-                    key={s.label}
-                    onClick={() => insertGif(s.search)}
-                    className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-card-hover active:scale-95 transition-all"
+                    onClick={() => setGifTab('gif')}
+                    className={`flex-1 py-2 text-xs font-semibold text-center transition-colors border-b-2 ${
+                      gifTab === 'gif' ? 'text-accent border-accent' : 'text-text-muted border-transparent'
+                    }`}
                   >
-                    <span className="text-xl leading-none">{s.display}</span>
-                    <span className="text-[9px] text-text-muted mt-0.5">{s.label}</span>
+                    GIFs
                   </button>
-                ))}
+                )}
+                <button
+                  onClick={() => setGifTab('sticker')}
+                  className={`flex-1 py-2 text-xs font-semibold text-center transition-colors border-b-2 ${
+                    gifTab === 'sticker' ? 'text-accent border-accent' : 'text-text-muted border-transparent'
+                  }`}
+                >
+                  Stickers
+                </button>
               </div>
+
+              {/* GIF search tab */}
+              {gifTab === 'gif' && TENOR_API_KEY && (
+                <div className="p-2">
+                  <div className="flex items-center gap-2 mb-2 bg-surface rounded-lg px-3 py-1.5">
+                    <Search size={14} className="text-text-muted flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Search GIFs..."
+                      value={gifQuery}
+                      onChange={e => setGifQuery(e.target.value)}
+                      className="flex-1 bg-transparent text-sm text-text placeholder-text-muted outline-none"
+                    />
+                    {gifQuery && (
+                      <button onClick={() => setGifQuery('')} className="text-text-muted hover:text-text">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+                    {gifLoading ? (
+                      <div className="col-span-full text-center text-text-muted text-xs py-6 animate-pulse">
+                        Loading GIFs...
+                      </div>
+                    ) : gifResults.length === 0 ? (
+                      <div className="col-span-full text-center text-text-muted text-xs py-6">
+                        {gifQuery ? 'No GIFs found' : 'Trending GIFs loading...'}
+                      </div>
+                    ) : (
+                      gifResults.map(g => (
+                        <button
+                          key={g.id}
+                          onClick={() => insertGif(g.url, true)}
+                          className="rounded-lg overflow-hidden hover:ring-2 ring-accent active:scale-95 transition-all aspect-square"
+                        >
+                          <img
+                            src={g.preview}
+                            alt={g.title}
+                            loading="lazy"
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <div className="text-[9px] text-text-muted/50 text-right mt-1 pr-1">Powered by Tenor</div>
+                </div>
+              )}
+
+              {/* Sticker tab */}
+              {(gifTab === 'sticker' || !TENOR_API_KEY) && (
+                <div className="p-3">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {STICKER_CATEGORIES.map(s => (
+                      <button
+                        key={s.label}
+                        onClick={() => insertGif(s.search)}
+                        className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-card-hover active:scale-95 transition-all"
+                      >
+                        <span className="text-xl leading-none">{s.display}</span>
+                        <span className="text-[9px] text-text-muted mt-0.5">{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
