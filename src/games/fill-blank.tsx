@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, type ReactElement } from 'react';
+import { useState, useEffect, useRef, type ReactElement } from 'react';
 import type { GameProps } from '@/types';
 
 interface FillBlank {
   word: string;
   clue: string;
-  blanks: { start: number; length: number; answer: string }[];
+  blanks: number[]; // indices of blank positions
 }
 
 interface PuzzleSet {
@@ -13,244 +13,97 @@ interface PuzzleSet {
 }
 
 const PUZZLE_SETS: PuzzleSet[] = [
-  {
-    theme: 'Geography',
-    puzzle: {
-      word: 'AUSTRALIA',
-      clue: 'The smallest continent',
-      blanks: [
-        { start: 0, length: 3, answer: 'AUS' },
-        { start: 4, length: 3, answer: 'RAL' },
-        { start: 7, length: 2, answer: 'IA' },
-      ],
-    },
-  },
-  {
-    theme: 'Science',
-    puzzle: {
-      word: 'ELECTRON',
-      clue: 'Negatively charged particle',
-      blanks: [
-        { start: 0, length: 3, answer: 'ELE' },
-        { start: 4, length: 3, answer: 'TRO' },
-        { start: 7, length: 2, answer: 'ON' },
-      ],
-    },
-  },
-  {
-    theme: 'Animals',
-    puzzle: {
-      word: 'DOLPHIN',
-      clue: 'Intelligent sea mammal',
-      blanks: [
-        { start: 0, length: 3, answer: 'DOL' },
-        { start: 3, length: 3, answer: 'PHI' },
-        { start: 6, length: 1, answer: 'N' },
-      ],
-    },
-  },
-  {
-    theme: 'Space',
-    puzzle: {
-      word: 'SATELLITE',
-      clue: 'Orbits a planet',
-      blanks: [
-        { start: 0, length: 3, answer: 'SAT' },
-        { start: 4, length: 3, answer: 'LLI' },
-        { start: 7, length: 2, answer: 'TE' },
-      ],
-    },
-  },
-  {
-    theme: 'Food',
-    puzzle: {
-      word: 'SPAGHETTI',
-      clue: 'Italian pasta',
-      blanks: [
-        { start: 0, length: 3, answer: 'SPA' },
-        { start: 4, length: 3, answer: 'HET' },
-        { start: 7, length: 2, answer: 'TI' },
-      ],
-    },
-  },
-  {
-    theme: 'Music',
-    puzzle: {
-      word: 'GUITAR',
-      clue: 'Six-string instrument',
-      blanks: [
-        { start: 0, length: 3, answer: 'GUI' },
-        { start: 3, length: 3, answer: 'TAR' },
-      ],
-    },
-  },
-  {
-    theme: 'Sports',
-    puzzle: {
-      word: 'FOOTBALL',
-      clue: 'Played with hands and ball',
-      blanks: [
-        { start: 0, length: 3, answer: 'FOO' },
-        { start: 4, length: 4, answer: 'BALL' },
-      ],
-    },
-  },
-  {
-    theme: 'Weather',
-    puzzle: {
-      word: 'HURRICANE',
-      clue: 'Tropical storm',
-      blanks: [
-        { start: 0, length: 3, answer: 'HUR' },
-        { start: 4, length: 3, answer: 'ICA' },
-        { start: 7, length: 2, answer: 'NE' },
-      ],
-    },
-  },
+  { theme: 'Geography', puzzle: { word: 'AUSTRALIA', clue: 'The smallest continent', blanks: [0, 4, 7] } },
+  { theme: 'Science', puzzle: { word: 'ELECTRON', clue: 'Negatively charged particle', blanks: [0, 3, 6] } },
+  { theme: 'Animals', puzzle: { word: 'DOLPHIN', clue: 'Intelligent sea mammal', blanks: [0, 3, 6] } },
+  { theme: 'Space', puzzle: { word: 'SATELLITE', clue: 'Orbits a planet', blanks: [0, 4, 7] } },
+  { theme: 'Food', puzzle: { word: 'SPAGHETTI', clue: 'Italian pasta', blanks: [0, 4, 7] } },
+  { theme: 'Music', puzzle: { word: 'GUITAR', clue: 'Six-string instrument', blanks: [0, 3] } },
+  { theme: 'Sports', puzzle: { word: 'FOOTBALL', clue: 'Played with hands and ball', blanks: [0, 4] } },
+  { theme: 'Weather', puzzle: { word: 'HURRICANE', clue: 'Tropical storm', blanks: [0, 4, 7] } },
+  { theme: 'History', puzzle: { word: 'PHARAOH', clue: 'Egyptian ruler', blanks: [0, 3, 5] } },
+  { theme: 'Nature', puzzle: { word: 'VOLCANO', clue: 'Mountain that erupts', blanks: [0, 3, 5] } },
+  { theme: 'Body', puzzle: { word: 'SKELETON', clue: 'Framework of bones', blanks: [0, 4, 7] } },
+  { theme: 'Ocean', puzzle: { word: 'JELLYFISH', clue: 'Stinging sea creature', blanks: [0, 5, 8] } },
 ];
 
-function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
-  const difficulty = aiDifficulty || 'medium';
+function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const puzzleIdx = Math.min(stage - 1, PUZZLE_SETS.length - 1);
   const puzzleSet = PUZZLE_SETS[puzzleIdx];
-  const puzzle = puzzleSet.puzzle;
+  const { word, clue, blanks } = puzzleSet.puzzle;
+
+  // Build the set of blank indices for quick lookup
+  const blankSet = useRef(new Set(blanks));
+  useEffect(() => { blankSet.current = new Set(blanks); }, [blanks]);
 
   const [inputs, setInputs] = useState<Record<number, string>>({});
-  const [checked, setChecked] = useState<Record<number, boolean>>({});
+  const [wrong, setWrong] = useState<Set<number>>(new Set());
   const [isComplete, setIsComplete] = useState(false);
 
+  // Reset on stage change
   useEffect(() => {
     setInputs({});
-    setChecked({});
+    setWrong(new Set());
     setIsComplete(false);
-  }, [puzzleIdx]);
-
-  useEffect(() => {
-    if (isComplete) return;
-    let allCorrect = true;
-    for (const blank of puzzle.blanks) {
-      let entered = '';
-      for (let i = blank.start; i < blank.start + blank.length; i++) {
-        entered += inputs[i] || '';
-      }
-      if (entered.toUpperCase() !== blank.answer) {
-        allCorrect = false;
-        break;
-      }
-    }
-    if (allCorrect && Object.keys(inputs).length > 0) {
-      setIsComplete(true);
-      const stars = stage >= 8 ? 3 : stage >= 5 ? 2 : 1;
-      onScore(stage * 100);
-      onProgress(1);
-      setTimeout(() => {
-        onEnd({ score: stage * 100, stars: Math.min(stars, 3), summary: `${puzzleSet.theme} fill-in solved!` });
-      }, 600);
-    }
-  }, [inputs, puzzle, stage, isComplete, onScore, onProgress, onEnd, puzzleSet.theme]);
+    blankSet.current = new Set(blanks);
+  }, [puzzleIdx, blanks]);
 
   const handleInput = (idx: number, val: string) => {
-    if (val.length > 1) val = val[0];
-    const upper = val.toUpperCase();
-    setInputs(prev => ({ ...prev, [idx]: upper }));
-    
-    if (upper) {
-      // Find the blank containing this index
-      const currentBlank = puzzle.blanks.find(b => idx >= b.start && idx < b.start + b.length);
-      if (currentBlank) {
-        // Try next empty box within the same blank
-        for (let i = idx + 1; i < currentBlank.start + currentBlank.length; i++) {
-          if (!inputs[i]) {
-            const input = document.getElementById(`input-${i}`);
-            if (input) { input.focus(); return; }
-          }
-        }
-        // Otherwise jump to the next blank's first empty box
-        const nextBlank = puzzle.blanks.find(b => b.start > currentBlank.start);
-        if (nextBlank) {
-          const input = document.getElementById(`input-${nextBlank.start}`);
-          input?.focus();
-        }
+    if (isComplete) return;
+    const letter = (val.slice(-1) || '').toUpperCase();
+    const updated = { ...inputs, [idx]: letter };
+    setInputs(updated);
+    // Clear error on this cell
+    setWrong(prev => { const n = new Set(prev); n.delete(idx); return n; });
+
+    // Auto-advance to next blank
+    if (letter) {
+      const remaining = blanks.filter(b => b > idx && !updated[b]);
+      if (remaining.length > 0) {
+        document.getElementById(`fb-${remaining[0]}`)?.focus();
+      }
+    }
+  };
+
+  const handleKeyDown = (idx: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !inputs[idx]) {
+      // Move to previous blank
+      const prev = [...blanks].reverse().find(b => b < idx);
+      if (prev !== undefined) {
+        setInputs(p => { const n = { ...p }; delete n[prev]; return n; });
+        document.getElementById(`fb-${prev}`)?.focus();
       }
     }
   };
 
   const handleCheck = () => {
-    const wrong: Record<number, boolean> = {};
+    const wrongSet = new Set<number>();
     let allCorrect = true;
-    for (const blank of puzzle.blanks) {
-      let entered = '';
-      for (let i = blank.start; i < blank.start + blank.length; i++) {
-        entered += inputs[i] || '';
-      }
-      if (entered.toUpperCase() !== blank.answer) {
-        for (let i = blank.start; i < blank.start + blank.length; i++) {
-          wrong[i] = true;
-        }
+
+    for (const idx of blanks) {
+      const entered = (inputs[idx] || '').toUpperCase();
+      const expected = word[idx];
+      if (entered !== expected) {
+        wrongSet.add(idx);
         allCorrect = false;
       }
     }
-    setChecked(wrong);
-    onMessage(allCorrect ? 'All correct!' : 'Some answers are wrong');
-  };
 
-  const renderWord = () => {
-    const boxes: ReactElement[] = [];
-    let currentBlankIdx = 0;
-    
-    for (let i = 0; i < puzzle.word.length; i++) {
-      const blank = puzzle.blanks[currentBlankIdx];
-      const isBlankStart = blank && blank.start === i;
-      const isInBlank = blank && i >= blank.start && i < blank.start + blank.length;
-      
-      if (isBlankStart) {
-        boxes.push(
-          <input
-            key={i}
-            id={`input-${i}`}
-            type="text"
-            maxLength={1}
-            value={inputs[i] || ''}
-            onChange={(e) => handleInput(i, e.target.value)}
-            className={`w-10 h-12 text-center text-xl font-bold rounded-lg border-2 transition-all ${
-              checked[i] 
-                ? 'bg-danger/30 border-danger text-danger'
-                : inputs[i] 
-                  ? 'bg-accent/20 border-accent text-accent'
-                  : 'bg-card border-card-hover text-text'
-            }`}
-            disabled={isComplete}
-          />
-        );
-        currentBlankIdx++;
-      } else if (isInBlank) {
-        boxes.push(
-          <input
-            key={i}
-            id={`input-${i}`}
-            type="text"
-            maxLength={1}
-            value={inputs[i] || ''}
-            onChange={(e) => handleInput(i, e.target.value)}
-            className={`w-10 h-12 text-center text-xl font-bold rounded-lg border-2 transition-all ${
-              checked[i] 
-                ? 'bg-danger/30 border-danger text-danger'
-                : inputs[i] 
-                  ? 'bg-accent/20 border-accent text-accent'
-                  : 'bg-card border-card-hover text-text'
-            }`}
-            disabled={isComplete}
-          />
-        );
-      } else {
-        boxes.push(
-          <div key={i} className="w-10 h-12 flex items-center justify-center text-2xl font-bold text-text-muted">
-            {puzzle.word[i]}
-          </div>
-        );
-      }
+    setWrong(wrongSet);
+
+    if (allCorrect) {
+      setIsComplete(true);
+      const stars = stage >= 8 ? 3 : stage >= 5 ? 2 : 1;
+      const pts = stage * 100;
+      onScore(pts);
+      onProgress(1);
+      onMessage('All correct!');
+      setTimeout(() => {
+        onEnd({ score: pts, stars: Math.min(stars, 3), summary: `${puzzleSet.theme} fill-in solved!` });
+      }, 600);
+    } else {
+      onMessage(`${wrongSet.size} letter${wrongSet.size > 1 ? 's' : ''} wrong — try again!`);
     }
-    return boxes;
   };
 
   return (
@@ -266,20 +119,55 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       <div className="flex-1 flex flex-col items-center justify-center">
         <div className="bg-card rounded-xl p-6 mb-6">
           <div className="text-center text-sm text-text-muted mb-2">CLUE:</div>
-          <div className="text-center text-lg font-medium text-text mb-4">{puzzle.clue}</div>
-          <div className="flex gap-2 flex-wrap justify-center">
-            {renderWord()}
+          <div className="text-center text-lg font-medium text-text mb-4">{clue}</div>
+          <div className="flex gap-1.5 flex-wrap justify-center">
+            {word.split('').map((ch, i) => {
+              const isBlank = blankSet.current.has(i);
+              if (isBlank) {
+                const hasError = wrong.has(i);
+                const hasValue = !!inputs[i];
+                return (
+                  <input
+                    key={i}
+                    id={`fb-${i}`}
+                    type="text"
+                    inputMode="text"
+                    autoCapitalize="characters"
+                    maxLength={2}
+                    value={inputs[i] || ''}
+                    onChange={e => handleInput(i, e.target.value)}
+                    onKeyDown={e => handleKeyDown(i, e)}
+                    className={`w-10 h-12 text-center text-xl font-bold rounded-lg border-2 transition-all outline-none ${
+                      isComplete
+                        ? 'bg-success/20 border-success text-success'
+                        : hasError
+                          ? 'bg-danger/30 border-danger text-danger animate-[shake_0.3s_ease]'
+                          : hasValue
+                            ? 'bg-accent/20 border-accent text-accent'
+                            : 'bg-card border-card-hover text-text focus:border-accent'
+                    }`}
+                    disabled={isComplete}
+                  />
+                );
+              }
+              return (
+                <div key={i} className="w-10 h-12 flex items-center justify-center text-2xl font-bold text-text-muted">
+                  {ch}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="text-center text-sm text-text-muted mb-4">
-          Fill in the missing letters
+          Tap each blank and type the missing letter
         </div>
 
         {!isComplete && (
           <button
             onClick={handleCheck}
-            className="bg-accent text-bg font-semibold px-8 py-3 rounded-xl hover:opacity-90 active:scale-95"
+            disabled={blanks.some(b => !inputs[b])}
+            className="bg-accent text-bg font-semibold px-8 py-3 rounded-xl hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all"
           >
             Check Answers
           </button>
@@ -289,7 +177,7 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
           <div className="text-center p-4 bg-success/20 rounded-xl">
             <span className="text-3xl">🎉</span>
             <p className="text-success font-bold mt-2">Complete!</p>
-            <p className="text-sm text-text-muted">{puzzle.word}</p>
+            <p className="text-sm text-text-muted">{word}</p>
           </div>
         )}
       </div>

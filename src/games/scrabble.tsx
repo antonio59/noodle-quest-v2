@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { GameProps } from '@/types';
 
 const TILE_SCORES: Record<string, number> = { A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10 };
@@ -45,13 +45,38 @@ function buildTilePool(): string[] {
   return pool.sort(() => Math.random() - 0.5);
 }
 
-const GRID_SIZE = 10;
+const GRID_SIZE = 11;
+// Standard Scrabble-style bonus layout for 11x11 board
 const BONUS_CELLS: Record<string, string> = {
-  '0,0': 'TW', '0,9': 'TW', '9,0': 'TW', '9,9': 'TW',
-  '1,1': 'DL', '1,8': 'DL', '8,1': 'DL', '8,8': 'DL',
-  '2,2': 'DW', '2,7': 'DW', '7,2': 'DW', '7,7': 'DW',
-  '3,3': 'DL', '3,6': 'DL', '6,3': 'DL', '6,6': 'DL',
-  '4,4': 'TL', '4,5': 'TL', '5,4': 'TL', '5,5': 'TL',
+  // Triple Word
+  '0,0': 'TW', '0,5': 'TW', '0,10': 'TW',
+  '5,0': 'TW', '5,10': 'TW',
+  '10,0': 'TW', '10,5': 'TW', '10,10': 'TW',
+  // Double Word
+  '1,1': 'DW', '1,9': 'DW', '2,2': 'DW', '2,8': 'DW',
+  '3,3': 'DW', '3,7': 'DW', '4,4': 'DW', '4,6': 'DW',
+  '6,4': 'DW', '6,6': 'DW', '7,3': 'DW', '7,7': 'DW',
+  '8,2': 'DW', '8,8': 'DW', '9,1': 'DW', '9,9': 'DW',
+  // Triple Letter
+  '1,5': 'TL', '5,1': 'TL', '5,9': 'TL', '9,5': 'TL',
+  // Double Letter
+  '0,3': 'DL', '0,7': 'DL', '3,0': 'DL', '3,10': 'DL',
+  '7,0': 'DL', '7,10': 'DL', '10,3': 'DL', '10,7': 'DL',
+  '2,5': 'DL', '5,2': 'DL', '5,8': 'DL', '8,5': 'DL',
+  // Center star
+  '5,5': 'ST',
+};
+
+const BONUS_BG: Record<string, string> = {
+  TW: 'bg-red-500/30 text-red-300',
+  DW: 'bg-pink-400/25 text-pink-300',
+  TL: 'bg-blue-500/30 text-blue-300',
+  DL: 'bg-cyan-400/25 text-cyan-300',
+  ST: 'bg-amber-400/25 text-amber-300',
+};
+
+const BONUS_LABEL: Record<string, string> = {
+  TW: '3W', DW: '2W', TL: '3L', DL: '2L', ST: '\u2605',
 };
 
 function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
@@ -90,6 +115,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
 
   const handleBoardClick = (r: number, c: number) => {
     if (selectedTile === null) {
+      // Pick up a placed tile
       if (board[r][c] && placedCells.has(`${r},${c}`)) {
         const letter = board[r][c];
         const newBoard = board.map(row => [...row]);
@@ -129,21 +155,18 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
       ? cells.sort((a, b) => a[1] - b[1])
       : cells.sort((a, b) => a[0] - b[0]);
 
+    // Check contiguous
     for (let i = 1; i < sorted.length; i++) {
       if (allSameRow && sorted[i][1] !== sorted[i-1][1] + 1) return { valid: false, word: '', cells: [], score: 0 };
       if (!allSameRow && sorted[i][0] !== sorted[i-1][0] + 1) return { valid: false, word: '', cells: [], score: 0 };
     }
 
+    // Expand to include existing tiles
     let startR = sorted[0][0], startC = sorted[0][1];
-    while (startR > 0 && board[startR - 1]?.[startC] && (placedCells.has(`${startR-1},${startC}`) || !placedCells.has(`${startR-1},${startC}`))) {
-      if (!placedCells.has(`${startR-1},${startC}`) && board[startR-1]?.[startC]) { startR--; break; }
-      if (placedCells.has(`${startR-1},${startC}`)) startR--;
-      else break;
-    }
-    while (startC > 0 && board[startR]?.[startC - 1] && (placedCells.has(`${startR},${startC-1}`) || !placedCells.has(`${startR},${startC-1}`))) {
-      if (!placedCells.has(`${startR},${startC-1}`) && board[startR]?.[startC-1]) { startC--; break; }
-      if (placedCells.has(`${startR},${startC-1}`)) startC--;
-      else break;
+    if (allSameRow) {
+      while (startC > 0 && board[startR][startC - 1]) startC--;
+    } else {
+      while (startR > 0 && board[startR - 1]?.[startC]) startR--;
     }
 
     const wordCells: number[][] = [];
@@ -157,19 +180,18 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
     const word = wordCells.map(([r, c]) => board[r][c]).join('');
     if (word.length < 2) return { valid: false, word: '', cells: [], score: 0 };
 
-    const hasNew = wordCells.some(([r, c]) => placedCells.has(`${r},${c}`));
-    if (!hasNew) return { valid: false, word: '', cells: [], score: 0 };
-
+    // Calculate score with bonuses (only for newly placed tiles)
     let wordMultiplier = 1;
     let letterScore = 0;
     for (const [r, c] of wordCells) {
       const bonus = BONUS_CELLS[`${r},${c}`];
       const ls = TILE_SCORES[board[r][c]!] || 0;
-      if (bonus === 'DL' && placedCells.has(`${r},${c}`)) letterScore += ls * 2;
-      else if (bonus === 'TL' && placedCells.has(`${r},${c}`)) letterScore += ls * 3;
+      const isNew = placedCells.has(`${r},${c}`);
+      if (isNew && bonus === 'DL') letterScore += ls * 2;
+      else if (isNew && bonus === 'TL') letterScore += ls * 3;
       else letterScore += ls;
-      if (bonus === 'DW' && placedCells.has(`${r},${c}`)) wordMultiplier *= 2;
-      if (bonus === 'TW' && placedCells.has(`${r},${c}`)) wordMultiplier *= 3;
+      if (isNew && bonus === 'DW') wordMultiplier *= 2;
+      if (isNew && (bonus === 'TW' || bonus === 'ST')) wordMultiplier *= 3;
     }
 
     return { valid: true, word, cells: wordCells, score: letterScore * wordMultiplier };
@@ -178,7 +200,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
   const handleSubmit = () => {
     const result = isValidPlacement();
     if (!result.valid) {
-      setMessage('Invalid placement. Use 2+ tiles in a row or column.');
+      setMessage('Place 2+ tiles in a straight line.');
       return;
     }
     if (!VALID_WORDS.has(result.word.toUpperCase())) {
@@ -189,7 +211,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
     setTotalScore(newScore);
     onScore(result.score);
     setPlacedCells(new Set());
-    setMessage(`"${result.word}" scored ${result.score} points!`);
+    setMessage(`"${result.word}" = ${result.score} pts!`);
     onMessage(`+${result.score} points!`);
 
     const newTurn = turn + 1;
@@ -206,7 +228,6 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
   };
 
   const handleClear = () => {
-    const newBoard = board.map(row => row.map(cell => placedCells.has(`${board.indexOf(row)},${row.indexOf(cell)}`) ? null : cell));
     const letters: string[] = [];
     for (const key of placedCells) {
       const [r, c] = key.split(',').map(Number);
@@ -217,60 +238,84 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
     setPlacedCells(new Set());
   };
 
-  const bonusColor = (r: number, c: number): string => {
-    const b = BONUS_CELLS[`${r},${c}`];
-    if (!b) return 'bg-card';
-    if (b === 'TW') return 'bg-red-500/30';
-    if (b === 'DW') return 'bg-pink-500/30';
-    if (b === 'TL') return 'bg-blue-500/30';
-    if (b === 'DL') return 'bg-cyan-500/30';
-    return 'bg-card';
-  };
-
   return (
-    <div className="h-full flex flex-col items-center p-2 overflow-hidden">
-      <div className="flex gap-3 mb-2 text-sm items-center">
-        <span className="bg-card rounded-lg px-2 py-1 text-accent text-xs font-bold">{totalScore} pts</span>
-        <span className="bg-card rounded-lg px-2 py-1 text-text-muted text-xs">Turn {turn}/{maxTurns}</span>
-        <span className="bg-card rounded-lg px-2 py-1 text-text-muted text-xs">Target: {targetScore}</span>
+    <div className="h-full flex flex-col items-center p-1.5 sm:p-2 overflow-hidden">
+      {/* Score bar */}
+      <div className="flex gap-2 mb-1.5 text-xs items-center flex-wrap justify-center">
+        <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{totalScore} pts</span>
+        <span className="bg-card rounded-lg px-2 py-0.5 text-text-muted">Turn {turn}/{maxTurns}</span>
+        <span className="bg-card rounded-lg px-2 py-0.5 text-text-muted">Target: {targetScore}</span>
+        <span className="bg-card rounded-lg px-2 py-0.5 text-text-dim">{pool.length} left</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex justify-center mb-3">
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)`, gap: 1, maxWidth: `${GRID_SIZE * 32}px` }}>
-            {board.map((row, r) => row.map((cell, c) => (
-              <button key={`${r}-${c}`} onClick={() => handleBoardClick(r, c)}
-                className={`w-7 h-7 sm:w-8 sm:h-8 text-xs font-bold flex items-center justify-center rounded-sm transition-colors ${
-                  cell ? 'bg-amber-100 text-amber-900' : bonusColor(r, c)
-                } ${placedCells.has(`${r},${c}`) ? 'ring-1 ring-accent' : ''}`}>
-                {cell || (BONUS_CELLS[`${r},${c}`] ? <span className="text-[6px] text-text-muted">{BONUS_CELLS[`${r},${c}`]}</span> : '')}
+      {/* Board — uses CSS grid that fills available width */}
+      <div className="w-full max-w-[360px] aspect-square mb-1.5">
+        <div
+          className="w-full h-full grid gap-px bg-white/5 rounded-lg overflow-hidden"
+          style={{ gridTemplateColumns: `repeat(${GRID_SIZE}, 1fr)` }}
+        >
+          {board.map((row, r) => row.map((cell, c) => {
+            const bonus = BONUS_CELLS[`${r},${c}`];
+            const isPlaced = placedCells.has(`${r},${c}`);
+            return (
+              <button
+                key={`${r}-${c}`}
+                onClick={() => handleBoardClick(r, c)}
+                className={`relative flex items-center justify-center text-[10px] sm:text-xs font-bold transition-colors aspect-square ${
+                  cell
+                    ? `bg-amber-100 text-amber-900 ${isPlaced ? 'ring-1 ring-accent' : ''}`
+                    : bonus
+                      ? BONUS_BG[bonus] || 'bg-card'
+                      : 'bg-card'
+                }`}
+              >
+                {cell ? (
+                  <>
+                    <span className="leading-none">{cell}</span>
+                    <span className="absolute bottom-0 right-0.5 text-[6px] text-amber-700/70 leading-none">
+                      {TILE_SCORES[cell]}
+                    </span>
+                  </>
+                ) : bonus ? (
+                  <span className="text-[7px] sm:text-[8px] font-semibold opacity-60 leading-none">
+                    {BONUS_LABEL[bonus]}
+                  </span>
+                ) : null}
               </button>
-            )))}
-          </div>
+            );
+          }))}
         </div>
+      </div>
 
-        {message && <div className="text-center text-xs mb-2 text-accent">{message}</div>}
+      {/* Bonus legend */}
+      <div className="flex gap-2 text-[9px] text-text-dim mb-1 flex-wrap justify-center">
+        <span className="flex items-center gap-0.5"><span className="w-2.5 h-2.5 rounded-sm bg-red-500/30" /> 3W</span>
+        <span className="flex items-center gap-0.5"><span className="w-2.5 h-2.5 rounded-sm bg-pink-400/25" /> 2W</span>
+        <span className="flex items-center gap-0.5"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500/30" /> 3L</span>
+        <span className="flex items-center gap-0.5"><span className="w-2.5 h-2.5 rounded-sm bg-cyan-400/25" /> 2L</span>
+      </div>
 
-        <div className="flex justify-center gap-2 mb-3">
-          <button onClick={handleSubmit} disabled={placedCells.size === 0}
-            className="bg-accent text-bg font-bold px-4 py-2 rounded-lg text-sm disabled:opacity-30">Submit</button>
-          <button onClick={handleClear} disabled={placedCells.size === 0}
-            className="bg-card text-text font-semibold px-4 py-2 rounded-lg text-sm disabled:opacity-30">Clear</button>
-        </div>
+      {message && <div className="text-center text-[11px] mb-1 text-accent">{message}</div>}
 
-        <div className="flex justify-center flex-wrap gap-1 mb-2">
-          {rack.map((tile, i) => (
-            <button key={i} onClick={() => handleRackClick(i)}
-              className={`w-9 h-10 rounded-lg font-bold text-sm flex items-center justify-center transition-all ${
-                selectedTile === i ? 'bg-accent text-bg ring-2 ring-accent scale-110' : 'bg-amber-200 text-amber-900'
-              }`}>
-              <span>{tile}</span>
-              <span className="text-[8px] absolute -bottom-0.5 -right-0.5">{TILE_SCORES[tile]}</span>
-            </button>
-          ))}
-        </div>
+      {/* Action buttons */}
+      <div className="flex justify-center gap-2 mb-1.5">
+        <button onClick={handleSubmit} disabled={placedCells.size === 0}
+          className="bg-accent text-bg font-bold px-3 py-1.5 rounded-lg text-xs disabled:opacity-30">Submit Word</button>
+        <button onClick={handleClear} disabled={placedCells.size === 0}
+          className="bg-card text-text font-semibold px-3 py-1.5 rounded-lg text-xs disabled:opacity-30">Clear</button>
+      </div>
 
-        <div className="text-center text-xs text-text-muted">{pool.length} tiles remaining</div>
+      {/* Tile rack */}
+      <div className="flex justify-center gap-1 flex-wrap">
+        {rack.map((tile, i) => (
+          <button key={i} onClick={() => handleRackClick(i)}
+            className={`relative w-8 h-9 sm:w-9 sm:h-10 rounded-lg font-bold text-sm flex items-center justify-center transition-all ${
+              selectedTile === i ? 'bg-accent text-bg ring-2 ring-accent scale-110' : 'bg-amber-200 text-amber-900'
+            }`}>
+            <span>{tile}</span>
+            <span className="absolute bottom-0 right-0.5 text-[7px] font-normal opacity-60">{TILE_SCORES[tile]}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

@@ -1,41 +1,52 @@
 import { useState, useEffect } from 'react';
 import type { GameProps } from '@/types';
 
-const C = 28;
+/**
+ * Full Ludo board — 15×15 grid with cross-shaped track.
+ * 52 outer squares, 6 home-stretch squares per color, 1 center home.
+ * Currently supports 2-player (Red vs Blue AI).
+ */
+
+const C = 24; // cell size
 const N = 15;
 const W = C * N;
 
-// Full Ludo outer track: 52 squares around the board
+// Full 52-square outer track (clockwise from Red entry)
 const TRACK: [number, number][] = [
-  // Red start → top-left approach (0-5)
-  [6, 0], [6, 1], [6, 2], [6, 3], [6, 4], [6, 5],
-  // Up the left column of top arm (6-11)
+  // Red's start → across top of left arm (0-5)  [row, col]
+  [6, 1], [6, 2], [6, 3], [6, 4], [6, 5],
+  // Up left side of top arm (5-11)
   [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6],
-  // Top-right turn (12)
+  // Across top (12)
   [0, 7],
-  // Down the right column of top arm (13-18)
+  // Down right side of top arm (13-18) — Green's side
   [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8],
-  // Right arm top row (19-24)
-  [6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14],
+  // Across top of right arm (19-24)
+  [6, 9], [6, 10], [6, 11], [6, 12], [6, 13],
   // Right-bottom turn (25)
   [7, 14],
-  // Right arm bottom row going left (26-31)
-  [8, 14], [8, 13], [8, 12], [8, 11], [8, 10], [8, 9],
-  // Down the right column of bottom arm (32-37)
+  // Down right side (26-31) — Blue approach
+  [8, 13], [8, 12], [8, 11], [8, 10], [8, 9],
+  // Down right side of bottom arm (32-37)
   [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8],
-  // Bottom-left turn (38)
+  // Bottom turn (38)
   [14, 7],
-  // Up the left column of bottom arm (39-44)
+  // Up left side of bottom arm (39-44)
   [14, 6], [13, 6], [12, 6], [11, 6], [10, 6], [9, 6],
-  // Left arm bottom row (45-50)
-  [8, 5], [8, 4], [8, 3], [8, 2], [8, 1], [8, 0],
-  // Left-top turn (51)
+  // Across bottom of left arm (45-50)
+  [8, 5], [8, 4], [8, 3], [8, 2], [8, 1],
+  // Left turn back to red start (51)
   [7, 0],
 ];
 
-// Home stretch for red player (entering from position 51 → center)
-const STRETCH: [number, number][] = [
+// Red home stretch: enters from square 51 (left side), goes right toward center
+const RED_STRETCH: [number, number][] = [
   [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6],
+];
+
+// Blue home stretch: enters from square 25 (right side), goes left toward center
+const BLUE_STRETCH: [number, number][] = [
+  [7, 13], [7, 12], [7, 11], [7, 10], [7, 9], [7, 8],
 ];
 
 const DIFF_CFG = {
@@ -44,21 +55,19 @@ const DIFF_CFG = {
   hard: { enter: 1.0, home: 1.0, cap: 1.0 },
 };
 
-function rollDie(): number {
-  return Math.floor(Math.random() * 6) + 1;
-}
+function rollDie(): number { return Math.floor(Math.random() * 6) + 1; }
 
-function posCoord(pos: number): [number, number] {
+function posCoord(pos: number, stretch: [number, number][]): [number, number] {
   if (pos < 0) return [-1, -1];
   if (pos < 52) return TRACK[pos];
-  if (pos < 58) return STRETCH[pos - 52];
-  return [7, 7]; // home center
+  if (pos < 58) return stretch[pos - 52];
+  return [7, 7]; // center home
 }
 
 function advance(pos: number, steps: number): number {
   if (pos === -1) return steps === 6 ? 0 : -1;
   const next = pos + steps;
-  return next > 58 ? pos : next; // 52 track + 6 stretch = 58 = home
+  return next > 58 ? pos : next;
 }
 
 function aiRoll(pPos: number, aPos: number, diff: 'easy' | 'medium' | 'hard'): number {
@@ -69,10 +78,23 @@ function aiRoll(pPos: number, aPos: number, diff: 'easy' | 'medium' | 'hard'): n
     if (gap > 0 && gap <= 6) return gap;
   }
   if (aPos >= 0 && aPos < 52 && pPos >= 0 && pPos < 52 && Math.random() < cfg.cap) {
-    const gap = pPos - aPos;
+    const gap = ((pPos - aPos) + 52) % 52;
     if (gap > 0 && gap <= 6) return gap;
   }
   return rollDie();
+}
+
+// Board cell classification for coloring
+function cellType(r: number, c: number): string | null {
+  // Red home base (top-left)
+  if (r >= 0 && r <= 5 && c >= 0 && c <= 5) return 'red-base';
+  // Green home base (top-right)
+  if (r >= 0 && r <= 5 && c >= 9 && c <= 14) return 'green-base';
+  // Yellow home base (bottom-left)
+  if (r >= 0 + 9 && r <= 14 && c >= 0 && c <= 5) return 'yellow-base';
+  // Blue home base (bottom-right)
+  if (r >= 9 && r <= 14 && c >= 9 && c <= 14) return 'blue-base';
+  return null;
 }
 
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
@@ -84,6 +106,9 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   const [over, setOver] = useState(false);
   const target = Math.min(stage, 10);
   const diff = aiDifficulty || 'medium';
+
+  // Blue AI enters at position 26 (its entry square) instead of 0
+  const BLUE_ENTRY = 26;
 
   useEffect(() => {
     onMessage('Roll a 6 to enter the track!');
@@ -98,11 +123,28 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     onMessage('New round! Roll a 6 to enter.');
   };
 
+  const advanceAI = (pos: number, steps: number): number => {
+    if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
+    const next = pos + steps;
+    // AI enters home stretch at position 25 (before its entry)
+    if (pos < 52 && next >= 52) {
+      // Check if AI should enter its home stretch
+      const overTrack = next - 52;
+      if (overTrack <= 6) return 52 + overTrack; // into stretch
+      return pos; // can't overshoot
+    }
+    if (pos >= 52) {
+      const nextStretch = pos + steps;
+      return nextStretch > 58 ? pos : nextStretch;
+    }
+    return next % 52; // wrap around track
+  };
+
   const doAi = () => {
     if (over) return;
     const d = aiRoll(pPos, aPos, diff);
     setDice(d);
-    const np = advance(aPos, d);
+    const np = advanceAI(aPos, d);
 
     if (np === aPos && aPos !== -1) {
       onMessage(`AI rolled ${d} — can't move.`);
@@ -110,28 +152,29 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       return;
     }
     if (np === -1) {
-      onMessage(`AI rolled ${d} — needs a 6 to enter.`);
+      onMessage(`AI rolled ${d} — needs a 6.`);
       setTurn('p');
       return;
     }
 
     setAPos(np);
 
+    // Capture check (only on main track)
     if (np >= 0 && np < 52 && np === pPos) {
       setPPos(-1);
-      onMessage(`AI rolled ${d} — captured you! Back to base!`);
+      onMessage(`AI rolled ${d} — captured you!`);
     } else if (np >= 58) {
       setOver(true);
-      onMessage('AI reached home — you lose this round!');
+      onMessage('AI reached home!');
       setTimeout(reset, 1500);
       return;
     } else {
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
-      onMessage(`AI rolled ${d} — moved to ${label}`);
+      onMessage(`AI rolled ${d} → ${label}`);
     }
 
     if (d === 6 && !over) {
-      onMessage('AI rolled a 6 — bonus roll!');
+      onMessage('AI rolled 6 — bonus roll!');
       setTimeout(doAi, 700);
       return;
     }
@@ -145,13 +188,13 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     const np = advance(pPos, d);
 
     if (np === pPos && pPos !== -1) {
-      onMessage(`Rolled ${d} — can't overshoot home!`);
+      onMessage(`Rolled ${d} — can't overshoot!`);
       setTurn('a');
       setTimeout(doAi, 800);
       return;
     }
     if (np === -1) {
-      onMessage(`Rolled ${d} — need a 6 to enter the track!`);
+      onMessage(`Rolled ${d} — need a 6!`);
       setTurn('a');
       setTimeout(doAi, 800);
       return;
@@ -161,7 +204,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
     if (np >= 0 && np < 52 && np === aPos) {
       setAPos(-1);
-      onMessage(`Rolled ${d} — captured AI! Sent back to base!`);
+      onMessage(`Rolled ${d} — captured AI!`);
     } else if (np >= 58) {
       const w = wins + 1;
       setWins(w);
@@ -171,96 +214,109 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
         setOver(true);
         onEnd({ score: w * 100, stars: 3, summary: `Won ${w} games of Ludo!` });
       } else {
-        onMessage('You reached home! New round starting...');
+        onMessage('You reached home!');
         setTimeout(reset, 1500);
       }
       return;
     } else {
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
-      onMessage(`Rolled ${d} — moved to ${label}`);
+      onMessage(`Rolled ${d} → ${label}`);
     }
 
     if (d === 6 && !over) {
-      onMessage('Rolled a 6 — bonus roll!');
+      onMessage('Rolled 6 — bonus roll!');
       return;
     }
     setTurn('a');
     setTimeout(doAi, 800);
   };
 
+  const px = (col: number) => col * C;
   const cx = (col: number) => col * C + C / 2;
   const cy = (row: number) => row * C + C / 2;
 
   const renderBoard = () => {
     const el: React.ReactElement[] = [];
 
+    // Background
+    el.push(<rect key="bg" x={0} y={0} width={W} height={W} fill="#0f172a" rx={8} />);
+
+    // Home bases — colored quadrants
+    const bases = [
+      { key: 'rb', x: 0, y: 0, color: '#ef4444', label: 'RED', labelX: 3, labelY: 3 },
+      { key: 'gb', x: 9, y: 0, color: '#22c55e', label: 'GREEN', labelX: 12, labelY: 3 },
+      { key: 'yb', x: 0, y: 9, color: '#eab308', label: 'YELLOW', labelX: 3, labelY: 12 },
+      { key: 'bb', x: 9, y: 9, color: '#3b82f6', label: 'BLUE', labelX: 12, labelY: 12 },
+    ];
+
+    for (const b of bases) {
+      el.push(
+        <rect key={b.key} x={b.x * C + 2} y={b.y * C + 2} width={6 * C - 4} height={6 * C - 4}
+          fill={b.color} fillOpacity={0.1} rx={8} stroke={b.color} strokeWidth={1} strokeOpacity={0.2} />,
+        <rect key={`${b.key}i`} x={(b.x + 1) * C} y={(b.y + 1) * C} width={4 * C} height={4 * C}
+          fill={b.color} fillOpacity={0.15} rx={6} stroke={b.color} strokeWidth={1.5} strokeOpacity={0.25} />,
+        <text key={`${b.key}l`} x={cx(b.labelX)} y={cy(b.labelY)} textAnchor="middle" dominantBaseline="central"
+          fontSize={8} fill={b.color} fontWeight="bold" opacity={0.5}>{b.label}</text>,
+      );
+    }
+
+    // Cross arms background
     el.push(
-      <rect key="xt" x={6 * C} y={0} width={3 * C} height={6 * C} fill="#1e293b" rx={4} />,
-      <rect key="xl" x={0} y={6 * C} width={6 * C} height={3 * C} fill="#1e293b" rx={4} />,
-      <rect key="xc" x={6 * C} y={6 * C} width={3 * C} height={3 * C} fill="#1e293b" />,
-      <rect key="xr" x={9 * C} y={6 * C} width={6 * C} height={3 * C} fill="#1e293b" rx={4} />,
-      <rect key="xb" x={6 * C} y={9 * C} width={3 * C} height={6 * C} fill="#1e293b" rx={4} />,
+      <rect key="arm-t" x={6 * C} y={0} width={3 * C} height={6 * C} fill="#1e293b" />,
+      <rect key="arm-l" x={0} y={6 * C} width={6 * C} height={3 * C} fill="#1e293b" />,
+      <rect key="arm-c" x={6 * C} y={6 * C} width={3 * C} height={3 * C} fill="#1e293b" />,
+      <rect key="arm-r" x={9 * C} y={6 * C} width={6 * C} height={3 * C} fill="#1e293b" />,
+      <rect key="arm-b" x={6 * C} y={9 * C} width={3 * C} height={6 * C} fill="#1e293b" />,
     );
 
-    el.push(
-      <rect key="rb" x={2} y={2} width={6 * C - 4} height={6 * C - 4} fill="#ef4444" fillOpacity={0.12} rx={10} />,
-      <rect key="rbi" x={C} y={C} width={4 * C} height={4 * C} fill="#ef4444" fillOpacity={0.18} rx={8} stroke="#ef4444" strokeWidth={1.5} strokeOpacity={0.3} />,
-      <circle key="rbc" cx={cx(3)} cy={cy(3)} r={C * 0.7} fill="#ef4444" fillOpacity={0.1} stroke="#ef4444" strokeWidth={1} strokeOpacity={0.2} />,
-      <text key="rbl" x={cx(3)} y={cy(3)} textAnchor="middle" dominantBaseline="central" fontSize={10} fill="#ef4444" fontWeight="bold" opacity={0.7}>RED</text>,
-    );
-
-    el.push(
-      <rect key="gb" x={9 * C + 2} y={2} width={6 * C - 4} height={6 * C - 4} fill="#22c55e" fillOpacity={0.08} rx={10} />,
-      <rect key="gbi" x={10 * C} y={C} width={4 * C} height={4 * C} fill="#22c55e" fillOpacity={0.12} rx={8} stroke="#22c55e" strokeWidth={1.5} strokeOpacity={0.2} />,
-      <text key="gbl" x={cx(12)} y={cy(3)} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="#22c55e" opacity={0.4}>HOME</text>,
-    );
-
-    el.push(
-      <rect key="yb" x={2} y={9 * C + 2} width={6 * C - 4} height={6 * C - 4} fill="#eab308" fillOpacity={0.08} rx={10} />,
-      <rect key="ybi" x={C} y={10 * C} width={4 * C} height={4 * C} fill="#eab308" fillOpacity={0.12} rx={8} stroke="#eab308" strokeWidth={1.5} strokeOpacity={0.2} />,
-      <text key="ybl" x={cx(3)} y={cy(12)} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="#eab308" opacity={0.4}>HOME</text>,
-    );
-
-    el.push(
-      <rect key="bb" x={9 * C + 2} y={9 * C + 2} width={6 * C - 4} height={6 * C - 4} fill="#3b82f6" fillOpacity={0.12} rx={10} />,
-      <rect key="bbi" x={10 * C} y={10 * C} width={4 * C} height={4 * C} fill="#3b82f6" fillOpacity={0.18} rx={8} stroke="#3b82f6" strokeWidth={1.5} strokeOpacity={0.3} />,
-      <circle key="bbc" cx={cx(12)} cy={cy(12)} r={C * 0.7} fill="#3b82f6" fillOpacity={0.1} stroke="#3b82f6" strokeWidth={1} strokeOpacity={0.2} />,
-      <text key="bbl" x={cx(12)} y={cy(12)} textAnchor="middle" dominantBaseline="central" fontSize={10} fill="#3b82f6" fontWeight="bold" opacity={0.7}>BLUE</text>,
-    );
-
-    TRACK.forEach(([col, row], i) => {
+    // Track squares
+    TRACK.forEach(([row, col], i) => {
       const isRedEntry = i === 0;
-      const isBlueEntry = i === 26;
-      let fill = '#f1f5f9';
+      const isBlueEntry = i === BLUE_ENTRY;
+      const isGreenEntry = i === 13;
+      const isYellowEntry = i === 39;
+      let fill = '#e2e8f0';
       if (isRedEntry) fill = '#fecaca';
       if (isBlueEntry) fill = '#bfdbfe';
+      if (isGreenEntry) fill = '#bbf7d0';
+      if (isYellowEntry) fill = '#fef08a';
       el.push(
-        <rect key={`t${i}`} x={col * C + 1} y={row * C + 1} width={C - 2} height={C - 2} fill={fill} stroke="#94a3b8" strokeWidth={0.5} rx={3} />,
-      );
-      el.push(
-        <text key={`tl${i}`} x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="#475569" fontWeight={isRedEntry || isBlueEntry ? 'bold' : 'normal'}>
-          {isRedEntry ? 'S' : isBlueEntry ? 'B' : i}
-        </text>,
+        <rect key={`t${i}`} x={col * C + 0.5} y={row * C + 0.5} width={C - 1} height={C - 1}
+          fill={fill} stroke="#94a3b8" strokeWidth={0.4} rx={2} />,
       );
     });
 
-    STRETCH.forEach(([col, row], i) => {
-      el.push(
-        <rect key={`s${i}`} x={col * C + 1} y={row * C + 1} width={C - 2} height={C - 2} fill="#dcfce7" stroke="#22c55e" strokeWidth={0.75} rx={3} />,
-      );
-      el.push(
-        <text key={`sl${i}`} x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="#16a34a" fontWeight="bold">
-          {i + 1}
-        </text>,
-      );
-    });
+    // Home stretches
+    const stretches = [
+      { data: RED_STRETCH, color: '#ef4444', fillColor: '#fecaca', label: 'R' },
+      { data: BLUE_STRETCH, color: '#3b82f6', fillColor: '#bfdbfe', label: 'B' },
+    ];
+    // Also show green/yellow stretch visually (not playable yet)
+    const greenStretch: [number, number][] = [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7]];
+    const yellowStretch: [number, number][] = [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [8, 7]];
+    const decorativeStretches = [
+      { data: greenStretch, color: '#22c55e', fillColor: '#bbf7d0' },
+      { data: yellowStretch, color: '#eab308', fillColor: '#fef08a' },
+    ];
 
+    for (const s of [...stretches, ...decorativeStretches]) {
+      s.data.forEach(([row, col], i) => {
+        el.push(
+          <rect key={`s-${s.color}-${i}`} x={col * C + 0.5} y={row * C + 0.5} width={C - 1} height={C - 1}
+            fill={s.fillColor} stroke={s.color} strokeWidth={0.6} rx={2} />,
+          <text key={`sl-${s.color}-${i}`} x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
+            fontSize={6} fill={s.color} fontWeight="bold">{i + 1}</text>,
+        );
+      });
+    }
+
+    // Center home triangle
+    const centerX = cx(7), centerY = cy(7);
     el.push(
-      <circle key="hbg" cx={cx(7)} cy={cy(7)} r={C * 1.1} fill="#fbbf24" fillOpacity={0.15} />,
-      <circle key="hfg" cx={cx(7)} cy={cy(7)} r={C * 0.7} fill="#fbbf24" fillOpacity={0.25} stroke="#f59e0b" strokeWidth={1} />,
-      <text key="hl" x={cx(7)} y={cy(7) + 1} textAnchor="middle" dominantBaseline="central" fontSize={11} fill="#92400e" fontWeight="bold">
-        {'\u2605'}
-      </text>,
+      <circle key="home-bg" cx={centerX} cy={centerY} r={C * 1.2} fill="#fbbf24" fillOpacity={0.12} />,
+      <circle key="home-fg" cx={centerX} cy={centerY} r={C * 0.7} fill="#fbbf24" fillOpacity={0.2} stroke="#f59e0b" strokeWidth={1} />,
+      <text key="home-star" x={centerX} y={centerY + 1} textAnchor="middle" dominantBaseline="central"
+        fontSize={14} fill="#92400e" fontWeight="bold">{'\u2605'}</text>,
     );
 
     return el;
@@ -268,31 +324,33 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
   const renderTokens = () => {
     const el: React.ReactElement[] = [];
-    const r = C * 0.35;
+    const r = C * 0.4;
 
+    // Player (red)
     if (pPos === -1) {
       el.push(
-        <circle key="pt" cx={cx(3)} cy={cy(3)} r={r + 2} fill="#ef4444" stroke="white" strokeWidth={2} filter="url(#shadow)" />,
-        <text key="ptl" x={cx(3)} y={cy(3) + 1} textAnchor="middle" dominantBaseline="central" fontSize={10} fill="white" fontWeight="bold">P</text>,
+        <circle key="pt" cx={cx(2)} cy={cy(2)} r={r + 1} fill="#ef4444" stroke="white" strokeWidth={1.5} />,
+        <text key="ptl" x={cx(2)} y={cy(2) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">P</text>,
       );
     } else {
-      const [col, row] = posCoord(pPos);
-      const sameCell = aPos === pPos && pPos >= 52;
+      const [row, col] = posCoord(pPos, RED_STRETCH);
       el.push(
-        <circle key="pt" cx={cx(col) + (sameCell ? -5 : 0)} cy={cy(row)} r={r} fill="#ef4444" stroke="white" strokeWidth={2} filter="url(#shadow)" />,
+        <circle key="pt" cx={cx(col)} cy={cy(row)} r={r} fill="#ef4444" stroke="white" strokeWidth={1.5} />,
+        <text key="ptl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">P</text>,
       );
     }
 
+    // AI (blue)
     if (aPos === -1) {
       el.push(
-        <circle key="at" cx={cx(12)} cy={cy(12)} r={r + 2} fill="#3b82f6" stroke="white" strokeWidth={2} filter="url(#shadow)" />,
-        <text key="atl" x={cx(12)} y={cy(12) + 1} textAnchor="middle" dominantBaseline="central" fontSize={10} fill="white" fontWeight="bold">A</text>,
+        <circle key="at" cx={cx(12)} cy={cy(12)} r={r + 1} fill="#3b82f6" stroke="white" strokeWidth={1.5} />,
+        <text key="atl" x={cx(12)} y={cy(12) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">A</text>,
       );
     } else {
-      const [col, row] = posCoord(aPos);
-      const sameCell = aPos === pPos && pPos >= 52;
+      const [row, col] = posCoord(aPos, BLUE_STRETCH);
       el.push(
-        <circle key="at" cx={cx(col) + (sameCell ? 5 : 0)} cy={cy(row)} r={r} fill="#3b82f6" stroke="white" strokeWidth={2} filter="url(#shadow)" />,
+        <circle key="at" cx={cx(col)} cy={cy(row)} r={r} fill="#3b82f6" stroke="white" strokeWidth={1.5} />,
+        <text key="atl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">A</text>,
       );
     }
 
@@ -307,53 +365,48 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   };
 
   return (
-    <div className="h-full flex flex-col items-center p-2 gap-2">
+    <div className="h-full flex flex-col items-center p-2 gap-1.5">
+      {/* Status bar */}
       <div className="flex gap-2 text-xs items-center flex-wrap justify-center">
-        <span className="bg-card rounded-lg px-2.5 py-1 text-danger font-bold flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-full bg-[#ef4444]" />
+        <span className="bg-card rounded-lg px-2 py-0.5 text-danger font-bold flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
           You: {posLabel(pPos)}
         </span>
-        <span className="bg-card rounded-lg px-2.5 py-1 text-blue-400 font-bold flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-full bg-[#3b82f6]" />
+        <span className="bg-card rounded-lg px-2 py-0.5 text-blue-400 font-bold flex items-center gap-1">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#3b82f6]" />
           AI: {posLabel(aPos)}
         </span>
-        <span className="bg-card rounded-lg px-2.5 py-1 text-accent font-bold">
-          {wins}/{target}
-        </span>
+        <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{wins}/{target}</span>
       </div>
 
-      <div className="w-full max-w-[420px] flex-shrink-0">
-        <svg viewBox={`0 0 ${W} ${W}`} className="w-full h-auto rounded-xl" style={{ maxHeight: '60vh' }}>
-          <defs>
-            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx={0} dy={1} stdDeviation={1.5} floodColor="#000" floodOpacity={0.3} />
-            </filter>
-          </defs>
-          <rect x={0} y={0} width={W} height={W} fill="#0f172a" rx={12} />
+      {/* Board */}
+      <div className="w-full max-w-[380px] flex-shrink-0">
+        <svg viewBox={`0 0 ${W} ${W}`} className="w-full h-auto rounded-xl" style={{ maxHeight: '58vh' }}>
           {renderBoard()}
           {renderTokens()}
         </svg>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 bg-card rounded-xl flex items-center justify-center text-3xl font-bold select-none">
+      {/* Dice + Roll */}
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center text-2xl font-bold select-none">
           {dice !== null ? (
             <span className={dice === 6 ? 'text-accent' : 'text-text'}>{dice}</span>
           ) : (
-            <span>{'\uD83C\uDFB2'}</span>
+            <span>🎲</span>
           )}
         </div>
         <button
           onClick={handleRoll}
           disabled={over || turn !== 'p'}
-          className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl text-base hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all"
+          className="bg-accent text-bg font-bold px-5 py-2 rounded-xl text-sm hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all"
         >
-          {turn === 'p' ? 'Roll!' : 'AI...'}
+          {turn === 'p' ? 'Roll!' : 'AI thinking...'}
         </button>
       </div>
 
-      <div className="text-xs text-text-muted text-center px-4 leading-relaxed">
-        Roll 6 to enter the track. Land on opponent to send them back. Reach the star to win!
+      <div className="text-[11px] text-text-muted text-center px-4 leading-relaxed">
+        Roll 6 to enter. Land on opponent to capture. Reach the star to win!
       </div>
     </div>
   );

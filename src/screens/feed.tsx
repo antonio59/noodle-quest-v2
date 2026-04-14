@@ -13,14 +13,20 @@ const QUICK_EMOJIS = [
   '👍','👎','🤝','✌️','🫡','💀','😭','🫠',
 ];
 
-// Simple sticker-style GIFs mapped to real Giphy URLs
+// Sticker-style animated reactions (emoji-based, no external URLs needed)
 const STICKER_CATEGORIES = [
-  { label: 'Happy', search: 'happy celebration', emoji: '🎉', gifUrl: 'https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif' },
-  { label: 'GG', search: 'good game', emoji: '🎮', gifUrl: 'https://media.giphy.com/media/l0HlNQ03J5JxX6lva/giphy.gif' },
-  { label: 'Fire', search: 'fire flames', emoji: '🔥', gifUrl: 'https://media.giphy.com/media/l2Sqir5ZxfoS27EvS/giphy.gif' },
-  { label: 'Clap', search: 'clapping', emoji: '👏', gifUrl: 'https://media.giphy.com/media/13CoXDiaCcCoyk/giphy.gif' },
-  { label: 'LOL', search: 'laughing', emoji: '😂', gifUrl: 'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif' },
-  { label: 'Love', search: 'love hearts', emoji: '❤️', gifUrl: 'https://media.giphy.com/media/3o7TKu8D1d12Eo9wSQ/giphy.gif' },
+  { label: 'Happy', search: 'happy', emoji: '🎉', display: '🎉🥳🎊' },
+  { label: 'GG', search: 'gg', emoji: '🎮', display: '🎮🏆👾' },
+  { label: 'Fire', search: 'fire', emoji: '🔥', display: '🔥💥⚡' },
+  { label: 'Clap', search: 'clap', emoji: '👏', display: '👏🙌💪' },
+  { label: 'LOL', search: 'lol', emoji: '😂', display: '🤣😂😹' },
+  { label: 'Love', search: 'love', emoji: '❤️', display: '❤️💕😍' },
+  { label: 'Cool', search: 'cool', emoji: '😎', display: '😎🕶️✨' },
+  { label: 'Sad', search: 'sad', emoji: '😢', display: '😢😭💔' },
+  { label: 'Wow', search: 'wow', emoji: '🤯', display: '🤯😲🫢' },
+  { label: 'Think', search: 'think', emoji: '🤔', display: '🤔🧐💭' },
+  { label: 'Noodle', search: 'noodle', emoji: '🍜', display: '🍜🍝🥢' },
+  { label: 'Brain', search: 'brain', emoji: '🧠', display: '🧠💡🎯' },
 ];
 
 interface MentionSuggestion {
@@ -120,7 +126,8 @@ export function Feed() {
     } catch { /* send failed */ }
   };
 
-  const chatPosts = feedPosts?.filter((p: any) => p.type === 'chat' || p.type === 'gif') ?? [];
+  // Feed comes in desc order from Convex; reverse for chronological chat display
+  const chatPosts = [...(feedPosts?.filter((p: any) => p.type === 'chat' || p.type === 'gif') ?? [])].reverse();
   const activityPosts = feedPosts?.filter((p: any) => p.type === 'score') ?? [];
 
   const formatTime = (ts: number) => {
@@ -201,12 +208,8 @@ export function Feed() {
                   </div>
                   <div className="text-sm text-text break-words">
                     {post.type === 'gif' ? (
-                      <div className="mt-1 rounded-xl overflow-hidden max-w-[200px]">
-                        <img
-                          src={STICKER_CATEGORIES.find(s => s.search === post.content)?.gifUrl || 'https://media.giphy.com/media/3o7abB06u9bNzA8lu8/giphy.gif'}
-                          alt="GIF"
-                          className="w-full h-auto max-h-40 object-cover rounded-xl"
-                        />
+                      <div className="mt-1 text-4xl leading-none">
+                        {STICKER_CATEGORIES.find(s => s.search === post.content)?.display || '🎉🥳🎊'}
                       </div>
                     ) : (
                       renderContent(post.content)
@@ -280,16 +283,16 @@ export function Feed() {
           {/* GIF/Sticker picker */}
           {showGif && (
             <div className="mb-2 bg-card rounded-xl border border-white/10 p-3">
-              <div className="text-xs text-text-muted mb-2 font-semibold">Stickers</div>
-              <div className="grid grid-cols-6 gap-2">
+              <div className="text-xs text-text-muted mb-2 font-semibold">Sticker Reactions</div>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {STICKER_CATEGORIES.map(s => (
                   <button
                     key={s.label}
                     onClick={() => insertGif(s.search)}
-                    className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-card-hover transition-colors"
+                    className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-card-hover active:scale-95 transition-all"
                   >
-                    <span className="text-2xl">{s.emoji}</span>
-                    <span className="text-[10px] text-text-muted">{s.label}</span>
+                    <span className="text-xl leading-none">{s.display}</span>
+                    <span className="text-[9px] text-text-muted mt-0.5">{s.label}</span>
                   </button>
                 ))}
               </div>

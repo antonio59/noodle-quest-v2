@@ -1,7 +1,7 @@
 import { useState, useEffect, createElement, Suspense } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Star, ChevronRight, ArrowRight } from 'lucide-react';
-import { useMutation } from 'convex/react';
+import { ArrowLeft, Star, ChevronRight, ArrowRight, Lock } from 'lucide-react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGameMeta, getGameComponent } from '@/lib/game-registry';
@@ -29,11 +29,19 @@ export function PlayGame() {
     (initialDifficulty as any) || 'medium'
   );
   const [showLobby, setShowLobby] = useState(!initialDifficulty);
+  const [showStagePicker, setShowStagePicker] = useState(false);
 
   const saveScore = useMutation(api.games.saveScore);
 
   // Look up game metadata (no component import)
   const gameMeta = gameId ? getGameMeta(gameId) : undefined;
+
+  // Fetch player's progress for this game to enable stage selection
+  const playerProgress = useQuery(
+    api.games.getPlayerProgress,
+    player && gameId ? { playerId: player.playerId as any, gameId } : 'skip' as any,
+  );
+  const maxUnlocked = playerProgress?.maxUnlockedStage ?? 1;
 
   // Retrieve pre-built lazy component (created at registration time, not during render)
   const GameComponent = gameId ? getGameComponent(gameId) : undefined;
@@ -45,7 +53,89 @@ export function PlayGame() {
     }
   }, [gameMeta, navigate]);
 
+  const createInvite = useMutation(api.multiplayer.createInvite);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+
   if (!gameMeta || !gameId || !GameComponent) return null;
+
+  // Multiplayer invite flow
+  if (isMultiplayer && !inviteCode && !creatingInvite) {
+    const handleCreateInvite = async () => {
+      if (!player) return;
+      setCreatingInvite(true);
+      try {
+        const result = await createInvite({ gameId, fromId: player.playerId as any });
+        if (result && 'inviteCode' in result) {
+          setInviteCode(result.inviteCode as string);
+        }
+      } catch {
+        // invite creation failed
+      }
+      setCreatingInvite(false);
+    };
+
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">{gameMeta.emoji}</div>
+        <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
+        <p className="text-text-muted text-sm mb-6">Invite a friend to play!</p>
+        <button
+          onClick={handleCreateInvite}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 mb-4"
+        >
+          Create Invite Link
+        </button>
+        <button
+          onClick={() => navigate(`/games?tab=board`)}
+          className="text-text-muted text-sm hover:text-text transition-colors"
+        >
+          <ArrowLeft size={14} className="inline mr-1" /> Back to Games
+        </button>
+      </div>
+    );
+  }
+
+  if (isMultiplayer && inviteCode) {
+    const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
+    const handleCopy = () => {
+      navigator.clipboard.writeText(inviteUrl).catch(() => {});
+    };
+    const handleShare = () => {
+      if (navigator.share) {
+        navigator.share({ title: `Play ${gameMeta.name}!`, text: `Join me for ${gameMeta.name} on Noodle Quest!`, url: inviteUrl }).catch(() => {});
+      } else {
+        handleCopy();
+      }
+    };
+
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">{gameMeta.emoji}</div>
+        <h2 className="text-2xl font-bold mb-2">Invite Created!</h2>
+        <p className="text-text-muted text-sm mb-4">Share this code with your friend:</p>
+        <div className="bg-card rounded-xl px-6 py-4 mb-4">
+          <div className="text-3xl font-mono font-bold text-accent tracking-widest mb-2">{inviteCode}</div>
+          <div className="text-xs text-text-muted break-all">{inviteUrl}</div>
+        </div>
+        <div className="flex gap-3 mb-6">
+          <button onClick={handleCopy} className="bg-card text-text font-bold px-5 py-2.5 rounded-xl hover:bg-card-hover active:scale-95">
+            Copy Link
+          </button>
+          <button onClick={handleShare} className="bg-accent text-bg font-bold px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-95">
+            Share
+          </button>
+        </div>
+        <p className="text-text-dim text-xs mb-4 animate-pulse">Waiting for opponent to join...</p>
+        <button
+          onClick={() => navigate(`/games?tab=board`)}
+          className="text-text-muted text-sm hover:text-text transition-colors"
+        >
+          <ArrowLeft size={14} className="inline mr-1" /> Back to Games
+        </button>
+      </div>
+    );
+  }
 
   // Show pre-game lobby for board games when no difficulty was pre-selected
   if (showLobby && gameMeta.category === 'board') {
@@ -83,7 +173,11 @@ export function PlayGame() {
   }
 
   const handleEnd = async (result: GameResult) => {
-    setEnded(result);
+    // Guarantee minimum 10 points for participation
+    const finalScore = Math.max(result.score, 10);
+    const finalResult = { ...result, score: finalScore };
+
+    setEnded(finalResult);
     setSaving(true);
 
     if (player && saveScore) {
@@ -92,16 +186,27 @@ export function PlayGame() {
           playerId: player.playerId as any,
           gameId,
           stage: currentStage,
-          score: result.score,
+          score: finalScore,
           stars: result.stars,
         });
       } catch (err) {
-        console.error('Failed to save score:', err);
+        // save failed silently
       }
     }
     setSaving(false);
 
-    if (result.stars > 0 && currentStage < gameMeta.stages) {
+    // Auto-advance on success (2+ stars) after a brief pause
+    if (result.stars >= 2 && currentStage < gameMeta.stages) {
+      setNextStage(currentStage + 1);
+      setTimeout(() => {
+        setEnded(null);
+        setScore(0);
+        setProgress(0);
+        setCurrentStage(currentStage + 1);
+        setNextStage(null);
+        setMessage('');
+      }, 2200);
+    } else if (result.stars > 0 && currentStage < gameMeta.stages) {
       setNextStage(currentStage + 1);
     }
   };
@@ -135,7 +240,10 @@ export function PlayGame() {
         {renderStars(ended.stars)}
         <p className="text-accent text-xl font-bold mb-1">Score: {ended.score}</p>
         {saving && <p className="text-text-muted text-xs mb-2">Saving...</p>}
-        <p className="text-text-muted text-sm mb-6 max-w-xs">{ended.summary}</p>
+        <p className="text-text-muted text-sm mb-4 max-w-xs">{ended.summary}</p>
+        {ended.stars >= 2 && nextStage && (
+          <p className="text-accent text-sm mb-4 animate-pulse">Advancing to Stage {nextStage}...</p>
+        )}
         <div className="flex gap-3 flex-wrap justify-center">
           <button
             onClick={() => {
@@ -185,12 +293,46 @@ export function PlayGame() {
         <button onClick={goBackToGames} className="text-text-muted hover:text-text p-2">
           <ArrowLeft size={20} />
         </button>
-        <div className="text-center">
+        <button onClick={() => setShowStagePicker(!showStagePicker)} className="text-center">
           <div className="font-semibold text-sm">{gameMeta.emoji} {gameMeta.name}</div>
-          <div className="text-text-muted text-xs">Stage {currentStage}/{gameMeta.stages}</div>
-        </div>
+          <div className="text-text-muted text-xs">Stage {currentStage}/{gameMeta.stages} {maxUnlocked > 1 ? '▼' : ''}</div>
+        </button>
         <div className="text-accent font-bold min-w-[60px] text-right pr-2">{score}</div>
       </div>
+
+      {showStagePicker && maxUnlocked > 1 && (
+        <div className="bg-surface border-b border-white/5 p-2 flex-shrink-0">
+          <div className="flex gap-1 flex-wrap justify-center">
+            {Array.from({ length: gameMeta.stages }, (_, i) => i + 1).map(s => {
+              const unlocked = s <= maxUnlocked;
+              const isCurrent = s === currentStage;
+              return (
+                <button
+                  key={s}
+                  disabled={!unlocked}
+                  onClick={() => {
+                    setCurrentStage(s);
+                    setScore(0);
+                    setProgress(0);
+                    setEnded(null);
+                    setMessage('');
+                    setShowStagePicker(false);
+                  }}
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                    isCurrent
+                      ? 'bg-accent text-bg'
+                      : unlocked
+                        ? 'bg-card text-text hover:bg-card-hover'
+                        : 'bg-card/50 text-text-muted/30'
+                  }`}
+                >
+                  {unlocked ? s : <Lock size={10} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="h-1 bg-card flex-shrink-0">
         <div

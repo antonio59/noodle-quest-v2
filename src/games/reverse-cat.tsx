@@ -82,8 +82,16 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     setSequence(seq);
     setScore(0);
     setPlayerIndex(0);
-    setStatusText('Watch carefully...');
-    setTimeout(() => playSequence(seq), 1000);
+    // 3-2-1 countdown before showing the sequence
+    setStatusText('3...');
+    setStatusColor('#fbbf24');
+    setTimeout(() => { setStatusText('2...'); }, 800);
+    setTimeout(() => { setStatusText('1...'); }, 1600);
+    setTimeout(() => {
+      setStatusText('Watch carefully...');
+      setStatusColor('#67e8f9');
+      playSequence(seq);
+    }, 2400);
   }, [config, playSequence]);
 
   const nextRound = useCallback((currentSeq: number[]) => {

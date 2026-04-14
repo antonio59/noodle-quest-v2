@@ -19,6 +19,22 @@ export const saveScore = mutation({
   },
 });
 
+export const getPlayerProgress = query({
+  args: { playerId: v.id("players"), gameId: v.string() },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("progress")
+      .withIndex("by_player_game", q => q.eq("playerId", args.playerId).eq("gameId", args.gameId))
+      .collect();
+    // Return the highest stage that was completed (earned at least 1 star)
+    let maxStage = 0;
+    for (const r of rows) {
+      if (r.starsEarned > 0 && r.stage > maxStage) maxStage = r.stage;
+    }
+    return { maxUnlockedStage: maxStage + 1, stages: rows.map(r => ({ stage: r.stage, highScore: r.highScore, stars: r.starsEarned, timesPlayed: r.timesPlayed })) };
+  },
+});
+
 export const getPlayerStats = query({
   args: { playerId: v.id("players") },
   handler: async (ctx, args) => {
