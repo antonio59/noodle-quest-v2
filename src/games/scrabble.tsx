@@ -349,9 +349,9 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
   };
 
   return (
-    <div className="h-full flex flex-col items-center p-1.5 overflow-hidden">
+    <div className="h-full flex flex-col items-center px-2 pt-1 pb-2 overflow-hidden">
       {/* Score bar */}
-      <div className="flex gap-1.5 mb-1 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
+      <div className="flex gap-1.5 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
         <span className="bg-accent/20 text-accent rounded-md px-1.5 py-0.5 font-bold">{totalScore} pts</span>
         <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Turn {turn}/{maxTurns}</span>
         <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Target: {targetScore}</span>
@@ -359,14 +359,16 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
         {lastWord && <span className="text-accent font-medium">{lastWord}</span>}
       </div>
 
-      {/* Board — fills available space, square, centered */}
-      <div className="flex-1 flex items-center justify-center w-full min-h-0 mb-1">
+      {/* Board — takes all remaining vertical space, stays square */}
+      <div className="flex-1 min-h-0 flex items-center justify-center w-full py-1">
         <div
           className="grid gap-[1px] bg-white/5 rounded-md overflow-hidden"
           style={{
             gridTemplateColumns: `repeat(${SIZE}, 1fr)`,
-            width: 'min(100%, min(60vh, 420px))',
-            height: 'min(100%, min(60vh, 420px))',
+            /* Square: constrained by the smaller of available height or width */
+            width: 'min(100%, 100%)',
+            maxWidth: '420px',
+            maxHeight: '100%',
             aspectRatio: '1',
           }}
         >
@@ -409,8 +411,8 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
         </div>
       </div>
 
-      {/* Legend + Actions row — compact */}
-      <div className="flex items-center justify-center gap-2 mb-1 flex-shrink-0 flex-wrap">
+      {/* Legend + Actions row */}
+      <div className="flex items-center justify-center gap-2 flex-shrink-0 flex-wrap">
         <div className="flex gap-2 text-[7px] sm:text-[8px] text-text-dim">
           {(['TW','DW','TL','DL'] as const).map(b => (
             <span key={b} className="flex items-center gap-0.5">
@@ -444,24 +446,29 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
         </div>
       </div>
 
-      {/* Tile rack */}
-      <div className="flex justify-center gap-1 flex-shrink-0 pb-1">
-        {rack.map((tile, i) => (
-          <button
-            key={`${tile}-${i}`}
-            onClick={() => handleRackClick(i)}
-            className={`relative w-9 h-10 rounded-lg font-bold text-sm flex items-center justify-center transition-all shadow-sm ${
-              selectedTile === i
-                ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1'
-                : 'bg-amber-200 text-amber-900 hover:bg-amber-300 active:scale-95'
-            }`}
-          >
-            <span>{tile}</span>
-            <span className="absolute bottom-0.5 right-0.5 text-[6px] font-normal opacity-50">
-              {TILE_SCORES[tile]}
-            </span>
-          </button>
-        ))}
+      {/* Tile rack — real Scrabble style with visible point values */}
+      <div className="flex justify-center gap-1 flex-shrink-0 pt-1.5">
+        {rack.map((tile, i) => {
+          const pts = TILE_SCORES[tile];
+          return (
+            <button
+              key={`${tile}-${i}`}
+              onClick={() => handleRackClick(i)}
+              className={`relative w-10 h-11 rounded-lg font-bold text-base flex flex-col items-center justify-center transition-all shadow-sm ${
+                selectedTile === i
+                  ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1'
+                  : 'bg-amber-200 text-amber-900 hover:bg-amber-300 active:scale-95'
+              }`}
+            >
+              <span className="leading-none">{tile}</span>
+              <span className={`text-[8px] leading-none mt-0.5 font-semibold ${
+                selectedTile === i ? 'text-bg/70' : 'text-amber-700'
+              }`}>
+                {pts}
+              </span>
+            </button>
+          );
+        })}
         {rack.length === 0 && (
           <span className="text-text-muted text-[10px] py-2">No tiles</span>
         )}
