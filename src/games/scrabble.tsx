@@ -349,38 +349,39 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
   };
 
   return (
-    <div className="h-full flex flex-col items-center p-2 overflow-auto">
+    <div className="h-full flex flex-col items-center p-1.5 overflow-hidden">
       {/* Score bar */}
-      <div className="flex gap-1.5 mb-2 text-[10px] sm:text-xs items-center flex-wrap justify-center">
-        <span className="bg-accent/20 text-accent rounded-md px-2 py-0.5 font-bold">{totalScore} pts</span>
-        <span className="bg-card rounded-md px-2 py-0.5 text-text-muted">Turn {turn}/{maxTurns}</span>
-        <span className="bg-card rounded-md px-2 py-0.5 text-text-muted">Target: {targetScore}</span>
-        <span className="bg-card rounded-md px-2 py-0.5 text-text-dim">{pool.length} tiles left</span>
+      <div className="flex gap-1.5 mb-1 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
+        <span className="bg-accent/20 text-accent rounded-md px-1.5 py-0.5 font-bold">{totalScore} pts</span>
+        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Turn {turn}/{maxTurns}</span>
+        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Target: {targetScore}</span>
+        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-dim">{pool.length} left</span>
+        {lastWord && <span className="text-accent font-medium">{lastWord}</span>}
       </div>
 
-      {lastWord && (
-        <div className="text-xs text-accent mb-1 font-medium">{lastWord}</div>
-      )}
-
-      {/* Board — 15×15 responsive grid */}
-      <div className="w-full max-w-[375px] mb-2">
+      {/* Board — fills available space, square, centered */}
+      <div className="flex-1 flex items-center justify-center w-full min-h-0 mb-1">
         <div
-          className="w-full grid gap-[1px] bg-white/5 rounded-md overflow-hidden"
-          style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
+          className="grid gap-[1px] bg-white/5 rounded-md overflow-hidden"
+          style={{
+            gridTemplateColumns: `repeat(${SIZE}, 1fr)`,
+            width: 'min(100%, min(60vh, 420px))',
+            height: 'min(100%, min(60vh, 420px))',
+            aspectRatio: '1',
+          }}
         >
           {board.map((row, r) => row.map((_cell, c) => {
             const key = `${r},${c}`;
             const cell = board[r][c];
             const bonus = BONUS_MAP.get(key);
             const isPlaced = placedKeys.has(key);
-            const isLocked = lockedCells.has(key);
             const bs = bonus ? BONUS_STYLE[bonus] : null;
 
             return (
               <button
                 key={key}
                 onClick={() => handleBoardClick(r, c)}
-                className={`relative flex items-center justify-center aspect-square transition-all text-[8px] sm:text-[10px] font-bold leading-none ${
+                className={`relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
                   cell
                     ? isPlaced
                       ? 'bg-amber-200 text-amber-900 ring-1 ring-accent/60'
@@ -393,12 +394,12 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
                 {cell ? (
                   <>
                     <span>{cell}</span>
-                    <span className="absolute bottom-0 right-px text-[5px] sm:text-[6px] opacity-50 leading-none">
+                    <span className="absolute bottom-0 right-px text-[4px] sm:text-[5px] opacity-50 leading-none">
                       {TILE_SCORES[cell]}
                     </span>
                   </>
                 ) : bs ? (
-                  <span className="text-[5px] sm:text-[7px] font-semibold opacity-70 leading-none select-none">
+                  <span className="text-[4px] sm:text-[6px] font-semibold opacity-70 leading-none select-none">
                     {bs.label}
                   </span>
                 ) : null}
@@ -408,61 +409,61 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex gap-3 text-[8px] sm:text-[9px] text-text-dim mb-2 flex-wrap justify-center">
-        {(['TW','DW','TL','DL'] as const).map(b => (
-          <span key={b} className="flex items-center gap-1">
-            <span className={`w-2.5 h-2.5 rounded-sm ${BONUS_STYLE[b].bg}`} />
-            <span>{b === 'TW' ? 'Triple Word' : b === 'DW' ? 'Double Word' : b === 'TL' ? 'Triple Letter' : 'Double Letter'}</span>
-          </span>
-        ))}
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex gap-2 mb-2">
-        <button
-          onClick={handleSubmit}
-          disabled={placedKeys.size < 2}
-          className="bg-accent text-bg font-bold px-4 py-2 rounded-lg text-xs disabled:opacity-30 active:scale-95 transition-all"
-        >
-          Submit
-        </button>
-        <button
-          onClick={handleClear}
-          disabled={placedKeys.size === 0}
-          className="bg-card text-text font-semibold px-4 py-2 rounded-lg text-xs disabled:opacity-30 active:scale-95 transition-all"
-        >
-          Clear
-        </button>
-        <button
-          onClick={handleShuffle}
-          disabled={rack.length === 0}
-          className="bg-card text-text-muted font-semibold px-3 py-2 rounded-lg text-xs disabled:opacity-30 active:scale-95 transition-all"
-        >
-          Shuffle
-        </button>
+      {/* Legend + Actions row — compact */}
+      <div className="flex items-center justify-center gap-2 mb-1 flex-shrink-0 flex-wrap">
+        <div className="flex gap-2 text-[7px] sm:text-[8px] text-text-dim">
+          {(['TW','DW','TL','DL'] as const).map(b => (
+            <span key={b} className="flex items-center gap-0.5">
+              <span className={`w-2 h-2 rounded-sm ${BONUS_STYLE[b].bg}`} />
+              <span>{b}</span>
+            </span>
+          ))}
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            onClick={handleSubmit}
+            disabled={placedKeys.size < 2}
+            className="bg-accent text-bg font-bold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+          >
+            Submit
+          </button>
+          <button
+            onClick={handleClear}
+            disabled={placedKeys.size === 0}
+            className="bg-card text-text font-semibold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+          >
+            Clear
+          </button>
+          <button
+            onClick={handleShuffle}
+            disabled={rack.length === 0}
+            className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+          >
+            Shuffle
+          </button>
+        </div>
       </div>
 
       {/* Tile rack */}
-      <div className="flex justify-center gap-1">
+      <div className="flex justify-center gap-1 flex-shrink-0 pb-1">
         {rack.map((tile, i) => (
           <button
             key={`${tile}-${i}`}
             onClick={() => handleRackClick(i)}
-            className={`relative w-9 h-10 sm:w-10 sm:h-11 rounded-lg font-bold text-sm sm:text-base flex items-center justify-center transition-all shadow-sm ${
+            className={`relative w-9 h-10 rounded-lg font-bold text-sm flex items-center justify-center transition-all shadow-sm ${
               selectedTile === i
                 ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1'
                 : 'bg-amber-200 text-amber-900 hover:bg-amber-300 active:scale-95'
             }`}
           >
             <span>{tile}</span>
-            <span className="absolute bottom-0.5 right-1 text-[7px] sm:text-[8px] font-normal opacity-50">
+            <span className="absolute bottom-0.5 right-0.5 text-[6px] font-normal opacity-50">
               {TILE_SCORES[tile]}
             </span>
           </button>
         ))}
         {rack.length === 0 && (
-          <span className="text-text-muted text-xs py-3">No tiles — submit or end turn</span>
+          <span className="text-text-muted text-[10px] py-2">No tiles</span>
         )}
       </div>
     </div>
