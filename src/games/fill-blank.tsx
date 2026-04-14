@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type ReactElement } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { GameProps } from '@/types';
 
 interface FillBlank {
@@ -32,9 +32,8 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
   const puzzleSet = PUZZLE_SETS[puzzleIdx];
   const { word, clue, blanks } = puzzleSet.puzzle;
 
-  // Build the set of blank indices for quick lookup
-  const blankSet = useRef(new Set(blanks));
-  useEffect(() => { blankSet.current = new Set(blanks); }, [blanks]);
+  // Set of blank indices — derived from props, safe to read during render
+  const blankSet = useMemo(() => new Set(blanks), [blanks]);
 
   const [inputs, setInputs] = useState<Record<number, string>>({});
   const [wrong, setWrong] = useState<Set<number>>(new Set());
@@ -45,8 +44,7 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
     setInputs({});
     setWrong(new Set());
     setIsComplete(false);
-    blankSet.current = new Set(blanks);
-  }, [puzzleIdx, blanks]);
+  }, [puzzleIdx]);
 
   const handleInput = (idx: number, val: string) => {
     if (isComplete) return;
@@ -122,7 +120,7 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
           <div className="text-center text-lg font-medium text-text mb-4">{clue}</div>
           <div className="flex gap-1.5 flex-wrap justify-center">
             {word.split('').map((ch, i) => {
-              const isBlank = blankSet.current.has(i);
+              const isBlank = blankSet.has(i);
               if (isBlank) {
                 const hasError = wrong.has(i);
                 const hasValue = !!inputs[i];
