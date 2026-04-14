@@ -99,8 +99,9 @@ export function Feed() {
   const inputRef = useRef<HTMLInputElement>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch feed from Convex
-  const feedPosts = useQuery(api.feed.getFeed, { limit: 100 });
+  // Fetch chat and activity separately so score posts don't crowd out chats
+  const chatData = useQuery(api.feed.getChatMessages, { limit: 100 });
+  const activityData = useQuery(api.feed.getActivity, { limit: 50 });
   // Search players for @mention
   const searchResults = useQuery(api.auth.searchPlayers as any, mentionQuery.length >= 2 && player ? { query: mentionQuery, currentPlayerId: player.playerId } : 'skip' as any);
   // Mutations
@@ -133,7 +134,7 @@ export function Feed() {
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     feedEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [feedPosts]);
+  }, [chatData]);
 
   const handleSend = async () => {
     if (!message.trim() || !player || !createPost) return;
@@ -196,9 +197,9 @@ export function Feed() {
     } catch { /* send failed */ }
   };
 
-  // Feed comes in desc order from Convex; reverse for chronological chat display
-  const chatPosts = [...(feedPosts?.filter((p: any) => p.type === 'chat' || p.type === 'gif' || p.type === 'gif_url') ?? [])].reverse();
-  const activityPosts = feedPosts?.filter((p: any) => p.type === 'score') ?? [];
+  // Chat data arrives desc from Convex; reverse for chronological display
+  const chatPosts = [...(chatData ?? [])].reverse();
+  const activityPosts = activityData ?? [];
 
   const formatTime = (ts: number) => {
     const d = new Date(ts);

@@ -59,7 +59,9 @@ export default defineSchema({
     stage: v.optional(v.number()),
     stars: v.optional(v.number()),
     createdAt: v.number(),
-  }).index("by_time", ["createdAt"]),
+  })
+    .index("by_time", ["createdAt"])
+    .index("by_type_time", ["type", "createdAt"]),
 
   favorites: defineTable({
     playerId: v.id("players"),
