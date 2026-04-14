@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Smile, Image, AtSign, X, Play, Search } from 'lucide-react';
+import { Send, Smile, Image, AtSign, X, Search } from 'lucide-react';
 import { getGameName } from '@/lib/game-registry';
 
 const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY as string | undefined;
@@ -12,22 +12,30 @@ interface GifItem {
   title: string;
   preview: string;
   url: string;
+  width: number;
+  height: number;
+}
+
+function mapGiphyItem(g: any): GifItem {
+  return {
+    id: g.id,
+    title: g.title ?? '',
+    preview: g.images?.fixed_width_small?.url ?? g.images?.fixed_width?.url ?? '',
+    url: g.images?.fixed_width?.url ?? g.images?.downsized_medium?.url ?? '',
+    width: Number(g.images?.fixed_width?.width ?? 200),
+    height: Number(g.images?.fixed_width?.height ?? 200),
+  };
 }
 
 async function searchGifs(query: string): Promise<GifItem[]> {
   if (!GIPHY_API_KEY) return [];
   try {
     const res = await fetch(
-      `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=pg`
+      `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=24&rating=pg`
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data ?? []).map((g: any) => ({
-      id: g.id,
-      title: g.title ?? '',
-      preview: g.images?.fixed_width_small?.url ?? g.images?.fixed_width?.url ?? '',
-      url: g.images?.fixed_width?.url ?? g.images?.original?.url ?? '',
-    }));
+    return (data.data ?? []).map(mapGiphyItem);
   } catch {
     return [];
   }
@@ -37,16 +45,11 @@ async function getTrendingGifs(): Promise<GifItem[]> {
   if (!GIPHY_API_KEY) return [];
   try {
     const res = await fetch(
-      `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&rating=pg`
+      `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=24&rating=pg`
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data ?? []).map((g: any) => ({
-      id: g.id,
-      title: g.title ?? '',
-      preview: g.images?.fixed_width_small?.url ?? g.images?.fixed_width?.url ?? '',
-      url: g.images?.fixed_width?.url ?? g.images?.original?.url ?? '',
-    }));
+    return (data.data ?? []).map(mapGiphyItem);
   } catch {
     return [];
   }
@@ -60,21 +63,12 @@ const QUICK_EMOJIS = [
   '👍','👎','🤝','✌️','🫡','💀','😭','🫠',
 ];
 
-// Sticker-style animated reactions (emoji-based, no external URLs needed)
-const STICKER_CATEGORIES = [
-  { label: 'Happy', search: 'happy', emoji: '🎉', display: '🎉🥳🎊' },
-  { label: 'GG', search: 'gg', emoji: '🎮', display: '🎮🏆👾' },
-  { label: 'Fire', search: 'fire', emoji: '🔥', display: '🔥💥⚡' },
-  { label: 'Clap', search: 'clap', emoji: '👏', display: '👏🙌💪' },
-  { label: 'LOL', search: 'lol', emoji: '😂', display: '🤣😂😹' },
-  { label: 'Love', search: 'love', emoji: '❤️', display: '❤️💕😍' },
-  { label: 'Cool', search: 'cool', emoji: '😎', display: '😎🕶️✨' },
-  { label: 'Sad', search: 'sad', emoji: '😢', display: '😢😭💔' },
-  { label: 'Wow', search: 'wow', emoji: '🤯', display: '🤯😲🫢' },
-  { label: 'Think', search: 'think', emoji: '🤔', display: '🤔🧐💭' },
-  { label: 'Noodle', search: 'noodle', emoji: '🍜', display: '🍜🍝🥢' },
-  { label: 'Brain', search: 'brain', emoji: '🧠', display: '🧠💡🎯' },
-];
+// Map legacy sticker search terms to a single readable emoji for old messages
+const LEGACY_STICKER_MAP: Record<string, string> = {
+  happy: '🎉', gg: '🎮', fire: '🔥', clap: '👏',
+  lol: '😂', love: '❤️', cool: '😎', sad: '😢',
+  wow: '🤯', think: '🤔', noodle: '🍜', brain: '🧠',
+};
 
 interface MentionSuggestion {
   id: string;
@@ -88,7 +82,6 @@ export function Feed() {
   const [message, setMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
-  const [gifTab, setGifTab] = useState<'gif' | 'sticker'>(GIPHY_API_KEY ? 'gif' : 'sticker');
   const [gifQuery, setGifQuery] = useState('');
   const [gifResults, setGifResults] = useState<GifItem[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
@@ -118,11 +111,11 @@ export function Feed() {
   }, []);
 
   useEffect(() => {
-    if (!showGif || gifTab !== 'gif' || !GIPHY_API_KEY) return;
+    if (!showGif || !GIPHY_API_KEY) return;
     if (gifSearchTimer.current) clearTimeout(gifSearchTimer.current);
     gifSearchTimer.current = setTimeout(() => loadGifs(gifQuery), gifQuery ? 400 : 0);
     return () => { if (gifSearchTimer.current) clearTimeout(gifSearchTimer.current); };
-  }, [showGif, gifTab, gifQuery, loadGifs]);
+  }, [showGif, gifQuery, loadGifs]);
 
   // Update mention suggestions when search results change
   useEffect(() => {
@@ -184,13 +177,13 @@ export function Feed() {
     inputRef.current?.focus();
   };
 
-  const insertGif = async (content: string, isUrl: boolean = false) => {
+  const sendGif = async (gifUrl: string) => {
     if (!player || !createPost) return;
     try {
       await createPost({
         authorId: player.playerId as any,
-        type: isUrl ? 'gif_url' : 'gif',
-        content,
+        type: 'gif_url',
+        content: gifUrl,
       });
       setShowGif(false);
       setGifQuery('');
@@ -211,17 +204,48 @@ export function Feed() {
     return d.toLocaleDateString();
   };
 
-  // Render content with @mentions and media URLs highlighted
-  const renderContent = (content: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+\.(?:gif|jpg|jpeg|png|webp))|(https?:\/\/[^\s]+)/gi;
-    const parts = content.split(urlRegex);
+  // Render chat message content
+  const renderChatContent = (post: any) => {
+    // GIF URL — render as image
+    if (post.type === 'gif_url') {
+      return (
+        <img
+          src={post.content}
+          alt="GIF"
+          className="mt-1 rounded-xl max-w-[240px] w-full"
+          loading="lazy"
+        />
+      );
+    }
+
+    // Legacy sticker posts (type "gif" with a search term like "happy")
+    // Show as a single large emoji reaction instead of the broken triplet
+    if (post.type === 'gif') {
+      const emoji = LEGACY_STICKER_MAP[post.content];
+      if (emoji) {
+        return <span className="text-4xl leading-none inline-block mt-1">{emoji}</span>;
+      }
+      // Unknown sticker content — show as text
+      return <span className="text-sm italic text-text-muted">{post.content}</span>;
+    }
+
+    // Regular chat message — render with @mentions and links
+    return renderTextContent(post.content);
+  };
+
+  // Render text with @mentions and URLs
+  const renderTextContent = (content: string) => {
+    // Split on @mentions and URLs
+    const parts = content.split(/(@\w+|https?:\/\/\S+)/g);
     return parts.map((part, i) => {
       if (!part) return null;
-      if (part.startsWith('@')) return <span key={i} className="text-accent font-semibold">{part}</span>;
-      if (/\.(gif|jpg|jpeg|png|webp)$/i.test(part)) {
-        return <img key={i} src={part} alt="" className="mt-2 rounded-xl max-h-40 object-cover" />;
+      if (part.startsWith('@')) {
+        return <span key={i} className="text-accent font-semibold">{part}</span>;
       }
       if (/^https?:\/\//i.test(part)) {
+        if (/\.(gif|jpg|jpeg|png|webp)(\?.*)?$/i.test(part)) {
+          return <img key={i} src={part} alt="" className="mt-1 rounded-xl max-w-[240px] w-full" loading="lazy" />;
+        }
         return <a key={i} href={part} target="_blank" rel="noreferrer" className="text-accent underline break-all">{part}</a>;
       }
       return <span key={i}>{part}</span>;
@@ -229,12 +253,11 @@ export function Feed() {
   };
 
   const formatActivityContent = (content: string) => {
-    // Replace game slugs with formatted names
     let formatted = content;
     const slugMatch = content.match(/on\s+([a-z0-9-]+)!/);
     if (slugMatch) {
       const gameName = getGameName(slugMatch[1]);
-      formatted = content.replace(slugMatch[1], gameName.replace(/^\S+\s/, '')); // remove emoji prefix for inline text
+      formatted = content.replace(slugMatch[1], gameName.replace(/^\S+\s/, ''));
     }
     return formatted;
   };
@@ -278,20 +301,7 @@ export function Feed() {
                     <span className="text-text-muted text-xs">{formatTime(post.createdAt)}</span>
                   </div>
                   <div className="text-sm text-text break-words">
-                    {post.type === 'gif_url' ? (
-                      <img
-                        src={post.content}
-                        alt="GIF"
-                        className="mt-1 rounded-xl max-h-48 max-w-[200px] object-cover"
-                        loading="lazy"
-                      />
-                    ) : post.type === 'gif' ? (
-                      <div className="mt-1 text-4xl leading-none">
-                        {STICKER_CATEGORIES.find(s => s.search === post.content)?.display || '🎉🥳🎊'}
-                      </div>
-                    ) : (
-                      renderContent(post.content)
-                    )}
+                    {renderChatContent(post)}
                   </div>
                 </div>
               </div>
@@ -349,7 +359,7 @@ export function Feed() {
                   <button
                     key={e}
                     onClick={() => insertEmoji(e)}
-                    className="text-xl p-1 rounded hover:bg-card-hover transition-colors"
+                    className="text-xl p-1.5 rounded-lg hover:bg-card-hover active:scale-90 transition-all"
                   >
                     {e}
                   </button>
@@ -358,35 +368,13 @@ export function Feed() {
             </div>
           )}
 
-          {/* GIF/Sticker picker */}
+          {/* GIF picker */}
           {showGif && (
             <div className="mb-2 bg-card rounded-xl border border-white/10 overflow-hidden">
-              {/* Tabs: GIF / Stickers */}
-              <div className="flex border-b border-white/5">
-                {GIPHY_API_KEY && (
-                  <button
-                    onClick={() => setGifTab('gif')}
-                    className={`flex-1 py-2 text-xs font-semibold text-center transition-colors border-b-2 ${
-                      gifTab === 'gif' ? 'text-accent border-accent' : 'text-text-muted border-transparent'
-                    }`}
-                  >
-                    GIFs
-                  </button>
-                )}
-                <button
-                  onClick={() => setGifTab('sticker')}
-                  className={`flex-1 py-2 text-xs font-semibold text-center transition-colors border-b-2 ${
-                    gifTab === 'sticker' ? 'text-accent border-accent' : 'text-text-muted border-transparent'
-                  }`}
-                >
-                  Stickers
-                </button>
-              </div>
-
-              {/* GIF search tab */}
-              {gifTab === 'gif' && GIPHY_API_KEY && (
+              {GIPHY_API_KEY ? (
                 <div className="p-2">
-                  <div className="flex items-center gap-2 mb-2 bg-surface rounded-lg px-3 py-1.5">
+                  {/* Search bar */}
+                  <div className="flex items-center gap-2 mb-2 bg-surface rounded-lg px-3 py-2">
                     <Search size={14} className="text-text-muted flex-shrink-0" />
                     <input
                       type="text"
@@ -394,6 +382,7 @@ export function Feed() {
                       value={gifQuery}
                       onChange={e => setGifQuery(e.target.value)}
                       className="flex-1 bg-transparent text-sm text-text placeholder-text-muted outline-none"
+                      autoFocus
                     />
                     {gifQuery && (
                       <button onClick={() => setGifQuery('')} className="text-text-muted hover:text-text">
@@ -401,51 +390,52 @@ export function Feed() {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+
+                  {/* GIF grid — responsive masonry-style with 3 columns */}
+                  <div className="max-h-56 overflow-y-auto rounded-lg">
                     {gifLoading ? (
-                      <div className="col-span-full text-center text-text-muted text-xs py-6 animate-pulse">
-                        Loading GIFs...
+                      <div className="text-center text-text-muted text-xs py-8 animate-pulse">
+                        Loading...
                       </div>
                     ) : gifResults.length === 0 ? (
-                      <div className="col-span-full text-center text-text-muted text-xs py-6">
-                        {gifQuery ? 'No GIFs found' : 'Trending GIFs loading...'}
+                      <div className="text-center text-text-muted text-xs py-8">
+                        {gifQuery ? 'No GIFs found — try a different search' : 'Loading trending GIFs...'}
                       </div>
                     ) : (
-                      gifResults.map(g => (
-                        <button
-                          key={g.id}
-                          onClick={() => insertGif(g.url, true)}
-                          className="rounded-lg overflow-hidden hover:ring-2 ring-accent active:scale-95 transition-all aspect-square"
-                        >
-                          <img
-                            src={g.preview}
-                            alt={g.title}
-                            loading="lazy"
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ))
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1">
+                        {gifResults.map(g => (
+                          <button
+                            key={g.id}
+                            onClick={() => sendGif(g.url)}
+                            className="rounded-lg overflow-hidden hover:ring-2 ring-accent active:scale-95 transition-all bg-surface"
+                          >
+                            <img
+                              src={g.preview}
+                              alt={g.title}
+                              loading="lazy"
+                              className="w-full h-auto"
+                            />
+                          </button>
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <div className="text-[9px] text-text-muted/50 text-right mt-1 pr-1">Powered by GIPHY</div>
-                </div>
-              )}
 
-              {/* Sticker tab */}
-              {(gifTab === 'sticker' || !GIPHY_API_KEY) && (
-                <div className="p-3">
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {STICKER_CATEGORIES.map(s => (
-                      <button
-                        key={s.label}
-                        onClick={() => insertGif(s.search)}
-                        className="flex flex-col items-center gap-0.5 p-2 rounded-lg hover:bg-card-hover active:scale-95 transition-all"
-                      >
-                        <span className="text-xl leading-none">{s.display}</span>
-                        <span className="text-[9px] text-text-muted mt-0.5">{s.label}</span>
-                      </button>
-                    ))}
+                  {/* Giphy attribution (required by their TOS) */}
+                  <div className="flex items-center justify-end gap-1 mt-1.5 pr-1">
+                    <span className="text-[9px] text-text-muted/50">Powered by</span>
+                    <img
+                      src="https://giphy.com/static/img/giphy_logo_square.png"
+                      alt="GIPHY"
+                      className="h-3 opacity-40"
+                    />
                   </div>
+                </div>
+              ) : (
+                <div className="p-6 text-center">
+                  <Image size={24} className="mx-auto text-text-muted mb-2" />
+                  <p className="text-sm text-text-muted">GIF search is not configured</p>
+                  <p className="text-xs text-text-muted/60 mt-1">Add VITE_GIPHY_API_KEY to enable</p>
                 </div>
               )}
             </div>
@@ -483,7 +473,7 @@ export function Feed() {
               onChange={handleInputChange}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               className="flex-1 bg-card rounded-xl px-4 py-2.5 text-sm text-text placeholder-text-muted outline-none focus:ring-1 ring-accent"
-              maxLength={200}
+              maxLength={500}
             />
             <button
               onClick={handleSend}
