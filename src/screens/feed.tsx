@@ -5,47 +5,47 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Send, Smile, Image, AtSign, X, Play, Search } from 'lucide-react';
 import { getGameName } from '@/lib/game-registry';
 
-const TENOR_API_KEY = import.meta.env.VITE_TENOR_API_KEY as string | undefined;
+const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY as string | undefined;
 
-interface TenorGif {
+interface GifItem {
   id: string;
   title: string;
   preview: string;
   url: string;
 }
 
-async function searchTenorGifs(query: string): Promise<TenorGif[]> {
-  if (!TENOR_API_KEY) return [];
+async function searchGifs(query: string): Promise<GifItem[]> {
+  if (!GIPHY_API_KEY) return [];
   try {
     const res = await fetch(
-      `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&limit=20&contentfilter=medium`
+      `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_API_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=pg`
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).map((g: any) => ({
+    return (data.data ?? []).map((g: any) => ({
       id: g.id,
       title: g.title ?? '',
-      preview: g.media_formats?.tinygif?.url ?? g.media_formats?.gif?.url ?? '',
-      url: g.media_formats?.mediumgif?.url ?? g.media_formats?.gif?.url ?? '',
+      preview: g.images?.fixed_width_small?.url ?? g.images?.fixed_width?.url ?? '',
+      url: g.images?.fixed_width?.url ?? g.images?.original?.url ?? '',
     }));
   } catch {
     return [];
   }
 }
 
-async function getTenorTrending(): Promise<TenorGif[]> {
-  if (!TENOR_API_KEY) return [];
+async function getTrendingGifs(): Promise<GifItem[]> {
+  if (!GIPHY_API_KEY) return [];
   try {
     const res = await fetch(
-      `https://tenor.googleapis.com/v2/featured?key=${TENOR_API_KEY}&limit=20&contentfilter=medium`
+      `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&rating=pg`
     );
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.results ?? []).map((g: any) => ({
+    return (data.data ?? []).map((g: any) => ({
       id: g.id,
       title: g.title ?? '',
-      preview: g.media_formats?.tinygif?.url ?? g.media_formats?.gif?.url ?? '',
-      url: g.media_formats?.mediumgif?.url ?? g.media_formats?.gif?.url ?? '',
+      preview: g.images?.fixed_width_small?.url ?? g.images?.fixed_width?.url ?? '',
+      url: g.images?.fixed_width?.url ?? g.images?.original?.url ?? '',
     }));
   } catch {
     return [];
@@ -88,9 +88,9 @@ export function Feed() {
   const [message, setMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
-  const [gifTab, setGifTab] = useState<'gif' | 'sticker'>(TENOR_API_KEY ? 'gif' : 'sticker');
+  const [gifTab, setGifTab] = useState<'gif' | 'sticker'>(GIPHY_API_KEY ? 'gif' : 'sticker');
   const [gifQuery, setGifQuery] = useState('');
-  const [gifResults, setGifResults] = useState<TenorGif[]>([]);
+  const [gifResults, setGifResults] = useState<GifItem[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
   const gifSearchTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const [showMention, setShowMention] = useState(false);
@@ -111,14 +111,14 @@ export function Feed() {
   const loadGifs = useCallback(async (query: string) => {
     setGifLoading(true);
     const results = query.trim()
-      ? await searchTenorGifs(query.trim())
-      : await getTenorTrending();
+      ? await searchGifs(query.trim())
+      : await getTrendingGifs();
     setGifResults(results);
     setGifLoading(false);
   }, []);
 
   useEffect(() => {
-    if (!showGif || gifTab !== 'gif' || !TENOR_API_KEY) return;
+    if (!showGif || gifTab !== 'gif' || !GIPHY_API_KEY) return;
     if (gifSearchTimer.current) clearTimeout(gifSearchTimer.current);
     gifSearchTimer.current = setTimeout(() => loadGifs(gifQuery), gifQuery ? 400 : 0);
     return () => { if (gifSearchTimer.current) clearTimeout(gifSearchTimer.current); };
@@ -363,7 +363,7 @@ export function Feed() {
             <div className="mb-2 bg-card rounded-xl border border-white/10 overflow-hidden">
               {/* Tabs: GIF / Stickers */}
               <div className="flex border-b border-white/5">
-                {TENOR_API_KEY && (
+                {GIPHY_API_KEY && (
                   <button
                     onClick={() => setGifTab('gif')}
                     className={`flex-1 py-2 text-xs font-semibold text-center transition-colors border-b-2 ${
@@ -384,7 +384,7 @@ export function Feed() {
               </div>
 
               {/* GIF search tab */}
-              {gifTab === 'gif' && TENOR_API_KEY && (
+              {gifTab === 'gif' && GIPHY_API_KEY && (
                 <div className="p-2">
                   <div className="flex items-center gap-2 mb-2 bg-surface rounded-lg px-3 py-1.5">
                     <Search size={14} className="text-text-muted flex-shrink-0" />
@@ -427,12 +427,12 @@ export function Feed() {
                       ))
                     )}
                   </div>
-                  <div className="text-[9px] text-text-muted/50 text-right mt-1 pr-1">Powered by Tenor</div>
+                  <div className="text-[9px] text-text-muted/50 text-right mt-1 pr-1">Powered by GIPHY</div>
                 </div>
               )}
 
               {/* Sticker tab */}
-              {(gifTab === 'sticker' || !TENOR_API_KEY) && (
+              {(gifTab === 'sticker' || !GIPHY_API_KEY) && (
                 <div className="p-3">
                   <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                     {STICKER_CATEGORIES.map(s => (
