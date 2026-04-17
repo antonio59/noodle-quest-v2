@@ -34,7 +34,7 @@ interface SplatterData {
   drops: { angle: number; dist: number; dropSize: number }[];
 }
 
-function JustRightGame({ stage, onScore, onEnd }: GameProps) {
+function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const [phase, setPhase] = useState<Phase>('intro');
   const [splatters, setSplatters] = useState(0);
@@ -100,6 +100,7 @@ function JustRightGame({ stage, onScore, onEnd }: GameProps) {
     setSplatters(newCount);
     scoreRef.current += 5;
     onScore(5);
+    onProgress(Math.min(newCount / config.target, 1));
 
     const canvas = canvasRef.current;
     if (!canvas) return;

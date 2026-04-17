@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameProps } from '@/types';
 
+const MAX_LOSSES = 3;
+
 type UnoColor = 'red' | 'blue' | 'green' | 'yellow';
-type UnoSymbol = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'skip' | 'reverse' | 'draw2';
+type UnoSymbol = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | 'skip' | 'reverse' | 'draw2' | 'wild';
 type UnoCardType = 'number' | 'action' | 'wild' | 'wild4';
 
 type UnoCard = {
@@ -13,7 +15,6 @@ type UnoCard = {
 };
 
 const COLORS: UnoColor[] = ['red', 'blue', 'green', 'yellow'];
-const NUMBER_SYMBOLS: UnoSymbol[] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 const ACTION_SYMBOLS: UnoSymbol[] = ['skip', 'reverse', 'draw2'];
 
 const COLOR_HEX: Record<string, string> = {
@@ -27,32 +28,14 @@ const COLOR_HEX: Record<string, string> = {
 const SYMBOL_DISPLAY: Record<string, string> = {
   '0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
   '5': '5', '6': '6', '7': '7', '8': '8', '9': '9',
-  skip: '⊘', reverse: '⟲', draw2: '+2',
+  skip: '⊘', reverse: '⟲', draw2: '+2', wild: '🌟',
 };
 
-let nextId = 0;
-function makeCard(color: UnoColor | 'wild', symbol: UnoSymbol, type: UnoCardType): UnoCard {
-  return { color, symbol, type, id: nextId++ };
-}
-
-function createDeck(): UnoCard[] {
-  const deck: UnoCard[] = [];
-  for (const color of COLORS) {
-    deck.push(makeCard(color, '0', 'number'));
-    for (let i = 1; i <= 9; i++) {
-      deck.push(makeCard(color, String(i) as UnoSymbol, 'number'));
-      deck.push(makeCard(color, String(i) as UnoSymbol, 'number'));
-    }
-    for (const sym of ACTION_SYMBOLS) {
-      deck.push(makeCard(color, sym, 'action'));
-      deck.push(makeCard(color, sym, 'action'));
-    }
-  }
-  for (let i = 0; i < 4; i++) {
-    deck.push(makeCard('wild', '0', 'wild'));
-    deck.push(makeCard('wild', '0', 'wild4'));
-  }
-  return shuffle(deck);
+function makeCardFactory() {
+  let id = 0;
+  return (color: UnoColor | 'wild', symbol: UnoSymbol, type: UnoCardType): UnoCard => ({
+    color, symbol, type, id: id++,
+  });
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -64,9 +47,29 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+function createDeck(): UnoCard[] {
+  const make = makeCardFactory();
+  const deck: UnoCard[] = [];
+  for (const color of COLORS) {
+    deck.push(make(color, '0', 'number'));
+    for (let i = 1; i <= 9; i++) {
+      deck.push(make(color, String(i) as UnoSymbol, 'number'));
+      deck.push(make(color, String(i) as UnoSymbol, 'number'));
+    }
+    for (const sym of ACTION_SYMBOLS) {
+      deck.push(make(color, sym, 'action'));
+      deck.push(make(color, sym, 'action'));
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    deck.push(make('wild', 'wild', 'wild'));
+    deck.push(make('wild', 'wild', 'wild4'));
+  }
+  return shuffle(deck);
+}
+
 function cardScore(card: UnoCard): number {
-  if (card.type === 'wild') return 50;
-  if (card.type === 'wild4') return 50;
+  if (card.type === 'wild' || card.type === 'wild4') return 50;
   if (card.type === 'action') return 20;
   return parseInt(card.symbol);
 }
@@ -74,6 +77,8 @@ function cardScore(card: UnoCard): number {
 function canPlay(card: UnoCard, topCard: UnoCard, currentColor: UnoColor): boolean {
   if (card.type === 'wild' || card.type === 'wild4') return true;
   if (card.color === currentColor) return true;
+  // Don't match on symbol if top card is wild (wild has placeholder symbol)
+  if (topCard.type === 'wild' || topCard.type === 'wild4') return false;
   if (card.symbol === topCard.symbol) return true;
   return false;
 }
@@ -140,38 +145,81 @@ function aiChooseColor(hand: UnoCard[], difficulty: AILevel): UnoColor {
 
 type GamePhase = 'playing' | 'choosing-color' | 'round-over' | 'game-over';
 
+function dealInitial(): { pHand: UnoCard[]; aHand: UnoCard[]; deck: UnoCard[]; discard: UnoCard[]; color: UnoColor } {
+  const d = createDeck();
+  const pHand = d.slice(0, 7);
+  const aHand = d.slice(7, 14);
+  let rest = d.slice(14);
+  // starter should be a number card to avoid complex wild-start logic
+  const starterIdx = rest.findIndex(c => c.type === 'number');
+  const starter = starterIdx >= 0 ? rest[starterIdx] : rest[0];
+  rest = rest.filter(c => c.id !== starter.id);
+  return {
+    pHand,
+    aHand,
+    deck: rest,
+    discard: [starter],
+    color: starter.color === 'wild' ? COLORS[0] : (starter.color as UnoColor),
+  };
+}
+
 function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: AILevel }) {
   const difficulty: AILevel = aiDifficulty || 'medium';
 
-  const [playerHand, setPlayerHand] = useState<UnoCard[]>(() => {
-    const d = createDeck();
-    return d.slice(0, 7);
-  });
-  const [aiHand, setAiHand] = useState<UnoCard[]>(() => {
-    const d = createDeck();
-    return d.slice(0, 7);
-  });
-  const [deck, setDeck] = useState<UnoCard[]>(() => {
-    const d = createDeck();
-    return d.slice(14);
-  });
-  const [discardPile, setDiscardPile] = useState<UnoCard[]>(() => {
-    const d = createDeck();
-    const first = d.find(c => c.type === 'number');
-    return first ? [first] : [d[0]];
-  });
-  const [currentColor, setCurrentColor] = useState<UnoColor>('red');
+  const initial = useRef(dealInitial()).current;
+
+  const [playerHand, setPlayerHand] = useState<UnoCard[]>(initial.pHand);
+  const [aiHand, setAiHand] = useState<UnoCard[]>(initial.aHand);
+  const [deck, setDeck] = useState<UnoCard[]>(initial.deck);
+  const [discardPile, setDiscardPile] = useState<UnoCard[]>(initial.discard);
+  const [currentColor, setCurrentColor] = useState<UnoColor>(initial.color);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [phase, setPhase] = useState<GamePhase>('playing');
   const [pendingCard, setPendingCard] = useState<UnoCard | null>(null);
   const [roundWins, setRoundWins] = useState(0);
+  const [losses, setLosses] = useState(0);
   const [message, setMessage] = useState('Your turn! Play a card.');
   const [aiThinking, setAiThinking] = useState(false);
-  const [lastPlayedBy, setLastPlayedBy] = useState<'player' | 'ai' | null>(null);
+  const [, setLastPlayedBy] = useState<'player' | 'ai' | null>(null);
   const [highlightCard, setHighlightCard] = useState<number | null>(null);
 
-  const targetWins = Math.min(stage + 1, 10);
+  const targetWins = Math.max(1, Math.min(stage + 1, 10));
   const topCard = discardPile[discardPile.length - 1];
+
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const winsRef = useRef(0);
+  const lossesRef = useRef(0);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const finalWins = winsRef.current;
+    const finalLosses = lossesRef.current;
+    const stars = outcome === 'win'
+      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
+      : (finalWins > 0 ? 2 : 1);
+    const summary = outcome === 'win'
+      ? `Won ${finalWins} of ${finalWins + finalLosses} UNO rounds!`
+      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
+    onEnd({ score: finalWins * 150, stars, summary });
+  }, [onEnd]);
 
   const drawCards = (currentDeck: UnoCard[], count: number, currentDiscard: UnoCard[] = discardPile): { drawn: UnoCard[]; remaining: UnoCard[] } => {
     if (currentDeck.length < count) {
@@ -183,9 +231,11 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
   };
 
   const handleEndRound = (winner: 'player' | 'ai') => {
+    if (endedRef.current) return;
     if (winner === 'player') {
       const opponentCards = handScore(aiHand);
-      const newWins = roundWins + 1;
+      const newWins = winsRef.current + 1;
+      winsRef.current = newWins;
       setRoundWins(newWins);
       onScore(opponentCards + 50);
       onProgress(newWins / targetWins);
@@ -194,14 +244,20 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
 
       if (newWins >= targetWins) {
         setPhase('game-over');
-        setTimeout(() => {
-          onEnd({ score: newWins * 150, stars: 3, summary: `Won ${newWins} UNO rounds!` });
-        }, 1500);
+        schedule(() => finishMatch('win'), 1500);
         return;
       }
     } else {
-      setMessage('AI won this round. Try again!');
-      onMessage('AI won the round');
+      const newLosses = lossesRef.current + 1;
+      lossesRef.current = newLosses;
+      setLosses(newLosses);
+      setMessage(`AI won this round. ${newLosses}/${MAX_LOSSES} losses.`);
+      onMessage(`AI won the round (${newLosses}/${MAX_LOSSES})`);
+      if (newLosses >= MAX_LOSSES) {
+        setPhase('game-over');
+        schedule(() => finishMatch('lose'), 1500);
+        return;
+      }
     }
     setPhase('round-over');
   };
@@ -209,7 +265,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
   const applyCardEffect = (card: UnoCard, playedBy: 'player' | 'ai', newDiscard: UnoCard[], newColor: UnoColor, newDeck: UnoCard[], pHand: UnoCard[], aHand: UnoCard[]) => {
     if (card.symbol === 'skip' || card.symbol === 'reverse') {
       if (playedBy === 'player') {
-        return { pHand, aHand, deck: newDeck, discard: newDiscard, color: newColor, skip: true, message: `${playedBy === 'player' ? 'AI' : 'You'} got skipped!` };
+        return { pHand, aHand, deck: newDeck, discard: newDiscard, color: newColor, skip: true, message: `AI got skipped!` };
       } else {
         return { pHand, aHand, deck: newDeck, discard: newDiscard, color: newColor, skip: true, message: `You got skipped!` };
       }
@@ -233,24 +289,24 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
       }
     }
 
-    return { pHand, aHand, deck: newDeck, discard: newDiscard, color: newColor, skip: false, message: playedBy === 'player' ? 'Your turn!' : 'AI played.' };
+    return { pHand, aHand, deck: newDeck, discard: newDiscard, color: newColor, skip: false, message: playedBy === 'player' ? 'AI turn...' : 'Your turn!' };
   };
 
   const doAiTurn = (currentDeck: UnoCard[], currentDiscard: UnoCard[], currentColor_: UnoColor, currentAiHand: UnoCard[], currentPlayerHand: UnoCard[]) => {
+    if (endedRef.current) return;
     setAiThinking(true);
     setMessage('AI is thinking...');
 
-    setTimeout(() => {
-      const choice = aiSelectCard(currentAiHand, currentDiscard[currentDiscard.length - 1], currentColor_, difficulty);
+    schedule(() => {
+      const topC = currentDiscard[currentDiscard.length - 1];
+      const choice = aiSelectCard(currentAiHand, topC, currentColor_, difficulty);
 
       if (!choice) {
         const { drawn, remaining } = drawCards(currentDeck, 1, currentDiscard);
         const newAiHand = [...currentAiHand, ...drawn];
-        setAiHand(newAiHand);
-        setDeck(remaining);
 
         const drawnCard = drawn[0];
-        if (drawnCard && canPlay(drawnCard, currentDiscard[currentDiscard.length - 1], currentColor_)) {
+        if (drawnCard && canPlay(drawnCard, topC, currentColor_)) {
           const aiHandAfter = newAiHand.filter(c => c.id !== drawnCard.id);
           const newDiscard = [...currentDiscard, drawnCard];
           const newColor = drawnCard.type === 'wild' || drawnCard.type === 'wild4'
@@ -275,17 +331,20 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
           setCurrentColor(effect.color);
           setDeck(effect.deck);
           setMessage(effect.message);
+          setAiThinking(false);
 
           if (effect.skip) {
-            setTimeout(() => doAiTurn(effect.deck, effect.discard, effect.color, effect.aHand, effect.pHand), 800);
+            schedule(() => doAiTurn(effect.deck, effect.discard, effect.color, effect.aHand, effect.pHand), 800);
           } else {
             setIsPlayerTurn(true);
           }
         } else {
+          setAiHand(newAiHand);
+          setDeck(remaining);
           setMessage('AI drew a card. Your turn!');
           setIsPlayerTurn(true);
+          setAiThinking(false);
         }
-        setAiThinking(false);
         return;
       }
 
@@ -305,7 +364,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
       }
 
       setHighlightCard(choice.id);
-      setTimeout(() => setHighlightCard(null), 600);
+      schedule(() => setHighlightCard(null), 600);
 
       const effect = applyCardEffect(choice, 'ai', newDiscard, newColor, currentDeck, currentPlayerHand, newAiHand);
 
@@ -316,13 +375,13 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
       setDeck(effect.deck);
       setMessage(effect.message);
       setLastPlayedBy('ai');
+      setAiThinking(false);
 
       if (effect.skip) {
-        setTimeout(() => doAiTurn(effect.deck, effect.discard, effect.color, effect.aHand, effect.pHand), 800);
+        schedule(() => doAiTurn(effect.deck, effect.discard, effect.color, effect.aHand, effect.pHand), 800);
       } else {
         setIsPlayerTurn(true);
       }
-      setAiThinking(false);
     }, 600 + Math.random() * 400);
   };
 
@@ -346,17 +405,17 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
   const playCardWithColor = (card: UnoCard, color: UnoColor) => {
     const newPlayerHand = playerHand.filter(c => c.id !== card.id);
     const newDiscard = [...discardPile, card];
-    setCurrentColor(color);
-    setDiscardPile(newDiscard);
-    setPlayerHand(newPlayerHand);
     setPhase('playing');
     setPendingCard(null);
     setLastPlayedBy('player');
 
     setHighlightCard(card.id);
-    setTimeout(() => setHighlightCard(null), 600);
+    schedule(() => setHighlightCard(null), 600);
 
     if (newPlayerHand.length === 0) {
+      setPlayerHand(newPlayerHand);
+      setDiscardPile(newDiscard);
+      setCurrentColor(color);
       handleEndRound('player');
       return;
     }
@@ -393,13 +452,12 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
     const newPlayerHand = [...playerHand, drawn[0]];
     setDeck(remaining);
     setPlayerHand(newPlayerHand);
-    setMessage(`You drew a card.`);
 
     const drawnCard = drawn[0];
     if (canPlay(drawnCard, topCard, currentColor)) {
       setMessage(`You drew ${cardLabel(drawnCard)} — you can play it!`);
     } else {
-      setMessage('No match. AI\'s turn.');
+      setMessage("No match. AI's turn.");
       setIsPlayerTurn(false);
       doAiTurn(remaining, discardPile, currentColor, aiHand, newPlayerHand);
     }
@@ -412,19 +470,13 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
   };
 
   const startNewRound = () => {
-    nextId = 0;
-    const newDeck = createDeck();
-    const pHand = newDeck.slice(0, 7);
-    const aHand = newDeck.slice(7, 14);
-    const rest = newDeck.slice(14);
-    const starter = rest.find(c => c.type === 'number') || rest[0];
-    const afterStarter = rest.filter(c => c.id !== starter.id);
-
-    setPlayerHand(pHand);
-    setAiHand(aHand);
-    setDeck(afterStarter);
-    setDiscardPile([starter]);
-    setCurrentColor(starter.color as UnoColor);
+    if (endedRef.current) return;
+    const fresh = dealInitial();
+    setPlayerHand(fresh.pHand);
+    setAiHand(fresh.aHand);
+    setDeck(fresh.deck);
+    setDiscardPile(fresh.discard);
+    setCurrentColor(fresh.color);
     setIsPlayerTurn(true);
     setPhase('playing');
     setPendingCard(null);
@@ -434,6 +486,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
   };
 
   const hasPlayableCard = playerHand.some(c => canPlay(c, topCard, currentColor));
+  const isAdverseMessage = message.includes('skip') || (message.includes('draw') && message.includes('You'));
 
   return (
     <div className="h-full flex flex-col items-center justify-between p-2 select-none overflow-hidden">
@@ -444,6 +497,11 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
         <span className="bg-card rounded-lg px-2 py-1 text-accent font-bold">
           {roundWins}/{targetWins} wins
         </span>
+        {losses > 0 && (
+          <span className="bg-card rounded-lg px-2 py-1 text-danger">
+            L: {losses}/{MAX_LOSSES}
+          </span>
+        )}
       </div>
 
       <div className="flex gap-1 justify-center flex-wrap px-2 py-1 max-h-16 overflow-hidden">
@@ -492,7 +550,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
       </div>
 
       <div className="text-center text-xs py-1 min-h-[20px]">
-        <span className={message.includes('skip') || message.includes('draw') && message.includes('You') ? 'text-danger' : 'text-text-muted'}>
+        <span className={isAdverseMessage ? 'text-danger' : 'text-text-muted'}>
           {message}
         </span>
       </div>
@@ -572,7 +630,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
               onClick={startNewRound}
               className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition-all"
             >
-              {roundWins >= targetWins ? 'Finish' : 'Next Round'}
+              Next Round
             </button>
           </div>
         </div>
@@ -581,12 +639,12 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
       {phase === 'game-over' && (
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-card rounded-2xl p-6 shadow-2xl flex flex-col items-center gap-4 max-w-xs">
-            <span className="text-3xl">🏆</span>
+            <span className="text-3xl">{roundWins >= targetWins ? '🏆' : '😔'}</span>
             <span className="text-lg font-bold text-accent">
-              You won {roundWins} rounds!
+              {roundWins >= targetWins ? `You won ${roundWins} rounds!` : `AI won the match`}
             </span>
             <span className="text-sm text-text-muted text-center">
-              Great UNO skills!
+              {roundWins} wins · {losses} losses
             </span>
           </div>
         </div>

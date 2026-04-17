@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 
 interface Country {
@@ -111,12 +111,10 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const difficulty = aiDifficulty || 'medium';
   const numFlags = difficulty === 'hard' ? 8 : difficulty === 'medium' ? 6 : 4;
-  const targetScore = Math.min(stage * 10, 100);
-  
-  const [round, setRound] = useState(0);
+
   const [score, setScore] = useState(0);
   const [selectedFlag, setSelectedFlag] = useState<Country | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
@@ -125,6 +123,25 @@ function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   const [roundComplete, setRoundComplete] = useState(false);
   const [options, setOptions] = useState<{ flags: Country[]; countries: Country[] }>({ flags: [], countries: [] });
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   const allRounds = useMemo(() => {
     const shuffled = shuffle(COUNTRIES);
     return Array.from({ length: 10 }, (_, i) => shuffled.slice(i * numFlags, (i + 1) * numFlags));
@@ -132,15 +149,17 @@ function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
 
   useEffect(() => {
     if (gameRound >= 10) {
+      if (endedRef.current) return;
+      endedRef.current = true;
       const stars = score >= 80 ? 3 : score >= 50 ? 2 : 1;
       onEnd({ score, stars, summary: `Matched ${score / 10} flags correctly!` });
       return;
     }
-    
+
     const roundCountries = allRounds[gameRound] || [];
     const flags = shuffle([...roundCountries]);
     const countries = shuffle([...roundCountries]);
-    
+
     setOptions({ flags, countries });
     setSelectedFlag(null);
     setSelectedCountry(null);
@@ -148,6 +167,26 @@ function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     setRoundComplete(false);
     onMessage('Match the flag to the correct country!');
   }, [gameRound, allRounds, score, onEnd, onMessage]);
+
+  const checkAnswer = useCallback((flag: Country, country: Country) => {
+    const isCorrect = flag.code === country.code;
+    setFeedback(isCorrect ? 'correct' : 'wrong');
+    setRoundComplete(true);
+
+    if (isCorrect) {
+      const newScore = score + 10;
+      setScore(newScore);
+      onScore(10);
+      onMessage('Correct! Great job!');
+    } else {
+      onMessage(`Wrong! The flag ${flag.flag} belongs to ${flag.name}`);
+    }
+
+    // Report progress after every round (correct or wrong)
+    onProgress((gameRound + 1) / 10);
+
+    schedule(() => setGameRound(prev => prev + 1), 1500);
+  }, [score, gameRound, onScore, onMessage, onProgress, schedule]);
 
   const handleFlagClick = (country: Country) => {
     if (feedback || roundComplete) return;
@@ -163,26 +202,6 @@ function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     if (selectedFlag) {
       checkAnswer(selectedFlag, country);
     }
-  };
-
-  const checkAnswer = (flag: Country, country: Country) => {
-    const isCorrect = flag.code === country.code;
-    setFeedback(isCorrect ? 'correct' : 'wrong');
-    setRoundComplete(true);
-
-    if (isCorrect) {
-      const newScore = score + 10;
-      setScore(newScore);
-      onScore(10);
-      onProgress((gameRound + 1) / 10);
-      onMessage('Correct! Great job!');
-    } else {
-      onMessage(`Wrong! The flag ${flag.flag} belongs to ${flag.name}`);
-    }
-
-    setTimeout(() => {
-      setGameRound(prev => prev + 1);
-    }, 1500);
   };
 
   return (

@@ -201,6 +201,12 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
 
     const spawnInterval = setInterval(spawnItem, config.spawnRate);
     const ruleInterval = setInterval(changeRule, config.ruleChange);
+    const startTime = Date.now();
+    const progressInterval = setInterval(() => {
+      if (gameActiveRef.current) {
+        onProgress(Math.min((Date.now() - startTime) / config.duration, 1));
+      }
+    }, 500);
     const gameTimeout = setTimeout(() => {
       gameActiveRef.current = false;
       clearInterval(spawnInterval);
@@ -227,6 +233,7 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
       gameActiveRef.current = false;
       clearInterval(spawnInterval);
       clearInterval(ruleInterval);
+      clearInterval(progressInterval);
       clearTimeout(gameTimeout);
     };
   }, [phase, config, spawnItem, changeRule, onProgress, onEnd]);

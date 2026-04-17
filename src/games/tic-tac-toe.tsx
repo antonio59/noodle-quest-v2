@@ -114,7 +114,9 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       onScore(100);
       onProgress(newWins / targetWins);
       if (newWins >= targetWins) {
-        const stars = newWins >= targetWins + 1 ? 3 : newWins >= targetWins ? 2 : 1;
+        // 3 stars if no losses, 2 stars if few losses, 1 star otherwise
+        const losses = newGames - newWins; // draws count as non-wins
+        const stars = losses === 0 ? 3 : losses <= 1 ? 2 : 1;
         onEnd({ score: newWins * 100, stars, summary: `You won ${newWins} games!` });
       } else {
         onMessage(`Win ${newWins}/${targetWins}!`);

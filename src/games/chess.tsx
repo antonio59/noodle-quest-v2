@@ -70,19 +70,42 @@ function getAiMove(game: Chess, difficulty: string): string | null {
   return bestMove;
 }
 
+const MAX_LOSSES = 3;
+
 function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const [game] = useState(() => new Chess());
-  const [fen, setFen] = useState(game.fen());
+  const [, setFen] = useState(game.fen());
   const [selected, setSelected] = useState<Square | null>(null);
   const [legalMoves, setLegalMoves] = useState<Square[]>([]);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   const [turn, setTurn] = useState<'w' | 'b'>('w');
   const [wins, setWins] = useState(0);
+  const [losses, setLosses] = useState(0);
   const [captured, setCaptured] = useState<{ w: string[]; b: string[] }>({ w: [], b: [] });
-  const [status, setStatus] = useState<string>('');
-  const targetWins = Math.min(stage, 10);
+  const targetWins = Math.max(1, Math.min(stage, 10));
   const difficulty = aiDifficulty || 'medium';
   const [boardSize, setBoardSize] = useState(320);
+
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const winsRef = useRef(0);
+  const lossesRef = useRef(0);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   useEffect(() => {
     const update = () => setBoardSize(Math.min(window.innerWidth - 24, 400));
@@ -91,35 +114,65 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const finalWins = winsRef.current;
+    const finalLosses = lossesRef.current;
+    const stars = outcome === 'win'
+      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
+      : (finalWins > 0 ? 2 : 1);
+    const summary = outcome === 'win'
+      ? `Won ${finalWins} of ${finalWins + finalLosses} chess games!`
+      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
+    onEnd({ score: finalWins * 200, stars, summary });
+  }, [onEnd]);
+
   const resetBoard = useCallback(() => {
+    if (endedRef.current) return;
     game.reset();
     setFen(game.fen());
     setSelected(null);
     setLegalMoves([]);
     setLastMove(null);
     setTurn('w');
-    setStatus('');
     setCaptured({ w: [], b: [] });
     onMessage('Your turn! (White)');
   }, [game, onMessage]);
 
   const doAiMove = useCallback(() => {
-    if (game.isGameOver()) return;
+    if (endedRef.current || game.isGameOver()) return;
     const moveStr = getAiMove(game, difficulty);
     if (!moveStr) return;
     const move = game.move(moveStr);
     if (!move) return;
-    if (move.captured) setCaptured(p => ({ ...p, b: [...p.b, move.captured] }));
+    if (move.captured) {
+      const capturedType = move.captured;
+      setCaptured(p => ({ ...p, b: [...p.b, capturedType] }));
+    }
     setLastMove({ from: move.from as Square, to: move.to as Square });
     setFen(game.fen());
     if (game.isGameOver()) {
-      if (game.isCheckmate()) { setStatus('checkmate'); onMessage('Checkmate — AI wins!'); setTimeout(resetBoard, 2000); }
-      else { setStatus('draw'); onMessage('Draw!'); setTimeout(resetBoard, 2000); }
+      if (game.isCheckmate()) {
+        const newLosses = lossesRef.current + 1;
+        lossesRef.current = newLosses;
+        setLosses(newLosses);
+        onMessage('Checkmate — AI wins!');
+        if (newLosses >= MAX_LOSSES) {
+          schedule(() => finishMatch('lose'), 1500);
+        } else {
+          schedule(resetBoard, 2000);
+        }
+      } else {
+        // draw: neither wins, just reset — doesn't count toward progress
+        onMessage('Draw! New game...');
+        schedule(resetBoard, 2000);
+      }
       return;
     }
     onMessage(game.isCheck() ? 'Check! Your turn' : 'Your turn!');
     setTurn('w');
-  }, [game, difficulty, onMessage, resetBoard]);
+  }, [game, difficulty, onMessage, resetBoard, schedule, finishMatch]);
 
   const handleSquareClick = useCallback((sq: Square) => {
     if (turn !== 'w' || game.isGameOver()) return;
@@ -131,7 +184,10 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       if (target) {
         const move = game.move({ from: selected, to: sq, promotion: 'q' });
         if (move) {
-          if (move.captured) setCaptured(p => ({ ...p, w: [...p.w, move.captured] }));
+          if (move.captured) {
+            const capturedType = move.captured;
+            setCaptured(p => ({ ...p, w: [...p.w, capturedType] }));
+          }
           setLastMove({ from: move.from as Square, to: move.to as Square });
           setFen(game.fen());
           setSelected(null);
@@ -139,25 +195,26 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
 
           if (game.isGameOver()) {
             if (game.isCheckmate()) {
-              const newWins = wins + 1;
+              const newWins = winsRef.current + 1;
+              winsRef.current = newWins;
               setWins(newWins);
               onScore(200);
               onProgress(newWins / targetWins);
               onMessage('Checkmate! You win!');
               if (newWins >= targetWins) {
-                setTimeout(() => onEnd({ score: newWins * 200, stars: 3, summary: `Won ${newWins} chess games!` }), 1500);
+                schedule(() => finishMatch('win'), 1500);
               } else {
-                setTimeout(resetBoard, 2000);
+                schedule(resetBoard, 2000);
               }
               return;
             }
-            onMessage('Draw!');
-            setTimeout(resetBoard, 2000);
+            onMessage('Draw! New game...');
+            schedule(resetBoard, 2000);
             return;
           }
           setTurn('b');
           onMessage('AI thinking...');
-          setTimeout(doAiMove, 300);
+          schedule(doAiMove, 300);
           return;
         }
       }
@@ -185,6 +242,9 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
           AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('')}
         </span>
         <span className="bg-card rounded-lg px-3 py-1 text-accent text-xs font-bold">{wins}/{targetWins}</span>
+        {losses > 0 && (
+          <span className="bg-card rounded-lg px-3 py-1 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
+        )}
       </div>
 
       <svg width={boardSize} height={boardSize} viewBox={`0 0 ${boardSize} ${boardSize}`} className="rounded-lg overflow-hidden shadow-lg">

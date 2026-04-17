@@ -1,27 +1,46 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { generateWordSearch } from '@/lib/puzzle-engine/wordsearch/generator';
 import { EN_GB_CORE_WORDS } from '@/data/words/en-gb-core';
 import { WordSearchGrid } from './WordSearchGrid';
 import { useWordSearch } from './use-wordsearch';
+import type { GameProps } from '@/types';
 
 function makePuzzleId() {
   return `wordsearch_${Date.now()}`;
 }
 
-export default function WordSearchGame() {
+// Map stage (1-10) to grid size and word count for harder puzzles
+const STAGE_CFG: Record<number, { gridSize: number; maxWords: number; directions: ('across' | 'down' | 'reverse' | 'diagonal')[] }> = {
+  1: { gridSize: 8, maxWords: 5, directions: ['across', 'down'] },
+  2: { gridSize: 9, maxWords: 6, directions: ['across', 'down'] },
+  3: { gridSize: 10, maxWords: 7, directions: ['across', 'down'] },
+  4: { gridSize: 10, maxWords: 8, directions: ['across', 'down', 'reverse'] },
+  5: { gridSize: 11, maxWords: 9, directions: ['across', 'down', 'reverse'] },
+  6: { gridSize: 12, maxWords: 10, directions: ['across', 'down', 'reverse'] },
+  7: { gridSize: 12, maxWords: 11, directions: ['across', 'down', 'reverse', 'diagonal'] },
+  8: { gridSize: 13, maxWords: 12, directions: ['across', 'down', 'reverse', 'diagonal'] },
+  9: { gridSize: 14, maxWords: 13, directions: ['across', 'down', 'reverse', 'diagonal'] },
+  10: { gridSize: 15, maxWords: 14, directions: ['across', 'down', 'reverse', 'diagonal'] },
+};
+
+export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }: Partial<GameProps>) {
+  const cfg = STAGE_CFG[stage] ?? STAGE_CFG[1];
   const [puzzleId, setPuzzleId] = useState(() => makePuzzleId());
   const [seed, setSeed] = useState(() => Date.now());
+  const startedAtRef = useRef<number>(Date.now());
+  const lastScoreRef = useRef<number>(0);
+  const endedRef = useRef(false);
 
   const puzzle = useMemo(() => {
     return generateWordSearch(EN_GB_CORE_WORDS, {
-      gridSize: 10,
-      directions: ['across', 'down', 'reverse'],
+      gridSize: cfg.gridSize,
+      directions: cfg.directions,
       seed,
-      maxWords: 8,
+      maxWords: cfg.maxWords,
       allowOverlap: false,
       locale: 'en-GB',
     });
-  }, [seed]);
+  }, [seed, cfg.gridSize, cfg.maxWords, cfg.directions]);
 
   const {
     found,
@@ -34,9 +53,41 @@ export default function WordSearchGame() {
     remaining,
   } = useWordSearch(puzzle, puzzleId);
 
+  // Report score + progress as words are found; call onEnd when all words found.
+  useEffect(() => {
+    const totalWords = puzzle.placements.length;
+    const foundCount = found.size;
+    if (totalWords === 0) return;
+
+    // Award +20 per newly found word
+    const delta = foundCount - lastScoreRef.current;
+    if (delta > 0 && onScore) {
+      onScore(delta * 20);
+    }
+    lastScoreRef.current = foundCount;
+
+    if (onProgress) onProgress(foundCount / totalWords);
+
+    if (completed && !endedRef.current && onEnd) {
+      endedRef.current = true;
+      const elapsedSec = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
+      // Stars: 3 if under 30s/word, 2 if under 60s/word, else 1
+      const perWord = elapsedSec / totalWords;
+      const stars = perWord < 30 ? 3 : perWord < 60 ? 2 : 1;
+      onEnd({
+        score: foundCount * 20,
+        stars,
+        summary: `Found all ${totalWords} words in ${elapsedSec}s!`,
+      });
+    }
+  }, [found, completed, puzzle.placements.length, onScore, onProgress, onEnd]);
+
   const handleNewGame = () => {
     setPuzzleId(makePuzzleId());
     setSeed(Date.now());
+    startedAtRef.current = Date.now();
+    lastScoreRef.current = 0;
+    endedRef.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {

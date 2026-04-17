@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+
+const MAX_LOSSES = 3;
 
 type Piece = { color: 'red' | 'black'; king: boolean };
 type Board = (Piece | null)[][];
@@ -211,9 +213,31 @@ function CheckersGame({
   const [turn, setTurn] = useState<'red' | 'black'>('red');
   const [multiJumpPos, setMultiJumpPos] = useState<Pos | null>(null);
   const [wins, setWins] = useState(0);
+  const [losses, setLosses] = useState(0);
   const [boardSize, setBoardSize] = useState(320);
-  const targetWins = Math.min(stage + 1, 10);
+  const targetWins = Math.max(1, Math.min(stage + 1, 10));
   const diff = aiDifficulty || 'medium';
+
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const winsRef = useRef(0);
+  const lossesRef = useRef(0);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   useEffect(() => {
     const u = () => setBoardSize(Math.min(window.innerWidth - 24, 400));
@@ -222,7 +246,22 @@ function CheckersGame({
     return () => window.removeEventListener('resize', u);
   }, []);
 
+  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const finalWins = winsRef.current;
+    const finalLosses = lossesRef.current;
+    const stars = outcome === 'win'
+      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
+      : (finalWins > 0 ? 2 : 1);
+    const summary = outcome === 'win'
+      ? `Won ${finalWins} of ${finalWins + finalLosses} checkers games!`
+      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
+    onEnd({ score: finalWins * 150, stars, summary });
+  }, [onEnd]);
+
   const resetBoard = useCallback(() => {
+    if (endedRef.current) return;
     setBoard(initBoard());
     setSelected(null);
     setTargets([]);
@@ -233,33 +272,40 @@ function CheckersGame({
 
   const handleEnd = useCallback(
     (b: Board): boolean => {
+      if (endedRef.current) return true;
       const bk = countPieces(b, 'black'),
         rd = countPieces(b, 'red');
       if (bk === 0 || allMoves(b, 'black').length === 0) {
-        const w = wins + 1;
+        const w = winsRef.current + 1;
+        winsRef.current = w;
         setWins(w);
         onScore(150);
         onProgress(w / targetWins);
         if (w >= targetWins) {
-          onEnd({
-            score: w * 150,
-            stars: 3,
-            summary: `Won ${w} checkers games!`,
-          });
+          onMessage('You won the match!');
+          schedule(() => finishMatch('win'), 1200);
         } else {
           onMessage(`You win! (${w}/${targetWins})`);
-          setTimeout(resetBoard, 1500);
+          schedule(resetBoard, 1500);
         }
         return true;
       }
       if (rd === 0 || allMoves(b, 'red').length === 0) {
-        onMessage('You lost — try again!');
-        setTimeout(resetBoard, 1500);
+        const l = lossesRef.current + 1;
+        lossesRef.current = l;
+        setLosses(l);
+        if (l >= MAX_LOSSES) {
+          onMessage('AI won the match!');
+          schedule(() => finishMatch('lose'), 1200);
+        } else {
+          onMessage(`You lost — ${l}/${MAX_LOSSES} losses.`);
+          schedule(resetBoard, 1500);
+        }
         return true;
       }
       return false;
     },
-    [wins, targetWins, onScore, onProgress, onMessage, onEnd, resetBoard],
+    [targetWins, onScore, onProgress, onMessage, resetBoard, schedule, finishMatch],
   );
 
   const doAiTurn = useCallback(
@@ -267,13 +313,14 @@ function CheckersGame({
       onMessage('AI thinking...');
 
       const step = (cb: Board, pos: Pos | null, wasJump: boolean) => {
+        if (endedRef.current) return;
         if (wasJump && pos) {
           const more = getJumps(cb, pos[0], pos[1]);
           if (more.length > 0) {
             const pick = more[Math.floor(Math.random() * more.length)];
             const nb = applyMove(cb, pos, pick);
             setBoard(nb);
-            setTimeout(() => step(nb, pick, true), 350);
+            schedule(() => step(nb, pick, true), 350);
             return;
           }
         }
@@ -282,7 +329,7 @@ function CheckersGame({
         onMessage('Your turn!');
       };
 
-      setTimeout(() => {
+      schedule(() => {
         const m = aiPick(b, diff);
         if (!m) {
           handleEnd(b);
@@ -290,10 +337,10 @@ function CheckersGame({
         }
         const nb = applyMove(b, m.from, m.to);
         setBoard(nb);
-        setTimeout(() => step(nb, m.to, m.jump), 350);
+        schedule(() => step(nb, m.to, m.jump), 350);
       }, 400);
     },
-    [diff, onMessage, handleEnd],
+    [diff, onMessage, handleEnd, schedule],
   );
 
   const handleClick = useCallback(
@@ -372,6 +419,11 @@ function CheckersGame({
         <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
           {wins}/{targetWins}
         </span>
+        {losses > 0 && (
+          <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">
+            L: {losses}/{MAX_LOSSES}
+          </span>
+        )}
       </div>
 
       <svg

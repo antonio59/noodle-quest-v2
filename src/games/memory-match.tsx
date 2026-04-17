@@ -56,6 +56,13 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const [feedback, setFeedback] = useState('');
 
   const checkingRef = useRef(false);
+  // Refs keep the timer closure fresh — effect only reruns on phase change
+  const matchedRef = useRef(matched);
+  const movesRef = useRef(moves);
+  const scoreRef = useRef(score);
+  useEffect(() => { matchedRef.current = matched; }, [matched]);
+  useEffect(() => { movesRef.current = moves; }, [moves]);
+  useEffect(() => { scoreRef.current = score; }, [score]);
 
   // Timer
   useEffect(() => {
@@ -64,7 +71,7 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(id);
-          finishGame(false, matched, moves, score);
+          finishGame(false, matchedRef.current, movesRef.current, scoreRef.current);
           return 0;
         }
         return prev - 1;

@@ -1,27 +1,46 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { generateCrossword } from '@/lib/puzzle-engine/crossword/generator';
 import { EN_GB_CORE_WORDS, EN_GB_CORE_CLUES } from '@/data/words/en-gb-core';
 import { CrosswordGrid } from './CrosswordGrid';
 import { useCrossword } from './use-crossword';
+import type { GameProps } from '@/types';
 
 function makePuzzleId() {
   return `crossword_${Date.now()}`;
 }
 
-export default function CrosswordGame() {
+// Stage difficulty ramp
+const STAGE_CFG: Record<number, { gridSize: number; maxWords: number; targetDifficulty: 1 | 2 | 3 }> = {
+  1: { gridSize: 7, maxWords: 5, targetDifficulty: 1 },
+  2: { gridSize: 8, maxWords: 6, targetDifficulty: 1 },
+  3: { gridSize: 8, maxWords: 7, targetDifficulty: 2 },
+  4: { gridSize: 9, maxWords: 8, targetDifficulty: 2 },
+  5: { gridSize: 9, maxWords: 9, targetDifficulty: 2 },
+  6: { gridSize: 10, maxWords: 10, targetDifficulty: 2 },
+  7: { gridSize: 10, maxWords: 11, targetDifficulty: 3 },
+  8: { gridSize: 11, maxWords: 12, targetDifficulty: 3 },
+  9: { gridSize: 11, maxWords: 13, targetDifficulty: 3 },
+  10: { gridSize: 12, maxWords: 14, targetDifficulty: 3 },
+};
+
+export default function CrosswordGame({ stage = 1, onScore, onProgress, onEnd }: Partial<GameProps>) {
+  const cfg = STAGE_CFG[stage] ?? STAGE_CFG[1];
   const [puzzleId, setPuzzleId] = useState(() => makePuzzleId());
   const [seed, setSeed] = useState(() => Date.now());
+  const startedAtRef = useRef<number>(Date.now());
+  const lastFilledRef = useRef<number>(0);
+  const endedRef = useRef(false);
 
   const puzzle = useMemo(() => {
     return generateCrossword(EN_GB_CORE_WORDS, EN_GB_CORE_CLUES, {
-      gridSize: 9,
+      gridSize: cfg.gridSize,
       seed,
-      maxWords: 8,
+      maxWords: cfg.maxWords,
       minCrossings: 1,
-      targetDifficulty: 2,
+      targetDifficulty: cfg.targetDifficulty,
       locale: 'en-GB',
     });
-  }, [seed]);
+  }, [seed, cfg.gridSize, cfg.maxWords, cfg.targetDifficulty]);
 
   const {
     grid,
@@ -42,9 +61,45 @@ export default function CrosswordGame() {
   const across = puzzle.words.filter(w => w.direction === 'across');
   const down = puzzle.words.filter(w => w.direction === 'down');
 
+  // Count non-empty answer cells across all placed words to track progress and score.
+  useEffect(() => {
+    let totalCells = 0;
+    let filledCells = 0;
+    for (const w of puzzle.words) {
+      for (let i = 0; i < w.word.length; i++) {
+        const r = w.direction === 'across' ? w.row : w.row + i;
+        const c = w.direction === 'across' ? w.col + i : w.col;
+        totalCells++;
+        if (grid[r]?.[c]?.value) filledCells++;
+      }
+    }
+    if (totalCells === 0) return;
+
+    const delta = filledCells - lastFilledRef.current;
+    if (delta > 0 && onScore) onScore(delta * 5);
+    lastFilledRef.current = filledCells;
+
+    if (onProgress) onProgress(filledCells / totalCells);
+
+    if (completed && !endedRef.current && onEnd) {
+      endedRef.current = true;
+      const elapsedSec = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
+      const perCell = elapsedSec / totalCells;
+      const stars = perCell < 5 ? 3 : perCell < 10 ? 2 : 1;
+      onEnd({
+        score: filledCells * 5 + 50,
+        stars,
+        summary: `Solved in ${elapsedSec}s!`,
+      });
+    }
+  }, [grid, completed, puzzle.words, onScore, onProgress, onEnd]);
+
   const handleNewGame = () => {
     setPuzzleId(makePuzzleId());
     setSeed(Date.now());
+    startedAtRef.current = Date.now();
+    lastFilledRef.current = 0;
+    endedRef.current = false;
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 // ── Tile data ──────────────────────────────────────────────────────────
@@ -17,25 +17,29 @@ const CENTER = 7;
 
 type BonusType = 'TW' | 'DW' | 'TL' | 'DL' | 'ST';
 
-// Build the standard bonus map (symmetric)
+// Build the standard bonus map (symmetric across both axes AND the main diagonals)
 function buildBonusMap(): Map<string, BonusType> {
   const m = new Map<string, BonusType>();
+  // 8-way symmetry: mirror across both axes + transpose so (7,0) etc are covered
   const set = (r: number, c: number, b: BonusType) => {
-    // Mirror across both axes for full symmetry
-    for (const [mr, mc] of [[r,c],[r,14-c],[14-r,c],[14-r,14-c]]) {
+    for (const [mr, mc] of [
+      [r, c], [r, 14 - c], [14 - r, c], [14 - r, 14 - c],
+      [c, r], [c, 14 - r], [14 - c, r], [14 - c, 14 - r],
+    ]) {
       m.set(`${mr},${mc}`, b);
     }
   };
-  // Triple Word
-  set(0, 0, 'TW'); set(0, 7, 'TW');
-  // Double Word (diagonal)
+  // Triple Word — corners + midpoints of every edge (8 total)
+  set(0, 0, 'TW');
+  set(0, 7, 'TW');
+  // Double Word (diagonal from corners inward)
   set(1, 1, 'DW'); set(2, 2, 'DW'); set(3, 3, 'DW'); set(4, 4, 'DW');
   // Triple Letter
   set(1, 5, 'TL'); set(5, 1, 'TL'); set(5, 5, 'TL');
   // Double Letter
   set(0, 3, 'DL'); set(2, 6, 'DL'); set(3, 0, 'DL'); set(3, 7, 'DL');
   set(6, 2, 'DL'); set(6, 6, 'DL'); set(7, 3, 'DL');
-  // Center
+  // Center star
   m.set(`${CENTER},${CENTER}`, 'ST');
   return m;
 }
@@ -349,7 +353,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
   };
 
   return (
-    <div className="h-full flex flex-col items-center px-2 pt-1 pb-2 overflow-hidden">
+    <div className="h-full w-full flex flex-col items-center px-2 pt-1 pb-2 gap-1.5 overflow-hidden">
       {/* Score bar */}
       <div className="flex gap-1.5 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
         <span className="bg-accent/20 text-accent rounded-md px-1.5 py-0.5 font-bold">{totalScore} pts</span>
@@ -359,17 +363,21 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
         {lastWord && <span className="text-accent font-medium">{lastWord}</span>}
       </div>
 
-      {/* Board — takes all remaining vertical space, stays square */}
-      <div className="flex-1 min-h-0 flex items-center justify-center w-full py-1">
+      {/* Board — grid centering lets a square fit inside a flex column correctly.
+         With aspect-ratio plus max-width+max-height, the browser scales the square down
+         to whichever dimension is smaller, guaranteeing the full 15×15 is visible. */}
+      <div
+        className="flex-1 min-h-0 w-full overflow-hidden"
+        style={{ display: 'grid', placeItems: 'center' }}
+      >
         <div
           className="grid gap-[1px] bg-white/5 rounded-md overflow-hidden"
           style={{
-            gridTemplateColumns: `repeat(${SIZE}, 1fr)`,
-            /* Square: constrained by the smaller of available height or width */
-            width: 'min(100%, 100%)',
-            maxWidth: '420px',
+            gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${SIZE}, minmax(0, 1fr))`,
+            aspectRatio: '1 / 1',
+            maxWidth: '100%',
             maxHeight: '100%',
-            aspectRatio: '1',
           }}
         >
           {board.map((row, r) => row.map((_cell, c) => {

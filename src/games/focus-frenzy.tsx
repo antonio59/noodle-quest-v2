@@ -131,9 +131,13 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     if (phase !== 'playing') return;
 
     const spawnTimer = setInterval(spawnOrb, config.spawnRate);
+    const startedAt = Date.now();
     const progressTimer = setInterval(() => {
-      if (gameActiveRef.current) onProgress(0.5);
-    }, 1000);
+      if (gameActiveRef.current) {
+        const elapsed = (Date.now() - startedAt) / config.duration;
+        onProgress(Math.min(elapsed, 1));
+      }
+    }, 250);
 
     const gameTimer = setTimeout(() => {
       gameActiveRef.current = false;

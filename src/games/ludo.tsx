@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 
 /**
@@ -97,31 +97,78 @@ function cellType(r: number, c: number): string | null {
   return null;
 }
 
+const MAX_LOSSES = 3;
+
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const [pPos, setPPos] = useState(-1);
   const [aPos, setAPos] = useState(-1);
   const [turn, setTurn] = useState<'p' | 'a'>('p');
   const [dice, setDice] = useState<number | null>(null);
   const [wins, setWins] = useState(0);
+  const [losses, setLosses] = useState(0);
   const [over, setOver] = useState(false);
-  const target = Math.min(stage, 10);
+  const target = Math.max(1, Math.min(stage, 10));
   const diff = aiDifficulty || 'medium';
 
   // Blue AI enters at position 26 (its entry square) instead of 0
   const BLUE_ENTRY = 26;
 
-  useEffect(() => {
-    onMessage('Roll a 6 to enter the track!');
+  // Refs to avoid stale closures inside chained setTimeouts
+  const pPosRef = useRef(-1);
+  const aPosRef = useRef(-1);
+  const winsRef = useRef(0);
+  const lossesRef = useRef(0);
+  const overRef = useRef(false);
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
   }, []);
 
-  const reset = () => {
-    setPPos(-1);
-    setAPos(-1);
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    onMessage('Roll a 6 to enter the track!');
+  }, [onMessage]);
+
+  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const fw = winsRef.current;
+    const fl = lossesRef.current;
+    const stars = outcome === 'win'
+      ? (fl === 0 ? 3 : fl === 1 ? 2 : 1)
+      : (fw > 0 ? 2 : 1);
+    const summary = outcome === 'win'
+      ? `Won ${fw} of ${fw + fl} games of Ludo!`
+      : `AI won the match — ${fw} wins vs ${fl} losses.`;
+    onEnd({ score: fw * 100, stars, summary });
+  }, [onEnd]);
+
+  const updatePPos = (v: number) => { pPosRef.current = v; setPPos(v); };
+  const updateAPos = (v: number) => { aPosRef.current = v; setAPos(v); };
+  const updateOver = (v: boolean) => { overRef.current = v; setOver(v); };
+
+  const reset = useCallback(() => {
+    if (endedRef.current) return;
+    updatePPos(-1);
+    updateAPos(-1);
     setTurn('p');
     setDice(null);
-    setOver(false);
+    updateOver(false);
     onMessage('New round! Roll a 6 to enter.');
-  };
+  }, [onMessage]);
 
   const advanceAI = (pos: number, steps: number): number => {
     if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
@@ -141,12 +188,14 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   };
 
   const doAi = () => {
-    if (over) return;
-    const d = aiRoll(pPos, aPos, diff);
+    if (endedRef.current || overRef.current) return;
+    const curP = pPosRef.current;
+    const curA = aPosRef.current;
+    const d = aiRoll(curP, curA, diff);
     setDice(d);
-    const np = advanceAI(aPos, d);
+    const np = advanceAI(curA, d);
 
-    if (np === aPos && aPos !== -1) {
+    if (np === curA && curA !== -1) {
       onMessage(`AI rolled ${d} — can't move.`);
       setTurn('p');
       return;
@@ -157,65 +206,76 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       return;
     }
 
-    setAPos(np);
+    updateAPos(np);
 
     // Capture check (only on main track)
-    if (np >= 0 && np < 52 && np === pPos) {
-      setPPos(-1);
+    if (np >= 0 && np < 52 && np === curP) {
+      updatePPos(-1);
       onMessage(`AI rolled ${d} — captured you!`);
     } else if (np >= 58) {
-      setOver(true);
-      onMessage('AI reached home!');
-      setTimeout(reset, 1500);
+      updateOver(true);
+      const newLosses = lossesRef.current + 1;
+      lossesRef.current = newLosses;
+      setLosses(newLosses);
+      if (newLosses >= MAX_LOSSES) {
+        onMessage('AI won the match!');
+        schedule(() => finishMatch('lose'), 1500);
+      } else {
+        onMessage(`AI reached home — ${newLosses}/${MAX_LOSSES} losses.`);
+        schedule(reset, 1500);
+      }
       return;
     } else {
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
       onMessage(`AI rolled ${d} → ${label}`);
     }
 
-    if (d === 6 && !over) {
+    if (d === 6 && !overRef.current) {
       onMessage('AI rolled 6 — bonus roll!');
-      setTimeout(doAi, 700);
+      schedule(doAi, 700);
       return;
     }
     setTurn('p');
   };
 
   const handleRoll = () => {
-    if (over || turn !== 'p') return;
+    if (endedRef.current || overRef.current || turn !== 'p') return;
+    const curP = pPosRef.current;
+    const curA = aPosRef.current;
     const d = rollDie();
     setDice(d);
-    const np = advance(pPos, d);
+    const np = advance(curP, d);
 
-    if (np === pPos && pPos !== -1) {
+    if (np === curP && curP !== -1) {
       onMessage(`Rolled ${d} — can't overshoot!`);
       setTurn('a');
-      setTimeout(doAi, 800);
+      schedule(doAi, 800);
       return;
     }
     if (np === -1) {
       onMessage(`Rolled ${d} — need a 6!`);
       setTurn('a');
-      setTimeout(doAi, 800);
+      schedule(doAi, 800);
       return;
     }
 
-    setPPos(np);
+    updatePPos(np);
 
-    if (np >= 0 && np < 52 && np === aPos) {
-      setAPos(-1);
+    if (np >= 0 && np < 52 && np === curA) {
+      updateAPos(-1);
       onMessage(`Rolled ${d} — captured AI!`);
     } else if (np >= 58) {
-      const w = wins + 1;
+      const w = winsRef.current + 1;
+      winsRef.current = w;
       setWins(w);
       onScore(100);
       onProgress(w / target);
       if (w >= target) {
-        setOver(true);
-        onEnd({ score: w * 100, stars: 3, summary: `Won ${w} games of Ludo!` });
+        updateOver(true);
+        schedule(() => finishMatch('win'), 1000);
       } else {
         onMessage('You reached home!');
-        setTimeout(reset, 1500);
+        schedule(reset, 1500);
       }
       return;
     } else {
@@ -223,12 +283,12 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
       onMessage(`Rolled ${d} → ${label}`);
     }
 
-    if (d === 6 && !over) {
+    if (d === 6 && !overRef.current) {
       onMessage('Rolled 6 — bonus roll!');
       return;
     }
     setTurn('a');
-    setTimeout(doAi, 800);
+    schedule(doAi, 800);
   };
 
   const px = (col: number) => col * C;
@@ -377,6 +437,9 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
           AI: {posLabel(aPos)}
         </span>
         <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{wins}/{target}</span>
+        {losses > 0 && (
+          <span className="bg-card rounded-lg px-2 py-0.5 text-danger">L: {losses}/{MAX_LOSSES}</span>
+        )}
       </div>
 
       {/* Board */}

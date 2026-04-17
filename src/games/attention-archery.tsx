@@ -123,9 +123,13 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
     if (phase !== 'playing') return;
 
     const spawnTimer = setInterval(spawnTarget, config.spawnRate);
+    const startTime = Date.now();
     const progressTimer = setInterval(() => {
-      if (gameActiveRef.current) onProgress(0.5);
-    }, 1000);
+      if (gameActiveRef.current) {
+        const elapsed = (Date.now() - startTime) / config.duration;
+        onProgress(Math.min(elapsed, 1));
+      }
+    }, 500);
 
     const gameTimer = setTimeout(() => {
       gameActiveRef.current = false;

@@ -54,6 +54,10 @@ function FillBlankGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
     // Clear error on this cell
     setWrong(prev => { const n = new Set(prev); n.delete(idx); return n; });
 
+    // Report progress based on filled blanks
+    const filled = blanks.filter(b => !!updated[b]).length;
+    onProgress(filled / blanks.length);
+
     // Auto-advance to next blank
     if (letter) {
       const remaining = blanks.filter(b => b > idx && !updated[b]);

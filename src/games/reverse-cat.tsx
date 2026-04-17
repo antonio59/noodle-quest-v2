@@ -50,7 +50,43 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   const [feedback, setFeedback] = useState('');
   const [feedbackColor, setFeedbackColor] = useState('#a78bfa');
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  const finishGame = useCallback((finalScore: number, rounds: number, perfect: boolean) => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const ratio = rounds / config.maxRounds;
+    const stars = perfect ? 3 : ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
+    let summary = perfect
+      ? `Perfect reverse memory! All ${config.maxRounds} rounds! 🏆`
+      : `You completed ${rounds} round${rounds !== 1 ? 's' : ''}! `;
+    if (!perfect) {
+      if (stars === 3) summary += 'Incredible reverse memory! Your brain works backwards! 🌟';
+      else if (stars === 2) summary += 'Good reversal! Try mentally flipping the sequence before tapping.';
+      else summary += 'Keep trying! Remember: the LAST color you see is the FIRST you tap.';
+    }
+    onEnd({ score: finalScore, stars, summary });
+  }, [config.maxRounds, onEnd]);
+
   const playSequence = useCallback((seq: number[]) => {
+    if (endedRef.current) return;
     setPhase('watching');
     setStatusText('👀 Watch the pattern...');
     setStatusColor('#67e8f9');
@@ -59,20 +95,20 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     setPlayerIndex(0);
 
     seq.forEach((colorIdx, i) => {
-      setTimeout(() => {
+      schedule(() => {
         setActiveIndex(colorIdx);
-        setTimeout(() => setActiveIndex(null), config.speed * 0.4);
+        schedule(() => setActiveIndex(null), config.speed * 0.4);
       }, i * config.speed);
     });
 
-    setTimeout(() => {
+    schedule(() => {
       setPhase('playing');
       setStatusText('🔄 Your turn! Tap in REVERSE order!');
       setStatusColor('#4ade80');
       setFeedback('Last color shown = your FIRST tap');
       setFeedbackColor('#4ade80');
     }, seq.length * config.speed);
-  }, [config.speed]);
+  }, [config.speed, schedule]);
 
   const startGame = useCallback(() => {
     const seq: number[] = [];
@@ -82,46 +118,38 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     setSequence(seq);
     setScore(0);
     setPlayerIndex(0);
-    // 3-2-1 countdown before showing the sequence
     setStatusText('3...');
     setStatusColor('#fbbf24');
-    setTimeout(() => { setStatusText('2...'); }, 800);
-    setTimeout(() => { setStatusText('1...'); }, 1600);
-    setTimeout(() => {
+    schedule(() => { setStatusText('2...'); }, 800);
+    schedule(() => { setStatusText('1...'); }, 1600);
+    schedule(() => {
       setStatusText('Watch carefully...');
       setStatusColor('#67e8f9');
       playSequence(seq);
     }, 2400);
-  }, [config, playSequence]);
+  }, [config, playSequence, schedule]);
 
   const nextRound = useCallback((currentSeq: number[]) => {
     const newSeq = [...currentSeq, Math.floor(Math.random() * config.colors)];
     setSequence(newSeq);
     const currentRound = newSeq.length - config.startLength + 1;
     onProgress(currentRound / config.maxRounds);
-    setTimeout(() => playSequence(newSeq), 700);
-  }, [config, playSequence, onProgress]);
+    schedule(() => playSequence(newSeq), 700);
+  }, [config, playSequence, onProgress, schedule]);
 
   const handleTap = useCallback((index: number) => {
     if (phase !== 'playing') return;
 
     setActiveIndex(index);
-    setTimeout(() => setActiveIndex(null), 250);
+    schedule(() => setActiveIndex(null), 250);
 
-    // Player taps in reverse: sequence[last], sequence[last-1], ...
     const expectedIndex = sequence.length - 1 - playerIndex;
     if (index !== sequence[expectedIndex]) {
       setPhase('done');
       setStatusText('❌ Oops! Wrong button!');
       setStatusColor('#ff6e6c');
-
       const rounds = sequence.length - config.startLength;
-      const stars = rounds >= config.maxRounds - 1 ? 3 : rounds >= Math.floor(config.maxRounds / 2) ? 2 : 1;
-      let summary = `You completed ${rounds} round${rounds !== 1 ? 's' : ''}! `;
-      if (stars === 3) summary += 'Incredible reverse memory! Your brain works backwards! 🌟';
-      else if (stars === 2) summary += 'Good reversal! Try mentally flipping the sequence before tapping.';
-      else summary += 'Keep trying! Remember: the LAST color you see is the FIRST you tap.';
-      onEnd({ score, stars, summary });
+      finishGame(score, rounds, false);
       return;
     }
 
@@ -135,15 +163,11 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
 
     if (newPlayerIndex >= sequence.length) {
       const currentRound = sequence.length - config.startLength + 1;
-
       if (currentRound >= config.maxRounds) {
         setPhase('done');
         setStatusText('🎉 Amazing! You won!');
-        onEnd({
-          score: newScore + 100,
-          stars: 3,
-          summary: `Perfect reverse memory! You completed all ${config.maxRounds} rounds! 🏆`,
-        });
+        onProgress(1);
+        finishGame(newScore + 100, currentRound, true);
       } else {
         setStatusText('✨ Perfect! Get ready for more...');
         setFeedback('+1 color coming up!');
@@ -151,7 +175,7 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
         nextRound(sequence);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, onScore, onEnd, nextRound]);
+  }, [phase, sequence, playerIndex, score, config, onScore, onProgress, nextRound, schedule, finishGame]);
 
   if (phase === 'intro') {
     return (

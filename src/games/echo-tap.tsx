@@ -87,7 +87,7 @@ function getIntervals(times: number[]) {
   return intervals;
 }
 
-function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const beatInterval = 60000 / config.bpm;
   const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
@@ -110,6 +110,27 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   const tapTimesRef = useRef<number[]>([]);
   const beatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      if (beatTimerRef.current) clearInterval(beatTimerRef.current);
+      if (audioCtxRef.current) audioCtxRef.current.close();
+    };
+  }, []);
+
   const getAudioCtx = useCallback(() => {
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -117,18 +138,38 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     return audioCtxRef.current;
   }, []);
 
+  const finishGame = useCallback((finalScore: number, roundsCompleted: number, perfect: boolean) => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const ratio = roundsCompleted / ROUNDS_NEEDED;
+    const scoreStars = finalScore >= 120 ? 3 : finalScore >= 70 ? 2 : 1;
+    const stars = perfect ? scoreStars : ratio >= 0.75 ? Math.min(scoreStars, 2) : 1;
+    let summary = `Final score: ${finalScore}. `;
+    if (stars === 3) summary += 'Incredible rhythm! You have perfect timing! 🥁';
+    else if (stars === 2) summary += 'Good beat! Practice counting along to improve your timing.';
+    else summary += 'Rhythm takes practice! Try tapping your foot to the beat first.';
+    onEnd({ score: finalScore, stars, summary });
+  }, [onEnd]);
+
   const playBeatSequence = useCallback(() => {
+    if (endedRef.current) return;
     setPhase('listening');
     setTapBtnActive(false);
     setStatusText('🔊 Listen to the rhythm...');
     setStatusColor('#67e8f9');
     setFeedback('');
-        setBeatDots(Array(config.beats).fill('off') as Array<'off' | 'on' | 'tap'>);
+    setBeatDots(Array(config.beats).fill('off') as Array<'off' | 'on' | 'tap'>);
+    tapTimesRef.current = [];
 
-        const beatTimes: number[] = [];
+    const beatTimes: number[] = [];
     let beatCount = 0;
 
+    if (beatTimerRef.current) clearInterval(beatTimerRef.current);
     beatTimerRef.current = setInterval(() => {
+      if (endedRef.current) {
+        if (beatTimerRef.current) clearInterval(beatTimerRef.current);
+        return;
+      }
       if (beatCount >= config.beats) {
         if (beatTimerRef.current) clearInterval(beatTimerRef.current);
         patternTimesRef.current = beatTimes;
@@ -153,7 +194,7 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
       playBeatSound(getAudioCtx(), false);
 
       const thisBeat = beatCount;
-      setTimeout(() => {
+      schedule(() => {
         setBeatDots(prev => {
           const next = [...prev] as ('off' | 'on' | 'tap')[];
           next[thisBeat] = 'off';
@@ -163,16 +204,17 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
 
       beatCount++;
     }, beatInterval);
-  }, [config, beatInterval, getAudioCtx]);
+  }, [config, beatInterval, getAudioCtx, schedule]);
 
   const startGame = useCallback(() => {
     setScore(0);
     setRound(1);
     setPhase('listening');
-    setTimeout(playBeatSequence, 1000);
-  }, [playBeatSequence]);
+    schedule(playBeatSequence, 1000);
+  }, [playBeatSequence, schedule]);
 
   const advanceRound = useCallback((currentScore: number) => {
+    if (endedRef.current) return;
     const currentRound = round;
     onProgress(currentRound / ROUNDS_NEEDED);
 
@@ -180,22 +222,17 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
       setPhase('done');
       setStatusText('🎉 Great rhythm!');
       setStatusColor('#c084fc');
-
-      const stars = currentScore >= 120 ? 3 : currentScore >= 70 ? 2 : 1;
-      let summary = `Final score: ${currentScore}. `;
-      if (stars === 3) summary += 'Incredible rhythm! You have perfect timing! 🥁';
-      else if (stars === 2) summary += 'Good beat! Practice counting along to improve your timing.';
-      else summary += 'Rhythm takes practice! Try tapping your foot to the beat first.';
-      onEnd({ score: currentScore, stars, summary });
+      finishGame(currentScore, currentRound, true);
     } else {
       setStatusText('✨ Next round...');
       setPhase('evaluating');
       setRound(r => r + 1);
-      setTimeout(playBeatSequence, 1200);
+      schedule(playBeatSequence, 1200);
     }
-  }, [round, onProgress, onEnd, playBeatSequence]);
+  }, [round, onProgress, playBeatSequence, schedule, finishGame]);
 
   const evaluateRhythm = useCallback((currentScore: number) => {
+    if (endedRef.current) return;
     setPhase('evaluating');
     setShowTimingBar(false);
 
@@ -260,49 +297,37 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     tapTimesRef.current.push(now);
 
     setTapBtnActive(false);
-    // Brief visual feedback
     setTapBtnActive(true);
 
     playBeatSound(getAudioCtx(), true);
 
-    // Light up next beat dot
     const currentBeat = tapTimesRef.current.length - 1;
     setBeatDots(prev => {
       const next = [...prev] as ('off' | 'on' | 'tap')[];
       if (currentBeat < next.length) {
         next[currentBeat] = 'tap';
-        setTimeout(() => {
-          setBeatDots(p => {
-            const n = [...p] as ('off' | 'on' | 'tap')[];
-            if (currentBeat < n.length) n[currentBeat] = 'off';
-            return n;
-          });
-        }, 200);
       }
       return next;
     });
+    schedule(() => {
+      setBeatDots(p => {
+        const n = [...p] as ('off' | 'on' | 'tap')[];
+        if (currentBeat < n.length) n[currentBeat] = 'off';
+        return n;
+      });
+    }, 200);
 
-    // Update timing bar
     if (patternTimesRef.current.length > 1 && currentBeat > 0) {
       const progress = currentBeat / config.beats;
       setTimingBarPct(progress * 100);
     }
 
-    // Check if done tapping
     if (tapTimesRef.current.length >= config.beats) {
       setTapBtnActive(false);
       setShowTimingBar(false);
       evaluateRhythm(score);
     }
-  }, [phase, tapBtnActive, config, getAudioCtx, evaluateRhythm, score]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (beatTimerRef.current) clearInterval(beatTimerRef.current);
-      if (audioCtxRef.current) audioCtxRef.current.close();
-    };
-  }, []);
+  }, [phase, tapBtnActive, config, getAudioCtx, evaluateRhythm, score, schedule]);
 
   if (phase === 'intro') {
     return (

@@ -38,29 +38,49 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   const generateSequence = useCallback((length: number) => {
     return Array.from({ length }, () => Math.floor(Math.random() * config.colors));
   }, [config.colors]);
 
   const playSequence = useCallback((seq: number[]) => {
+    if (endedRef.current) return;
     setPhase('watching');
     onMessage('👀 Watch the pattern...');
     setFeedback('');
     setPlayerIndex(0);
 
     seq.forEach((colorIdx, i) => {
-      setTimeout(() => {
+      schedule(() => {
         setActiveIndex(colorIdx);
-        setTimeout(() => setActiveIndex(null), config.speed * 0.4);
+        schedule(() => setActiveIndex(null), config.speed * 0.4);
       }, i * config.speed);
     });
 
-    setTimeout(() => {
+    schedule(() => {
       setPhase('playing');
       onMessage('🖐️ Your turn! Repeat it!');
       setFeedback(`Tap ${seq.length} colors in the same order`);
     }, seq.length * config.speed);
-  }, [config.speed, onMessage]);
+  }, [config.speed, onMessage, schedule]);
 
   const startGame = useCallback(() => {
     const seq = generateSequence(config.startLength);
@@ -68,24 +88,32 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     setScore(0);
     setRound(1);
     setPlayerIndex(0);
-    setTimeout(() => playSequence(seq), 500);
-  }, [config.startLength, generateSequence, playSequence]);
+    schedule(() => playSequence(seq), 500);
+  }, [config.startLength, generateSequence, playSequence, schedule]);
+
+  const finishGame = useCallback((finalScore: number, rounds: number, perfect: boolean) => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const ratio = rounds / config.maxRounds;
+    const stars = perfect ? 3 : ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
+    let summary = `You completed ${rounds} round${rounds !== 1 ? 's' : ''}! `;
+    if (perfect) summary = `Perfect! All ${config.maxRounds} rounds! 🏆`;
+    else if (stars === 3) summary += 'Almost perfect! 🌟';
+    else if (stars === 2) summary += 'Good job! Try saying the colors out loud.';
+    else summary += 'Keep practicing! Focus on the first few colors.';
+    onEnd({ score: finalScore, stars, summary });
+  }, [config.maxRounds, onEnd]);
 
   const handleTap = useCallback((index: number) => {
     if (phase !== 'playing') return;
 
     setActiveIndex(index);
-    setTimeout(() => setActiveIndex(null), 150);
+    schedule(() => setActiveIndex(null), 150);
 
     if (index !== sequence[playerIndex]) {
       setPhase('done');
       const rounds = sequence.length - config.startLength;
-      const stars = rounds >= config.maxRounds - 1 ? 3 : rounds >= Math.floor(config.maxRounds / 2) ? 2 : 1;
-      let summary = `You completed ${rounds} round${rounds !== 1 ? 's' : ''}! `;
-      if (stars === 3) summary += 'Almost perfect! 🌟';
-      else if (stars === 2) summary += 'Good job! Try saying the colors out loud.';
-      else summary += 'Keep practicing! Focus on the first few colors.';
-      onEnd({ score, stars, summary });
+      finishGame(score, rounds, false);
       return;
     }
 
@@ -100,7 +128,8 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
       const currentRound = sequence.length - config.startLength + 1;
       if (currentRound >= config.maxRounds) {
         setPhase('done');
-        onEnd({ score: newScore + 100, stars: 3, summary: `Perfect! All ${config.maxRounds} rounds! 🏆` });
+        onProgress(1);
+        finishGame(newScore + 100, currentRound, true);
       } else {
         onMessage('✨ Perfect! Get ready for more...');
         setFeedback('+1 color coming up!');
@@ -109,10 +138,10 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         setRound(currentRound + 1);
         setPlayerIndex(0);
         onProgress(currentRound / config.maxRounds);
-        setTimeout(() => playSequence(newSeq), 700);
+        schedule(() => playSequence(newSeq), 700);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, onScore, onProgress, onMessage, onEnd, playSequence]);
+  }, [phase, sequence, playerIndex, score, config, onScore, onProgress, onMessage, playSequence, schedule, finishGame]);
 
   if (phase === 'intro') {
     return (

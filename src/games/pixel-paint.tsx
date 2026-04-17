@@ -107,11 +107,20 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     setPlayerGrid(prev => {
       const next = prev.map(r => [...r]);
       next[y][x] = selectedColor;
+      // Update progress based on matching pixels
+      let correct = 0;
+      const total = config.size * config.size;
+      for (let yy = 0; yy < config.size; yy++) {
+        for (let xx = 0; xx < config.size; xx++) {
+          if (next[yy]?.[xx] === target[yy]?.[xx]) correct++;
+        }
+      }
+      onProgress(correct / total);
       return next;
     });
     setAnimatingPixel(`${y}-${x}`);
     setTimeout(() => setAnimatingPixel(null), 100);
-  }, [selectedColor]);
+  }, [selectedColor, config.size, target, onProgress]);
 
   const checkArt = useCallback(() => {
     gameActiveRef.current = false;

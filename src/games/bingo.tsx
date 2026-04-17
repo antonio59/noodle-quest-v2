@@ -59,9 +59,11 @@ function winLabel(stage: number): string {
   return 'Complete full card!';
 }
 
+const MAX_LOSSES = 3;
+
 function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const difficulty = aiDifficulty || 'medium';
-  const targetWins = Math.min(stage + 1, 4);
+  const targetWins = Math.max(1, Math.min(stage + 1, 4));
   const callSpeed = stage <= 3 ? 2500 : stage <= 6 ? 2000 : 1500;
 
   const [playerCard, setPlayerCard] = useState<(number | 'FREE')[][]>(genCard);
@@ -73,12 +75,47 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
   const [calling, setCalling] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [roundWins, setRoundWins] = useState(0);
-  const [totalCalled, setTotalCalled] = useState(0);
+  const [losses, setLosses] = useState(0);
+  const [, setTotalCalled] = useState(0);
 
   const poolRef = useRef<number[]>(genPool());
   const gameOverRef = useRef(false);
   const aiMarkedRef = useRef<boolean[][]>(emptyMarks());
   const aiCardRef = useRef<(number | 'FREE')[][]>(genCard());
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const winsRef = useRef(0);
+  const lossesRef = useRef(0);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const finalWins = winsRef.current;
+    const finalLosses = lossesRef.current;
+    const stars = outcome === 'win'
+      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
+      : (finalWins > 0 ? 2 : 1);
+    const summary = outcome === 'win'
+      ? `Won ${finalWins} Bingo round${finalWins > 1 ? 's' : ''}!`
+      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
+    onEnd({ score: finalWins * 150, stars, summary });
+  }, [onEnd]);
 
   useEffect(() => { gameOverRef.current = gameOver; }, [gameOver]);
   useEffect(() => { aiMarkedRef.current = aiMarked; }, [aiMarked]);
@@ -111,7 +148,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       if (idx >= pool.length) {
         setCalling(false);
         onMessage('All numbers called! New round...');
-        setTimeout(() => startRound(), 2000);
+        schedule(() => startRound(), 2000);
         return;
       }
 
@@ -135,8 +172,16 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       if (checkWin(nextAi, stage)) {
         setGameOver(true);
         setCalling(false);
-        onMessage('AI got Bingo! New round...');
-        setTimeout(() => startRound(), 2500);
+        const newLosses = lossesRef.current + 1;
+        lossesRef.current = newLosses;
+        setLosses(newLosses);
+        if (newLosses >= MAX_LOSSES) {
+          onMessage('AI won the match!');
+          schedule(() => finishMatch('lose'), 1500);
+        } else {
+          onMessage(`AI got Bingo! (${newLosses}/${MAX_LOSSES}) New round...`);
+          schedule(() => startRound(), 2500);
+        }
       }
     }, callSpeed);
 
@@ -155,7 +200,8 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     onScore(10);
 
     if (checkWin(next, stage)) {
-      const newWins = roundWins + 1;
+      const newWins = winsRef.current + 1;
+      winsRef.current = newWins;
       setRoundWins(newWins);
       setGameOver(true);
       setCalling(false);
@@ -163,17 +209,11 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       onProgress(newWins / targetWins);
 
       if (newWins >= targetWins) {
-        onMessage('BINGO! You won the game!');
-        setTimeout(() => {
-          onEnd({
-            score: newWins * 150 + Math.max(0, 75 - totalCalled) * 5,
-            stars: totalCalled < 20 * newWins ? 3 : totalCalled < 35 * newWins ? 2 : 1,
-            summary: `Won ${newWins} Bingo round${newWins > 1 ? 's' : ''}!`,
-          });
-        }, 1000);
+        onMessage('BINGO! You won the match!');
+        schedule(() => finishMatch('win'), 1000);
       } else {
         onMessage(`BINGO! Round ${newWins}/${targetWins} won!`);
-        setTimeout(() => startRound(), 1500);
+        schedule(() => startRound(), 1500);
       }
     }
   };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameProps } from '@/types';
 
 // Define AI difficulty levels
@@ -9,6 +9,7 @@ const DIFFICULTY_LEVELS = {
 };
 
 const BOARD_SIZE = 100;
+const MAX_LOSSES = 3; // lose the match after this many AI wins
 
 // Snakes: head -> tail (go back)
 const SNAKES: Record<number, number> = {
@@ -16,7 +17,7 @@ const SNAKES: Record<number, number> = {
 };
 // Ladders: bottom -> top (go forward)
 const LADDERS: Record<number, number> = {
-  1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100,
+  1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91,
 };
 
 function rollDie(): number {
@@ -31,165 +32,216 @@ function getCellPos(cell: number): { row: number; col: number } {
 }
 
 // Simple AI: prefer ladders > avoid snakes > exact finish > random
-function aiMove(playerPos: number, aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
-  const { enterChance, ladderChance, snakeAvoidChance } = DIFFICULTY_LEVELS[difficulty];
-  
-  // AI at start just rolls normally
-  if (aiPos === 0) {
-    return rollDie();
-  }
-  
-  // Prefer ladders (if close to a ladder)
+function aiMove(aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
+  const { ladderChance, snakeAvoidChance } = DIFFICULTY_LEVELS[difficulty];
+
+  if (aiPos === 0) return rollDie();
+
   if (Math.random() < ladderChance) {
     for (const [bottom, top] of Object.entries(LADDERS)) {
       const b = parseInt(bottom);
-      if (b > aiPos && b - aiPos <= 6) {
-        return b - aiPos;
-      }
-      if (top > aiPos && top - aiPos <= 6) {
-        return top - aiPos;
-      }
+      if (b > aiPos && b - aiPos <= 6) return b - aiPos;
+      if (top > aiPos && top - aiPos <= 6) return top - aiPos;
     }
   }
-  
-  // Avoid snakes (if possible)
+
+  // Avoid snakes: pick any roll 1..6 that doesn't land on a snake head
   if (Math.random() < snakeAvoidChance) {
-    for (const [head, tail] of Object.entries(SNAKES)) {
-      const h = parseInt(head);
-      if (h > aiPos && h - aiPos <= 6 && h - aiPos !== 6) {
-        return h - aiPos - 1;
-      }
+    const safeRolls: number[] = [];
+    for (let r = 1; r <= 6; r++) {
+      const dest = aiPos + r;
+      if (dest <= BOARD_SIZE && !SNAKES[dest]) safeRolls.push(r);
     }
+    if (safeRolls.length > 0) return safeRolls[Math.floor(Math.random() * safeRolls.length)];
   }
-  
-  // Exact finish
-  if (BOARD_SIZE - aiPos <= 6) {
-    return BOARD_SIZE - aiPos;
-  }
-  
-  // Random move
+
+  if (BOARD_SIZE - aiPos <= 6) return BOARD_SIZE - aiPos;
   return rollDie();
 }
 
-function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
+function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const [playerPos, setPlayerPos] = useState(0);
   const [aiPos, setAiPos] = useState(0);
   const [turn, setTurn] = useState<'player' | 'ai'>('player');
   const [die, setDie] = useState<number | null>(null);
   const [wins, setWins] = useState(0);
+  const [losses, setLosses] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const targetWins = Math.min(stage, 10);
+  const targetWins = Math.max(1, Math.min(stage, 10));
   const difficulty = aiDifficulty || 'medium';
 
-  const moveToken = (currentPos: number, steps: number, setter: (p: number) => void, name: string, onComplete: () => void) => {
-    let target = currentPos + steps;
-    if (target > BOARD_SIZE) target = currentPos; // can't overshoot
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
-    // Animate movement
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      intervalsRef.current.forEach(clearInterval);
+    };
+  }, []);
+
+  // Resolve snake/ladder chains (a ladder landing on a snake or vice versa)
+  const resolveSquare = (pos: number): number => {
+    const visited = new Set<number>();
+    let cur = pos;
+    while (!visited.has(cur)) {
+      visited.add(cur);
+      if (SNAKES[cur]) cur = SNAKES[cur];
+      else if (LADDERS[cur]) cur = LADDERS[cur];
+      else break;
+    }
+    return cur;
+  };
+
+  const moveToken = (
+    currentPos: number,
+    steps: number,
+    setter: (p: number) => void,
+    name: string,
+    onComplete: (finalPos: number) => void,
+  ) => {
+    const target = currentPos + steps;
+    if (target > BOARD_SIZE) {
+      onComplete(currentPos);
+      return;
+    }
+
     setAnimating(true);
     let pos = currentPos;
     const interval = setInterval(() => {
+      if (endedRef.current) {
+        clearInterval(interval);
+        intervalsRef.current = intervalsRef.current.filter(x => x !== interval);
+        return;
+      }
       pos++;
       if (pos > target) {
         clearInterval(interval);
-        // Check snakes/ladders
-        if (SNAKES[pos - 1]) {
-          onMessage(`${name} hit a snake! Going down...`);
-          setTimeout(() => {
-            setter(SNAKES[pos - 1]);
+        intervalsRef.current = intervalsRef.current.filter(x => x !== interval);
+        const landed = target;
+        const resolved = resolveSquare(landed);
+        if (resolved !== landed) {
+          if (SNAKES[landed]) onMessage(`${name} hit a snake! Going down...`);
+          else if (LADDERS[landed]) onMessage(`${name} found a ladder! Going up!`);
+          schedule(() => {
+            setter(resolved);
             setAnimating(false);
-            onComplete();
-          }, 500);
-        } else if (LADDERS[pos - 1]) {
-          onMessage(`${name} found a ladder! Going up!`);
-          setTimeout(() => {
-            setter(LADDERS[pos - 1]);
-            setAnimating(false);
-            onComplete();
+            onComplete(resolved);
           }, 500);
         } else {
           setAnimating(false);
-          onComplete();
+          onComplete(resolved);
         }
         return;
       }
       setter(pos);
     }, 100);
+    intervalsRef.current.push(interval);
   };
 
-  const handleRoll = () => {
-    if (gameOver || turn !== 'player' || animating) return;
-    const d = rollDie();
-    setDie(d);
-
-    const startPos = playerPos === 0 ? 0 : playerPos;
-    const target = startPos + d;
-    if (target > BOARD_SIZE) {
-      onMessage(`Rolled ${d} — need exact number to finish!`);
-      setTurn('ai');
-      setTimeout(aiTurn, 800);
-      return;
-    }
-
-    moveToken(startPos, d, setPlayerPos, 'You', () => {
-      if (playerPos + d >= BOARD_SIZE || LADDERS[playerPos + d] === BOARD_SIZE) {
-        // Check win after move resolves
-        setTimeout(() => {
-          if (playerPos >= BOARD_SIZE) {
-            const newWins = wins + 1;
-            setWins(newWins);
-            setGameOver(true);
-            onScore(80);
-            onProgress(newWins / targetWins);
-            if (newWins >= targetWins) {
-              onEnd({ score: newWins * 80, stars: 3, summary: `Won ${newWins} Snakes & Ladders games!` });
-            } else {
-              onMessage('You won this round!');
-              setTimeout(() => resetGame(), 2000);
-            }
-            return;
-          }
-        }, 600);
-      }
-      setTurn('ai');
-      setTimeout(aiTurn, 800);
-    });
-  };
-
-  const aiTurn = () => {
-    if (gameOver) return;
-    const d = aiMove(playerPos, aiPos, difficulty);
-
-    const startPos = aiPos === 0 ? 0 : aiPos;
-    const target = startPos + d;
-    if (target > BOARD_SIZE) {
-      onMessage(`AI rolled ${d} — overshoots!`);
-      setTurn('player');
-      return;
-    }
-
-    moveToken(startPos, d, setAiPos, 'AI', () => {
-      setTimeout(() => {
-        if (aiPos >= BOARD_SIZE) {
-          setGameOver(true);
-          onMessage('AI won — try again!');
-          setTimeout(() => resetGame(), 2000);
-          return;
-        }
-        setTurn('player');
-      }, 100);
-    });
-  };
-
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setPlayerPos(0);
     setAiPos(0);
     setTurn('player');
     setDie(null);
     setGameOver(false);
     setAnimating(false);
-    onMessage('Your turn! Roll to start.');
+    onMessage('New round! Your turn.');
+  }, [onMessage]);
+
+  const finishMatch = (finalWins: number, finalLosses: number, outcome: 'win' | 'lose') => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const totalRounds = finalWins + finalLosses;
+    const winRate = totalRounds > 0 ? finalWins / totalRounds : 0;
+    const stars = outcome === 'win'
+      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
+      : (winRate >= 0.5 ? 2 : 1);
+    const summary = outcome === 'win'
+      ? `Won ${finalWins} of ${totalRounds} rounds!`
+      : `Lost the match — ${finalWins} wins vs ${finalLosses} losses.`;
+    onEnd({ score: finalWins * 80, stars, summary });
+  };
+
+  const handlePlayerWin = () => {
+    const newWins = wins + 1;
+    setWins(newWins);
+    setGameOver(true);
+    onScore(80);
+    onProgress(newWins / targetWins);
+    if (newWins >= targetWins) {
+      finishMatch(newWins, losses, 'win');
+    } else {
+      onMessage(`Won round ${newWins}/${targetWins}!`);
+      schedule(resetGame, 2000);
+    }
+  };
+
+  const handleAiWin = () => {
+    const newLosses = losses + 1;
+    setLosses(newLosses);
+    setGameOver(true);
+    if (newLosses >= MAX_LOSSES) {
+      onMessage('AI won the match — good try!');
+      finishMatch(wins, newLosses, 'lose');
+    } else {
+      onMessage(`AI won round — ${newLosses}/${MAX_LOSSES} losses.`);
+      schedule(resetGame, 2000);
+    }
+  };
+
+  const aiTurn = () => {
+    if (endedRef.current || gameOver) return;
+    const d = aiMove(aiPos, difficulty);
+    setDie(d);
+
+    if (aiPos + d > BOARD_SIZE) {
+      onMessage(`AI rolled ${d} — overshoots!`);
+      setTurn('player');
+      return;
+    }
+
+    moveToken(aiPos, d, setAiPos, 'AI', (finalPos) => {
+      if (finalPos >= BOARD_SIZE) {
+        handleAiWin();
+      } else {
+        setTurn('player');
+      }
+    });
+  };
+
+  const handleRoll = () => {
+    if (endedRef.current || gameOver || turn !== 'player' || animating) return;
+    const d = rollDie();
+    setDie(d);
+
+    if (playerPos + d > BOARD_SIZE) {
+      onMessage(`Rolled ${d} — need exact roll to finish!`);
+      setTurn('ai');
+      schedule(aiTurn, 800);
+      return;
+    }
+
+    moveToken(playerPos, d, setPlayerPos, 'You', (finalPos) => {
+      if (finalPos >= BOARD_SIZE) {
+        handlePlayerWin();
+      } else {
+        setTurn('ai');
+        schedule(aiTurn, 800);
+      }
+    });
   };
 
   return (
@@ -198,6 +250,9 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
         <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: {playerPos}</span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: {aiPos}</span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
+        {losses > 0 && (
+          <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
+        )}
       </div>
 
       {/* Board */}
