@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 interface Panel {
@@ -146,6 +146,24 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [feedbackColor, setFeedbackColor] = useState('#67e8f9');
   const [resultColors, setResultColors] = useState<(string | null)[]>([]);
   const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   const startGame = useCallback(() => {
     setCurrentOrder([...story.panels].sort(() => Math.random() - 0.5));
@@ -195,10 +213,14 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     if (accuracy === 1) {
       setFeedback('🎉 Perfect story! You told it perfectly!');
       setFeedbackColor('#4ade80');
-      setTimeout(() => {
+      schedule(() => {
+        if (endedRef.current) return;
+        endedRef.current = true;
+        const ratio = correct / story.panels.length;
+        const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
         onEnd({
           score: newScore + 50,
-          stars: 3,
+          stars,
           summary: `Storytelling master! "${story.title}" was in perfect order! You understand how stories flow! 🏆`,
         });
       }, 1200);
@@ -213,11 +235,15 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         summary = `${correct}/${story.panels.length} correct. Think about the story: what happens FIRST? What's the ending?`;
       }
 
-      setTimeout(() => {
-        onEnd({ score: newScore, stars: accuracy >= 0.7 ? 2 : 1, summary });
+      schedule(() => {
+        if (endedRef.current) return;
+        endedRef.current = true;
+        const ratio = correct / story.panels.length;
+        const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
+        onEnd({ score: newScore, stars, summary });
       }, 2500);
     }
-  }, [currentOrder, story, onScore, onProgress, onEnd]);
+  }, [currentOrder, story, onScore, onProgress, onEnd, schedule]);
 
   if (phase === 'intro') {
     return (

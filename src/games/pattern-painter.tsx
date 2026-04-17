@@ -214,6 +214,24 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
   const containerRef = useRef<HTMLDivElement>(null);
   const pathPointsRef = useRef<Point[]>([]);
   const gameActiveRef = useRef(false);
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   const resizeAndDraw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -338,11 +356,15 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
           else if (stars === 2) summary += 'Good tracing! Keep practicing to get even more precise.';
           else summary += 'Nice effort! Remember: slow and steady, follow those dots!';
           onMessage('All shapes traced!');
-          setTimeout(() => onEnd({ score: final, stars, summary }), 0);
+          schedule(() => {
+            if (endedRef.current) return;
+            endedRef.current = true;
+            onEnd({ score: final, stars, summary });
+          }, 0);
           return final;
         });
       } else {
-        setTimeout(() => {
+        schedule(() => {
           setCurrentShape(nextShape);
           setDrawnPoints([]);
           const name = shapes[nextShape].name;
@@ -351,7 +373,7 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
         }, 1200);
       }
     }
-  }, [drawnPoints, shapes, currentShape, onScore, onProgress, onMessage, onEnd]);
+  }, [drawnPoints, shapes, currentShape, onScore, onProgress, onMessage, onEnd, schedule]);
 
   if (phase === 'intro') {
     return (

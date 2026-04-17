@@ -47,6 +47,25 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const currentScoreRef = useRef(0);
   const roundRef = useRef(0);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   const generateRound = useCallback(() => {
     const gs = config.gridSize;
     const totalCells = gs * gs;
@@ -88,12 +107,12 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     setStatusColor('#67e8f9');
     setPhase('memorize');
 
-    setTimeout(() => {
+    schedule(() => {
       setPhase('find');
       setStatusText('🫣 Grid A vanished! Find the differences in Grid B!');
       setStatusColor('#fbbf24');
     }, config.showTime);
-  }, [generateRound, config.showTime]);
+  }, [generateRound, config.showTime, schedule]);
 
   const startGame = useCallback(() => {
     currentScoreRef.current = 0;
@@ -105,20 +124,24 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const finishRound = useCallback(() => {
     setPhase('done');
 
-    setTimeout(() => {
+    schedule(() => {
       if (roundRef.current >= config.rounds) {
         const finalScore = currentScoreRef.current;
-        const stars = finalScore >= 200 ? 3 : finalScore >= 120 ? 2 : 1;
+        const maxScore = config.rounds * config.diffs * 25;
+        const ratio = maxScore > 0 ? finalScore / maxScore : 0;
+        const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
         let summary = `Final score: ${finalScore}. `;
         if (stars === 3) summary += 'Eagle eyes! You spot every detail! 🦅';
         else if (stars === 2) summary += 'Good observation! Scan row by row for even better results.';
         else summary += 'Observation takes practice! Try counting each emoji type.';
+        if (endedRef.current) return;
+        endedRef.current = true;
         onEnd({ score: finalScore, stars, summary });
       } else {
         startRound();
       }
     }, 1000);
-  }, [config.rounds, onEnd, startRound]);
+  }, [config.rounds, config.diffs, onEnd, startRound, schedule]);
 
   const handleCellClick = useCallback((idx: number) => {
     if (phase !== 'find') return;
@@ -153,7 +176,7 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       setFeedback('✗ Not a difference! -10 pts');
       setFeedbackColor('#ef4444');
 
-      setTimeout(() => {
+      schedule(() => {
         setCellStates(prev => {
           const next = { ...prev };
           delete next[idx];
@@ -161,7 +184,7 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
         });
       }, 500);
     }
-  }, [phase, differences, foundSet, config.rounds, onScore, onProgress, finishRound]);
+  }, [phase, differences, foundSet, config.rounds, onScore, onProgress, finishRound, schedule]);
 
   if (phase === 'intro') {
     return (

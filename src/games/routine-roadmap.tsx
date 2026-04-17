@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 interface Task {
@@ -154,6 +154,24 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
   const draggedItem = useRef<number | null>(null);
   const touchStartY = useRef(0);
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
 
   const startGame = useCallback(() => {
     setCurrentOrder([...routine.tasks].sort(() => Math.random() - 0.5));
@@ -226,10 +244,14 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     if (accuracy === 1) {
       setFeedback('🎉 Perfect order! You nailed it!');
       setFeedbackColor('#4ade80');
-      setTimeout(() => {
+      schedule(() => {
+        if (endedRef.current) return;
+        endedRef.current = true;
+        const ratio = correct / routine.tasks.length;
+        const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
         onEnd({
           score: newScore + 50,
-          stars: 3,
+          stars,
           summary: `Perfect! You put "${routine.name}" in exactly the right order! Great sequencing skills! 🏆`,
         });
       }, 1200);
@@ -246,15 +268,19 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         summary = `${correct}/${routine.tasks.length} correct. Imagine doing "${routine.name}" yourself — what would you do first?`;
       }
 
-      setTimeout(() => {
+      schedule(() => {
+        if (endedRef.current) return;
+        endedRef.current = true;
+        const ratio = correct / routine.tasks.length;
+        const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
         onEnd({
           score: newScore,
-          stars: accuracy >= 0.8 ? 2 : 1,
+          stars,
           summary,
         });
       }, 2500);
     }
-  }, [currentOrder, routine, onScore, onProgress, onEnd]);
+  }, [currentOrder, routine, onScore, onProgress, onEnd, schedule]);
 
   if (phase === 'intro') {
     return (

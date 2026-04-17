@@ -43,6 +43,27 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
 
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      intervalsRef.current.forEach(clearInterval);
+    };
+  }, []);
+
   const generateSequence = useCallback((roundNum: number) => {
     const baseLen = config.minLen + Math.floor(roundNum / 2);
     const len = Math.min(config.maxLen, baseLen + Math.floor(Math.random() * 2));
@@ -69,34 +90,32 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
         const next = prev - 50;
         if (next <= 0) {
           clearInterval(timer);
+          intervalsRef.current = intervalsRef.current.filter(x => x !== timer);
           return 0;
         }
         return next;
       });
     }, 50);
+    intervalsRef.current.push(timer);
 
-    const timeout = setTimeout(() => {
+    schedule(() => {
       clearInterval(timer);
+      intervalsRef.current = intervalsRef.current.filter(x => x !== timer);
       setPhase('input');
       setDisplayColor('#6b7280');
       setMessage('⌨️ Type the numbers!');
       setMessageColor('#4ade80');
       setFeedback('');
-      setTimeout(() => inputRef.current?.focus(), 50);
+      schedule(() => inputRef.current?.focus(), 50);
     }, showDuration);
-
-    return () => {
-      clearInterval(timer);
-      clearTimeout(timeout);
-    };
-  }, [round, generateSequence, config.showTime]);
+  }, [round, generateSequence, config.showTime, schedule]);
 
   const startGame = useCallback(() => {
     setScore(0);
     setRound(1);
     setPhase('memorize');
-    setTimeout(showNextSequence, 600);
-  }, [showNextSequence]);
+    schedule(showNextSequence, 600);
+  }, [showNextSequence, schedule]);
 
   // Reset sequence when round changes during gameplay
   useEffect(() => {
@@ -122,9 +141,12 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       setFeedbackColor('#4ade80');
 
       if (round >= config.maxRounds) {
-        setTimeout(() => {
+        schedule(() => {
           setPhase('done');
-          const stars = newScore > 200 ? 3 : newScore > 100 ? 2 : 1;
+          const ratio = round / config.maxRounds;
+          const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
+          if (endedRef.current) return;
+          endedRef.current = true;
           onEnd({
             score: newScore + 50,
             stars,
@@ -133,7 +155,7 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
         }, 1200);
       } else {
         onProgress(round / config.maxRounds);
-        setTimeout(() => setRound(r => r + 1), 1500);
+        schedule(() => setRound(r => r + 1), 1500);
       }
     } else {
       setDisplayColor('#ff6e6c');
@@ -155,17 +177,20 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       }
       setFeedbackColor('#ff6e6c');
 
-      setTimeout(() => {
+      schedule(() => {
         setPhase('done');
-        const stars = round > Math.floor(config.maxRounds * 0.7) ? 3 : round > Math.floor(config.maxRounds * 0.4) ? 2 : 1;
+        const ratio = round / config.maxRounds;
+        const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
         let summary = `You made it to round ${round}! `;
         if (stars === 3) summary += 'So close to perfect! Your number memory is great!';
         else if (stars === 2) summary += 'Good effort! Try grouping numbers in pairs to remember better.';
         else summary += 'Keep practicing! Say the numbers out loud as you memorize.';
+        if (endedRef.current) return;
+        endedRef.current = true;
         onEnd({ score, stars, summary });
       }, 2500);
     }
-  }, [phase, inputValue, sequence, score, round, config, onScore, onProgress, onEnd]);
+  }, [phase, inputValue, sequence, score, round, config, onScore, onProgress, onEnd, schedule]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') checkAnswer();

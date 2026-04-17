@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 interface Question {
@@ -124,6 +124,25 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [selectedOpt, setSelectedOpt] = useState<string | null>(null);
   const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
   const handleOption = useCallback((opt: string) => {
     if (phase !== 'playing') return;
     const q = questions[currentQ];
@@ -137,9 +156,11 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       setFeedback('✅ Exactly right! Great emotional awareness!');
       setFeedbackColor('#4ade80');
 
-      setTimeout(() => {
+      schedule(() => {
         const next = currentQ + 1;
         if (next >= questions.length) {
+          if (endedRef.current) return;
+          endedRef.current = true;
           const avgScore = newScore / questions.length;
           const stars = avgScore > 25 ? 3 : avgScore > 15 ? 2 : 1;
           let summary: string;
@@ -160,9 +181,11 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       setFeedback(`Not quite! It was "${q.correct}" ${correctEmo.emoji}`);
       setFeedbackColor('#fbbf24');
 
-      setTimeout(() => {
+      schedule(() => {
         const next = currentQ + 1;
         if (next >= questions.length) {
+          if (endedRef.current) return;
+          endedRef.current = true;
           const avgScore = score / questions.length;
           const stars = avgScore > 20 ? 3 : avgScore > 10 ? 2 : 1;
           onEnd({
@@ -179,7 +202,7 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         }
       }, 1500);
     }
-  }, [phase, currentQ, questions, score, onScore, onProgress, onEnd]);
+  }, [phase, currentQ, questions, score, onScore, onProgress, onEnd, schedule]);
 
   if (phase === 'intro') {
     return (

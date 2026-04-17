@@ -104,6 +104,18 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const heatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scoreRef = useRef(0);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
   const cleanup = useCallback(() => {
     if (heatIntervalRef.current) {
       clearInterval(heatIntervalRef.current);
@@ -112,14 +124,23 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      if (heatIntervalRef.current) {
+        clearInterval(heatIntervalRef.current);
+        heatIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const advanceScenario = useCallback((currentScore: number) => {
     cleanup();
     const next = currentScenario + 1;
     onProgress(next / scenarios.length);
     if (next >= scenarios.length) {
+      if (endedRef.current) return;
+      endedRef.current = true;
       setPhase('done');
       const stars = currentScore >= 200 ? 3 : currentScore >= 120 ? 2 : 1;
       let summary = 'You practiced cooling down your volcano! ';
@@ -160,13 +181,13 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           setFeedback("When feelings get too big, we might say or do things we regret. Next time, start cooling sooner!");
           setFeedbackColor('#fbbf24');
           setPhase('cooldown');
-          setTimeout(() => advanceScenario(scoreRef.current), 3000);
+          schedule(() => advanceScenario(scoreRef.current), 3000);
         }
         return next;
       });
     }, 1500);
     return cleanup;
-  }, [phase, cleanup, advanceScenario]);
+  }, [phase, cleanup, advanceScenario, schedule]);
 
   const handleStrategy = useCallback((strat: typeof coolingStrategies[number], idx: number) => {
     if (phase !== 'playing' || usedStrategies.has(idx)) return;
@@ -179,7 +200,7 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         setPhase('cooldown');
         scoreRef.current += 40;
         setScore(scoreRef.current);
-        setTimeout(() => advanceScenario(scoreRef.current), 1500);
+        schedule(() => advanceScenario(scoreRef.current), 1500);
       }
       return next;
     });
@@ -188,7 +209,7 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     onScore(10);
     setFeedback(`${strat.emoji} ${strat.tip}`);
     setFeedbackColor('#4ade80');
-  }, [phase, usedStrategies, onScore, cleanup, advanceScenario]);
+  }, [phase, usedStrategies, onScore, cleanup, advanceScenario, schedule]);
 
   // Derive heat display at render time
   const heatDisplay = getHeatDisplay(heat);

@@ -100,14 +100,31 @@ function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
   const currentItemRef = useRef(0);
   const MAX_HOLD = 10;
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
   const cleanup = useCallback(() => {
     if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
     if (timerTimeoutRef.current) clearTimeout(timerTimeoutRef.current);
   }, []);
 
   useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      if (holdIntervalRef.current) clearInterval(holdIntervalRef.current);
+      if (timerTimeoutRef.current) clearTimeout(timerTimeoutRef.current);
+    };
+  }, []);
 
   const startHold = useCallback(
     (e: React.PointerEvent) => {
@@ -158,12 +175,12 @@ function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
       setFeedback(`+${points} — Quick touch! Try holding longer!`);
     }
 
-    timerTimeoutRef.current = setTimeout(() => {
+    timerTimeoutRef.current = schedule(() => {
       const next = currentItemRef.current + 1;
       currentItemRef.current = next;
       setCurrentItem(next);
     }, 1500);
-  }, [items.length, onScore, onProgress, onMessage]);
+  }, [items.length, onScore, onProgress, onMessage, schedule]);
 
   if (phase === 'intro') {
     return (

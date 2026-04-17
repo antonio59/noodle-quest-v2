@@ -41,11 +41,32 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const gameActiveRef = useRef(false);
   const isBreathingRef = useRef(false);
   const breathIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scoreRef = useRef(0);
   const perfectCountRef = useRef(0);
   const currentBubbleRef = useRef(0);
   const bubbleSizeRef = useRef(10);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
+
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, []);
 
   const cleanupBreath = useCallback(() => {
     if (breathIntervalRef.current) {
@@ -56,6 +77,8 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   const endGame = useCallback(() => {
+    if (endedRef.current) return;
+    endedRef.current = true;
     gameActiveRef.current = false;
     cleanupBreath();
 
@@ -111,11 +134,11 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     onProgress(currentBubbleRef.current / config.bubbles);
 
     if (currentBubbleRef.current >= config.bubbles) {
-      setTimeout(endGame, 1500);
+      schedule(endGame, 1500);
     } else {
-      setTimeout(resetBubble, 1500);
+      schedule(resetBubble, 1500);
     }
-  }, [config, onScore, onProgress, endGame, resetBubble, cleanupBreath]);
+  }, [config, onScore, onProgress, endGame, resetBubble, cleanupBreath, schedule]);
 
   const startBlowing = useCallback(() => {
     if (!gameActiveRef.current || currentBubbleRef.current >= config.bubbles) return;
@@ -176,6 +199,7 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         return prev - 1;
       });
     }, 1000);
+    timerIntervalRef.current = timer;
 
     return () => clearInterval(timer);
   }, [phase, config.time, endGame]);
