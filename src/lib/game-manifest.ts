@@ -212,8 +212,8 @@ reg('flag-match', {
 
 reg('fill-blank', {
   name: 'Fill in the Blank', emoji: '✏️',
-  description: 'Fill in missing letters to complete the word!',
-  category: 'memory', stages: 10, aiDifficulty: 'medium',
+  description: 'Pick a theme and fill in missing letters. Endless mode!',
+  category: 'memory', stages: 99, aiDifficulty: 'medium',
 }, () => import('@/games/fill-blank'));
 
 reg('bingo', {
