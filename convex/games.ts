@@ -51,9 +51,19 @@ export const getPlayerStats = query({
     const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
     const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number }> = {};
     for (const p of progress) {
-      const key = `${p.gameId}:${p.stage}`;
-      if (!gameStages[p.gameId] || p.highScore > gameStages[p.gameId].highScore) {
-        gameStages[p.gameId] = { highScore: p.highScore, starsEarned: p.starsEarned, timesPlayed: p.timesPlayed };
+      const existing = gameStages[p.gameId];
+      if (!existing) {
+        gameStages[p.gameId] = {
+          highScore: p.highScore,
+          starsEarned: p.starsEarned,
+          timesPlayed: p.timesPlayed,
+        };
+      } else {
+        gameStages[p.gameId] = {
+          highScore: Math.max(existing.highScore, p.highScore),
+          starsEarned: Math.max(existing.starsEarned, p.starsEarned),
+          timesPlayed: existing.timesPlayed + p.timesPlayed,
+        };
       }
     }
     return { totalStars, totalScore, gamesPlayed: gameIds.size, totalGames: scores.length, gameStages };
@@ -94,7 +104,6 @@ export const getLeaderboard = query({
           .slice(0, 5);
         return { playerId: id, playerName: p.name, avatar: p.avatar, totalStars: p.totalStars, totalScore: p.totalScore, gamesPlayed: p.games.size, topGames };
       })
-      .sort((a, b) => b.totalStars - a.totalStars)
-      .slice(0, 50);
+      .sort((a, b) => b.totalStars - a.totalStars);
   },
 });

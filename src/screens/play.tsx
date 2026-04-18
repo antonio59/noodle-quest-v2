@@ -5,6 +5,7 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGameMeta, getGameComponent } from '@/lib/game-registry';
+import { getBonusMultiplier, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
 
 export function PlayGame() {
@@ -42,6 +43,15 @@ export function PlayGame() {
     player && gameId ? { playerId: player.playerId as any, gameId } : 'skip' as any,
   );
   const maxUnlocked = playerProgress?.maxUnlockedStage ?? 1;
+
+  // Fetch overall player stats to compute bonus multiplier for under-played games.
+  const playerStats = useQuery(
+    api.games.getPlayerStats,
+    player ? { playerId: player.playerId as any } : 'skip' as any,
+  );
+  const timesPlayed = gameId ? playerStats?.gameStages?.[gameId]?.timesPlayed ?? 0 : 0;
+  const bonusMultiplier = getBonusMultiplier(timesPlayed);
+  const bonusTier = getBonusTier(timesPlayed);
 
   // Retrieve pre-built lazy component (created at registration time, not during render)
   const GameComponent = gameId ? getGameComponent(gameId) : undefined;
@@ -173,8 +183,9 @@ export function PlayGame() {
   }
 
   const handleEnd = async (result: GameResult) => {
-    // Guarantee minimum 10 points for participation
-    const finalScore = Math.max(result.score, 10);
+    // Guarantee minimum 10 points for participation, then apply under-played bonus.
+    const baseScore = Math.max(result.score, 10);
+    const finalScore = applyBonus(baseScore, bonusMultiplier);
     const finalResult = { ...result, score: finalScore };
 
     setEnded(finalResult);
@@ -242,6 +253,11 @@ export function PlayGame() {
         </h2>
         {renderStars(ended.stars)}
         <p className="text-accent text-2xl font-bold mb-1">{ended.score}</p>
+        {bonusTier && (
+          <p className={`text-xs font-semibold mb-1 ${bonusTier.color}`}>
+            {bonusTier.label} applied · {bonusTier.multiplier}× multiplier
+          </p>
+        )}
         <div className="text-xs mb-3 min-h-[18px]">
           {isNewBest && prevBest > 0 ? (
             <span className="text-success font-semibold">
@@ -325,7 +341,17 @@ export function PlayGame() {
             />
           </div>
         </button>
-        <div className="text-accent font-bold min-w-[60px] text-right pr-2">{score}</div>
+        <div className="flex items-center gap-2 min-w-[60px] justify-end pr-2">
+          {bonusTier && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-card border border-white/5 ${bonusTier.color}`}
+              title={`Score multiplied by ${bonusTier.multiplier}× for trying this game`}
+            >
+              {bonusTier.label}
+            </span>
+          )}
+          <div className="text-accent font-bold">{score}</div>
+        </div>
       </div>
 
       {showStagePicker && maxUnlocked > 1 && (

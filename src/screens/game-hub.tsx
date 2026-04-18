@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap } from 'lucide-react';
+import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap, Star } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
+import { getBonusTier } from '@/lib/bonus-multiplier';
 
 const TABS = [
   { 
@@ -71,6 +75,16 @@ export function GameHub() {
   const initialTab = searchParams.get('tab') || 'brain';
   const [tab, setTab] = useState(initialTab);
   const audio = useAudioEngine();
+  const { player } = useAuth();
+  const playerStats = useQuery(
+    api.games.getPlayerStats,
+    player ? { playerId: player.playerId as any } : 'skip' as any,
+  );
+  const gameStages = playerStats?.gameStages ?? {};
+  const statsFor = (gameId: string) => ({
+    starsEarned: gameStages[gameId]?.starsEarned ?? 0,
+    timesPlayed: gameStages[gameId]?.timesPlayed ?? 0,
+  });
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<Set<string>>(() => {
@@ -117,6 +131,31 @@ export function GameHub() {
   };
 
   const currentTab = TABS.find(t => t.id === tab) || TABS[0];
+
+  const CardMeta = ({ gameId }: { gameId: string }) => {
+    const { starsEarned, timesPlayed } = statsFor(gameId);
+    const tier = getBonusTier(timesPlayed);
+    const earned = Math.min(starsEarned, 3);
+    return (
+      <div className="flex items-center justify-between gap-1 mt-2 min-h-[18px]">
+        <div className="flex gap-0.5" aria-label={`${earned} of 3 stars earned`}>
+          {[1, 2, 3].map(i => (
+            <Star
+              key={i}
+              size={11}
+              className={i <= earned ? 'text-warning' : 'text-card-hover'}
+              fill={i <= earned ? 'currentColor' : 'none'}
+            />
+          ))}
+        </div>
+        {tier && (
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-surface ${tier.color}`}>
+            {tier.label}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -234,6 +273,7 @@ export function GameHub() {
                   <div className="font-semibold text-sm mb-1">{g.name}</div>
                   <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
                   <div className="text-text-muted text-xs mt-2">{g.stages} levels</div>
+                  <CardMeta gameId={g.id} />
                 </button>
               </div>
             ))}
@@ -263,8 +303,9 @@ export function GameHub() {
                 </button>
                 <div className="text-3xl mb-2">{g.emoji}</div>
                 <div className="font-semibold text-sm mb-1">{g.name}</div>
-                <div className="text-text-muted text-xs line-clamp-2 mb-3">{g.description}</div>
-                <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                <div className="text-text-muted text-xs line-clamp-2 mb-2">{g.description}</div>
+                <CardMeta gameId={g.id} />
+                <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'easy')}
                     className="flex-1 bg-surface text-text-muted text-xs font-semibold py-2.5 rounded-lg hover:bg-card-hover transition-colors"
