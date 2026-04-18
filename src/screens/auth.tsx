@@ -226,6 +226,10 @@ export function Auth() {
               <ArrowLeft size={24} />
             </button>
           </div>
+
+          <p className="text-center text-text-muted text-xs mt-4">
+            Forgot your passcode? Ask a grown-up for help!
+          </p>
         </div>
       </div>
     );

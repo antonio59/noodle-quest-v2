@@ -23,7 +23,7 @@ http.route({
         }
       }
 
-      const body = await request.json();
+      const body = await request.json() as Record<string, any>;
 
       // Validate required fields
       if (!body.errorId || !body.message) {
@@ -86,7 +86,7 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     try {
-      const body = await request.json();
+      const body = await request.json() as Record<string, any>;
       
       // Verify webhook signature if configured
       const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET;
@@ -172,7 +172,7 @@ async function createLinearIssue(
     body: JSON.stringify({ query: mutation, variables }),
   });
 
-  const data = await response.json();
+  const data = await response.json() as any;
   
   if (data.data?.issueCreate?.success) {
     return {

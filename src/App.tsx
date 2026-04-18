@@ -13,6 +13,7 @@ const Feed = lazy(() => import('@/screens/feed').then(m => ({ default: m.Feed })
 const Profile = lazy(() => import('@/screens/profile').then(m => ({ default: m.Profile })));
 const Leaderboard = lazy(() => import('@/screens/leaderboard').then(m => ({ default: m.Leaderboard })));
 const InvitePage = lazy(() => import('@/screens/invite').then(m => ({ default: m.InvitePage })));
+const Admin = lazy(() => import('@/screens/admin').then(m => ({ default: m.Admin })));
 
 function ScreenFallback() {
   return (
@@ -48,6 +49,11 @@ export function AppRouter() {
         {/* Public routes */}
         <Route path="/welcome" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/admin" element={
+          <Suspense fallback={<ScreenFallback />}>
+            <Admin />
+          </Suspense>
+        } />
 
         {/* Invite links (public — redirects to auth if needed) */}
         <Route path="/invite/:code" element={
