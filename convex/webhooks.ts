@@ -1,6 +1,7 @@
+/// <reference types="node" />
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -33,7 +34,7 @@ http.route({
       }
 
       // Create the report
-      const { id: reportId, isNew } = await ctx.runMutation(internal.reports.createReport, {
+      const { id: reportId, isNew } = await ctx.runMutation(api.reports.createReport, {
         errorId: body.errorId,
         gameId: body.gameId,
         playerId: body.playerId,

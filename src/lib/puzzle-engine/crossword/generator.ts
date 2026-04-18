@@ -35,7 +35,7 @@ export function generateCrossword(
     if (attempts >= attemptLimit) break;
     const pool = shuffleWithRng(rng, candidates).slice(0, cfg.maxWords * 2);
     const placed: PlacedWord[] = [];
-    const grid = buildBlankGrid(cfg.gridSize);
+    const grid = buildBlankGrid<string>(cfg.gridSize, '');
     let numberAcc = 1;
 
     for (const cand of pool) {

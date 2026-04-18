@@ -103,7 +103,7 @@ function findPlacement(
   const minRow = 0;
   const maxRowBound = maxRow;
 
-  const options: [number, number][] = [];
+  const options: [number, number][][] = [];
 
   for (let r = minRow; r <= maxRowBound; r++) {
     for (let c = minCol; c <= maxCol; c++) {

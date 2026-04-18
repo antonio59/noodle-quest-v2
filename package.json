@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "eslint . --fix --max-warnings=0 && vite build",
+    "build": "tsc --noEmit -p tsconfig.app.json && eslint . --fix --max-warnings=0 && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "preview": "vite preview",
     "test": "vitest run",
     "convex:dev": "npx convex dev",
