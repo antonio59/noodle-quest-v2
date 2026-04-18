@@ -1,6 +1,6 @@
 import { useState, useEffect, createElement, Suspense } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Star, ChevronRight, ArrowRight, Lock } from 'lucide-react';
+import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -229,6 +229,9 @@ export function PlayGame() {
   };
 
   if (ended) {
+    const prevBestEntry = playerProgress?.stages?.find(s => s.stage === currentStage);
+    const prevBest = prevBestEntry?.highScore ?? 0;
+    const isNewBest = ended.score > prevBest;
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center">
         <div className={`text-6xl mb-4 ${ended.stars >= 2 ? 'animate-[celebrate_0.4s_ease]' : ''}`}>
@@ -238,7 +241,20 @@ export function PlayGame() {
           {ended.stars === 3 ? 'Amazing!' : ended.stars === 2 ? 'Great Job!' : 'Good Effort!'}
         </h2>
         {renderStars(ended.stars)}
-        <p className="text-accent text-xl font-bold mb-1">Score: {ended.score}</p>
+        <p className="text-accent text-2xl font-bold mb-1">{ended.score}</p>
+        <div className="text-xs mb-3 min-h-[18px]">
+          {isNewBest && prevBest > 0 ? (
+            <span className="text-success font-semibold">
+              New best on Stage {currentStage}! +{ended.score - prevBest} over previous
+            </span>
+          ) : isNewBest ? (
+            <span className="text-success font-semibold">New best on Stage {currentStage}!</span>
+          ) : (
+            <span className="text-text-muted">
+              Stage {currentStage} · Best: {prevBest}
+            </span>
+          )}
+        </div>
         {saving && <p className="text-text-muted text-xs mb-2">Saving...</p>}
         <p className="text-text-muted text-sm mb-4 max-w-xs">{ended.summary}</p>
         {ended.stars >= 2 && nextStage && (
@@ -293,9 +309,21 @@ export function PlayGame() {
         <button onClick={goBackToGames} className="text-text-muted hover:text-text p-2">
           <ArrowLeft size={20} />
         </button>
-        <button onClick={() => setShowStagePicker(!showStagePicker)} className="text-center">
+        <button
+          onClick={() => maxUnlocked > 1 && setShowStagePicker(!showStagePicker)}
+          className="text-center px-2 py-1 rounded-lg hover:bg-card/40 transition-colors"
+          aria-label={maxUnlocked > 1 ? 'Change stage' : 'Stage selector'}
+        >
           <div className="font-semibold text-sm">{gameMeta.emoji} {gameMeta.name}</div>
-          <div className="text-text-muted text-xs">Stage {currentStage}/{gameMeta.stages} {maxUnlocked > 1 ? '▼' : ''}</div>
+          <div className="text-text-muted text-xs flex items-center justify-center gap-1">
+            <span>Stage {currentStage}/{gameMeta.stages}</span>
+            <ChevronDown
+              size={12}
+              className={`transition-transform ${
+                maxUnlocked > 1 ? 'opacity-80' : 'opacity-25'
+              } ${showStagePicker ? 'rotate-180' : ''}`}
+            />
+          </div>
         </button>
         <div className="text-accent font-bold min-w-[60px] text-right pr-2">{score}</div>
       </div>
@@ -334,10 +362,13 @@ export function PlayGame() {
         </div>
       )}
 
-      <div className="h-1 bg-card flex-shrink-0">
+      <div className="h-2 bg-card flex-shrink-0 border-b border-white/5">
         <div
           className="h-full bg-accent transition-all duration-300 rounded-r"
-          style={{ width: `${Math.min(progress * 100, 100)}%` }}
+          style={{
+            width: `${Math.min(progress * 100, 100)}%`,
+            boxShadow: progress > 0 ? '0 0 8px var(--color-accent, #a78bfa)' : 'none',
+          }}
         />
       </div>
 

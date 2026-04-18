@@ -127,8 +127,8 @@ export function GameHub() {
             onClick={() => handleTabChange(t.id)}
             className={`flex-1 min-w-[80px] py-3 text-xs sm:text-sm font-semibold text-center transition-colors border-b-2 whitespace-nowrap ${
               tab === t.id
-                ? 'text-accent border-accent'
-                : 'text-text-muted border-transparent hover:text-text'
+                ? 'text-accent border-accent bg-accent/10'
+                : 'text-text-muted border-transparent hover:text-text hover:bg-white/5'
             }`}
           >
             {t.label}
@@ -267,19 +267,19 @@ export function GameHub() {
                 <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'easy')}
-                    className="flex-1 bg-surface text-text-muted text-[10px] font-semibold py-1.5 rounded-lg hover:bg-card-hover transition-colors"
+                    className="flex-1 bg-surface text-text-muted text-xs font-semibold py-2.5 rounded-lg hover:bg-card-hover transition-colors"
                   >
                     Easy
                   </button>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'medium')}
-                    className="flex-1 bg-accent/20 text-accent text-[10px] font-semibold py-1.5 rounded-lg hover:bg-accent/30 transition-colors"
+                    className="flex-1 bg-accent/20 text-accent text-xs font-semibold py-2.5 rounded-lg hover:bg-accent/30 transition-colors"
                   >
                     Medium
                   </button>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'hard')}
-                    className="flex-1 bg-danger/20 text-danger text-[10px] font-semibold py-1.5 rounded-lg hover:bg-danger/30 transition-colors"
+                    className="flex-1 bg-danger/20 text-danger text-xs font-semibold py-2.5 rounded-lg hover:bg-danger/30 transition-colors"
                   >
                     Hard
                   </button>
