@@ -4,8 +4,8 @@ import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock } from 'lu
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { getGameMeta, getGameComponent } from '@/lib/game-registry';
-import { getBonusMultiplier, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
+import { getGameMeta, getGameComponent, getAllGames } from '@/lib/game-registry';
+import { computeBonusTiers, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
 
 export function PlayGame() {
@@ -44,14 +44,13 @@ export function PlayGame() {
   );
   const maxUnlocked = playerProgress?.maxUnlockedStage ?? 1;
 
-  // Fetch overall player stats to compute bonus multiplier for under-played games.
-  const playerStats = useQuery(
-    api.games.getPlayerStats,
-    player ? { playerId: player.playerId as any } : 'skip' as any,
-  );
-  const timesPlayed = gameId ? playerStats?.gameStages?.[gameId]?.timesPlayed ?? 0 : 0;
-  const bonusMultiplier = getBonusMultiplier(timesPlayed);
-  const bonusTier = getBonusTier(timesPlayed);
+  // Monthly bonus pool: the 3 least-played games globally earn 3×, next 3 earn 2×.
+  const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
+  const bonusTiers = monthlyPlays
+    ? computeBonusTiers(monthlyPlays.counts, getAllGames().map(g => g.id))
+    : {};
+  const bonusMultiplier = gameId ? bonusTiers[gameId] ?? 1 : 1;
+  const bonusTier = getBonusTier(bonusMultiplier);
 
   // Retrieve pre-built lazy component (created at registration time, not during render)
   const GameComponent = gameId ? getGameComponent(gameId) : undefined;

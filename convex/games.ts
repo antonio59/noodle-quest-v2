@@ -70,6 +70,25 @@ export const getPlayerStats = query({
   },
 });
 
+// Global play counts over the last 30 days. Used client-side to surface a rotating
+// bonus pool: the least-played games in the window earn a score multiplier. As plays
+// accumulate, the bonus pool shifts automatically — no cron or admin action needed.
+export const getMonthlyPlayCounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const windowStart = now - 30 * 24 * 60 * 60 * 1000;
+    const scores = await ctx.db.query("scores").collect();
+    const counts: Record<string, number> = {};
+    for (const s of scores) {
+      if (s.playedAt >= windowStart) {
+        counts[s.gameId] = (counts[s.gameId] ?? 0) + 1;
+      }
+    }
+    return { counts, windowStart, windowEnd: now };
+  },
+});
+
 export const getLeaderboard = query({
   args: { gameId: v.optional(v.string()) },
   handler: async (ctx, args) => {

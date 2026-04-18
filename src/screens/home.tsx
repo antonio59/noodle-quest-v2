@@ -4,7 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { Star, Zap, Trophy, Sparkles } from 'lucide-react';
-import { getBonusTier } from '@/lib/bonus-multiplier';
+import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
 
 export function Home() {
   const navigate = useNavigate();
@@ -13,6 +13,10 @@ export function Home() {
 
   const stats = useQuery(api.games.getPlayerStats, player?.playerId ? { playerId: player.playerId as any } : 'skip' as any);
   const isLoading = stats === undefined && !!player?.playerId;
+  const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
+  const bonusTiers = monthlyPlays
+    ? computeBonusTiers(monthlyPlays.counts, games.map(g => g.id))
+    : {};
 
   const gameStages = stats?.gameStages ?? {};
   // Personalized Quick Play:
@@ -24,11 +28,11 @@ export function Home() {
   const unplayed = games.filter(g => (gameStages[g.id]?.timesPlayed ?? 0) === 0);
   const recentGames = [...played, ...unplayed].slice(0, 4);
 
-  // Top bonus picks (unplayed or low play count) — "Try for bonus points"
+  // Bonus picks = games in this month's global bonus pool, 3× first then 2×.
   const bonusPicks = games
-    .filter(g => (gameStages[g.id]?.timesPlayed ?? 0) <= 2)
-    .sort((a, b) => (gameStages[a.id]?.timesPlayed ?? 0) - (gameStages[b.id]?.timesPlayed ?? 0))
-    .slice(0, 3);
+    .filter(g => (bonusTiers[g.id] ?? 1) > 1)
+    .sort((a, b) => (bonusTiers[b.id] ?? 1) - (bonusTiers[a.id] ?? 1))
+    .slice(0, 6);
 
   const totalStars = stats?.totalStars ?? 0;
   const gamesPlayed = stats?.gamesPlayed ?? 0;
@@ -67,7 +71,7 @@ export function Home() {
           {recentGames.map(g => {
             const gs = gameStages[g.id];
             const earned = Math.min(gs?.starsEarned ?? 0, 3);
-            const tier = getBonusTier(gs?.timesPlayed ?? 0);
+            const tier = getBonusTier(bonusTiers[g.id]);
             return (
               <button
                 key={g.id}

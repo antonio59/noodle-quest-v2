@@ -8,7 +8,7 @@ import { GAME_CATEGORIES, type GameCategory } from '@/types';
 import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap, Star } from 'lucide-react';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
-import { getBonusTier } from '@/lib/bonus-multiplier';
+import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
 
 const TABS = [
   { 
@@ -81,9 +81,13 @@ export function GameHub() {
     player ? { playerId: player.playerId as any } : 'skip' as any,
   );
   const gameStages = playerStats?.gameStages ?? {};
+  const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
+  const bonusTiers = monthlyPlays
+    ? computeBonusTiers(monthlyPlays.counts, getAllGames().map(g => g.id))
+    : {};
   const statsFor = (gameId: string) => ({
     starsEarned: gameStages[gameId]?.starsEarned ?? 0,
-    timesPlayed: gameStages[gameId]?.timesPlayed ?? 0,
+    bonusMultiplier: bonusTiers[gameId] ?? 1,
   });
   const [category, setCategory] = useState<GameCategory | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -133,8 +137,8 @@ export function GameHub() {
   const currentTab = TABS.find(t => t.id === tab) || TABS[0];
 
   const CardMeta = ({ gameId }: { gameId: string }) => {
-    const { starsEarned, timesPlayed } = statsFor(gameId);
-    const tier = getBonusTier(timesPlayed);
+    const { starsEarned, bonusMultiplier } = statsFor(gameId);
+    const tier = getBonusTier(bonusMultiplier);
     const earned = Math.min(starsEarned, 3);
     return (
       <div className="flex items-center justify-between gap-1 mt-2 min-h-[18px]">
