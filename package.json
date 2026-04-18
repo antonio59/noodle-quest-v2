@@ -15,18 +15,13 @@
     "convex:deploy": "CONVEX_DEPLOYMENT=prod:incredible-lobster-12 npx convex deploy --yes"
   },
   "dependencies": {
-    "@pixi/react": "^8.0.5",
     "@tailwindcss/vite": "^4.2.2",
-    "@tanstack/react-query": "^5.96.1",
     "chess.js": "^1.4.0",
-    "clsx": "^2.1.1",
     "convex": "^1.34.1",
     "lucide-react": "^1.7.0",
-    "pixi.js": "^8.17.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^7.14.0",
-    "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
@@ -34,7 +29,6 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
