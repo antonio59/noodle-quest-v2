@@ -183,7 +183,7 @@ function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDiff
     }
 
     // Report progress after every round (correct or wrong)
-    onProgress((gameRound + 1) / 10);
+    onProgress(Math.min((gameRound + 1) / 10, 1));
 
     schedule(() => setGameRound(prev => prev + 1), 1500);
   }, [score, gameRound, onScore, onMessage, onProgress, schedule]);
