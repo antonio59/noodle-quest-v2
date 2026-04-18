@@ -16,22 +16,13 @@ const CONFIG: Record<number, { gridSize: number; diffs: number; showTime: number
   10: { gridSize: 5, diffs: 4, showTime: 2500, rounds: 6 },
 };
 
-const TIPS = [
-  '💡 Tip: Scan row by row, left to right. Don\'t try to look at everything at once!',
-  '💡 Tip: Focus on the corners first — differences are easier to spot there.',
-  '💡 Tip: Look for shapes that are MISSING, not just different.',
-  '💡 Tip: Blink and look away, then look back — differences jump out!',
-  '💡 Tip: Count how many of each emoji you see. Different counts = difference!',
-];
-
-type Phase = 'intro' | 'memorize' | 'find' | 'done';
+type Phase = 'memorize' | 'find' | 'done';
 type CellState = 'idle' | 'correct' | 'wrong';
 
 function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
 
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('memorize');
   const [roundNum, setRoundNum] = useState(0);
   const [score, setScore] = useState(0);
   const [gridA, setGridA] = useState<string[]>([]);
@@ -121,6 +112,10 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     startRound();
   }, [startRound]);
 
+  useEffect(() => {
+    startGame();
+  }, [startGame]);
+
   const finishRound = useCallback(() => {
     setPhase('done');
 
@@ -185,53 +180,6 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       }, 500);
     }
   }, [phase, differences, foundSet, config.rounds, onScore, onProgress, finishRound, schedule]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">🪞</div>
-        <h2 className="text-2xl font-bold text-accent mb-2">Mirror Match</h2>
-        <p className="text-text-dim mb-6 max-w-xs">
-          Two grids flash briefly — find the <strong>differences!</strong>
-        </p>
-
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="flex gap-3 justify-center mb-3">
-            <div className="text-center">
-              <div className="text-xs text-text-dim mb-1">Grid A</div>
-              <div className="grid grid-cols-3 gap-0.5">
-                {['🔴','🟢','🔵','🟡','🟣','🔴','🟢','⭐','🔵'].map((e, i) => (
-                  <span key={i} className="text-base">{e}</span>
-                ))}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-text-dim mb-1">Grid B</div>
-              <div className="grid grid-cols-3 gap-0.5">
-                {['🔴','🟢','🔵','🟡','🟣','🔴','🟢','💎','🔵'].map((e, i) => (
-                  <span key={i} className="text-base">{e}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="text-warning text-sm">⭐ vs 💎 — Spot the difference!</div>
-        </div>
-
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-success text-sm">👀 Both grids show → 🫣 They vanish → 🖐️ Tap the difference!</div>
-        </div>
-
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
-        >
-          Start Game! 🪞
-        </button>
-      </div>
-    );
-  }
 
   const gs = config.gridSize;
   const cellSize = gs >= 5 ? 38 : gs >= 4 ? 44 : 52;

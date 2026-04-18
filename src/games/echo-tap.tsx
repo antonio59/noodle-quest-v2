@@ -14,17 +14,9 @@ const CONFIG: Record<number, { beats: number; tolerance: number; bpm: number }> 
   10: { beats: 8, tolerance: 200, bpm: 120 },
 };
 
-const TIPS = [
-  '💡 Tip: Count along with the beats — \'1, 2, 3, 4\' — to lock in the rhythm!',
-  '💡 Tip: Tap your foot to the beat before it starts. Get the rhythm in your body.',
-  '💡 Tip: Don\'t watch the button — FEEL the beat. Close your eyes if it helps!',
-  '💡 Tip: The key is consistency. Same gap between every tap.',
-  '💡 Tip: If it feels too fast, take a breath and wait for the next round.',
-];
-
 const ROUNDS_NEEDED = 5;
 
-type Phase = 'intro' | 'listening' | 'tapping' | 'evaluating' | 'done';
+type Phase = 'listening' | 'tapping' | 'evaluating' | 'done';
 
 function playBeatSound(audioCtx: AudioContext, isTap: boolean) {
   const now = audioCtx.currentTime;
@@ -90,9 +82,8 @@ function getIntervals(times: number[]) {
 function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const beatInterval = 60000 / config.bpm;
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
 
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('listening');
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [statusText, setStatusText] = useState('Get ready...');
@@ -213,6 +204,10 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd 
     schedule(playBeatSequence, 1000);
   }, [playBeatSequence, schedule]);
 
+  useEffect(() => {
+    startGame();
+  }, [startGame]);
+
   const advanceRound = useCallback((currentScore: number) => {
     if (endedRef.current) return;
     const currentRound = round;
@@ -328,37 +323,6 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd 
       evaluateRhythm(score);
     }
   }, [phase, tapBtnActive, config, getAudioCtx, evaluateRhythm, score, schedule]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">🥁</div>
-        <h2 className="text-2xl font-bold text-accent mb-2">Echo Tap</h2>
-        <p className="text-text-dim mb-6 max-w-xs">
-          Listen to the beat, then tap to match the <strong>rhythm!</strong>
-        </p>
-
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="text-info mb-2">🔊 Beat plays with timing gaps</div>
-          <div className="text-success mb-2">🥁 You tap to match the rhythm</div>
-          <div className="text-warning">⭐ Closer timing = more points!</div>
-        </div>
-
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-success text-sm">🔊 Listen → 🥁 Tap along → 🎯 Match the beat!</div>
-        </div>
-
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
-        >
-          Start Game! 🥁
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col items-center p-4">

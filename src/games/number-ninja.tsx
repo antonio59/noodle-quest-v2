@@ -14,21 +14,12 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
   10: { minLen: 8, maxLen: 10, showTime: 4500, maxRounds: 5 },
 };
 
-const TIPS = [
-  '💡 Tip: Group numbers in pairs: \'42-87-31\' is easier than \'428731\'!',
-  '💡 Tip: Say the numbers OUT LOUD while memorizing — hearing helps!',
-  '💡 Tip: Create a rhythm: \'four-two, eight-seven, three-one\'.',
-  '💡 Tip: Visualize the numbers on a phone keypad position.',
-  '💡 Tip: Each round adds more digits. Focus on the NEW ones!',
-];
-
-type Phase = 'intro' | 'memorize' | 'input' | 'result' | 'done';
+type Phase = 'memorize' | 'input' | 'result' | 'done';
 
 function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
 
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('memorize');
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [sequence, setSequence] = useState('');
@@ -117,12 +108,19 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     schedule(showNextSequence, 600);
   }, [showNextSequence, schedule]);
 
+  const didStartRef = useRef(false);
+  useEffect(() => {
+    if (didStartRef.current) return;
+    didStartRef.current = true;
+    startGame();
+  }, [startGame]);
+
   // Reset sequence when round changes during gameplay
   useEffect(() => {
-    if (phase !== 'intro' && phase !== 'done') {
+    if (phase !== 'done' && round > 1) {
       showNextSequence();
     }
-  }, [round]);  
+  }, [round]);
 
   const checkAnswer = useCallback(() => {
     if (phase === 'done') return;
@@ -195,35 +193,6 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') checkAnswer();
   }, [checkAnswer]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">🔢</div>
-        <h2 className="text-2xl font-bold text-error mb-2">Number Ninja</h2>
-        <p className="text-text-dim mb-6 max-w-xs">Memorize numbers, then type them back!</p>
-
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="text-2xl text-error font-mono mb-2">4 2 8 7 ?</div>
-          <div className="text-info">Starting with {config.minLen}-{config.maxLen} digits</div>
-          <div className="text-warning mt-1">{config.maxRounds} rounds to beat!</div>
-        </div>
-
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-success text-sm">👀 See → 🧠 Remember → ⌨️ Type!</div>
-        </div>
-
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 flex items-center gap-2"
-        >
-          <span>▶</span> Start Game
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-4">

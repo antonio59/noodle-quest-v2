@@ -49,14 +49,6 @@ const STAGE_CONFIG: Record<number, { spawnRate: number; ruleChange: number; dura
 const COLORS = ['#ff6e6c', '#c084fc', '#67e8f9', '#4ade80'];
 const SHAPE_TYPES = ['circle', 'square'];
 
-const TIPS = [
-  '💡 Tip: When the rule changes, PAUSE for a second to read it clearly!',
-  '💡 Tip: Say the new rule out loud — it helps your brain switch faster.',
-  '💡 Tip: Don\'t tap on autopilot! Check each shape against the current rule.',
-  '💡 Tip: It\'s OK to be slow at first when rules change. Speed comes with practice!',
-  '💡 Tip: Watch the rule at the top — it pulses when it changes!',
-];
-
 interface GameItem {
   id: number;
   color: string;
@@ -67,12 +59,12 @@ interface GameItem {
   popping: boolean;
 }
 
-type Phase = 'intro' | 'playing' | 'done';
+type Phase = 'playing' | 'done';
 
 function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const rules = STAGE_RULES[stage] || ALL_RULES;
   const config = STAGE_CONFIG[stage] || STAGE_CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [currentRuleIdx, setCurrentRuleIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [correctClicks, setCorrectClicks] = useState(0);
@@ -81,7 +73,6 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
   const [feedback, setFeedback] = useState('');
   const [feedbackColor, setFeedbackColor] = useState('#67e8f9');
   const [rulePulse, setRulePulse] = useState(false);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const itemIdRef = useRef(0);
   const scoreRef = useRef(0);
@@ -197,6 +188,10 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
   }, []);
 
   useEffect(() => {
+    startGame();
+  }, [startGame]);
+
+  useEffect(() => {
     if (phase !== 'playing') return;
 
     const spawnInterval = setInterval(spawnItem, config.spawnRate);
@@ -237,46 +232,6 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
       clearTimeout(gameTimeout);
     };
   }, [phase, config, spawnItem, changeRule, onProgress, onEnd]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] p-6 text-center">
-        <div className="text-6xl mb-4">🔄</div>
-        <h2 className="text-2xl font-bold text-warning mb-2">Flexibility Frames</h2>
-        <p className="text-warning/80 mb-4 max-w-xs">
-          The rules keep CHANGING! Stay flexible and adapt!
-        </p>
-
-        <div className="bg-card rounded-xl p-4 mb-5 max-w-sm">
-          <div className="text-primary text-sm mb-3">Watch the rule at the top!</div>
-          <div className="flex gap-2 justify-center flex-wrap">
-            <div className="w-9 h-9 rounded-full" style={{ background: '#ff6e6c' }} />
-            <div className="w-9 h-9 rounded-lg" style={{ background: '#67e8f9' }} />
-            <div className="w-9 h-9 rounded-full" style={{ background: '#4ade80' }} />
-            <div className="w-9 h-9 rounded-lg" style={{ background: '#c084fc' }} />
-          </div>
-          <div className="text-text-dim text-sm mt-3">
-            Only tap shapes that match the CURRENT rule!
-          </div>
-        </div>
-
-        <div className="bg-surface rounded-lg p-2.5 mb-4 max-w-xs">
-          <div className="text-danger text-sm">
-            ⚠️ Rules change every {Math.round(config.ruleChange / 1000)} seconds!
-          </div>
-        </div>
-
-        <p className="text-primary text-sm mb-5 max-w-xs">{tip}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-warning text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
-        >
-          Start Game! 🔄
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

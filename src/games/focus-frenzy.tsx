@@ -14,7 +14,7 @@ interface Orb {
   burstY: number;
 }
 
-type Phase = 'intro' | 'playing' | 'done';
+type Phase = 'playing' | 'done';
 
 const CONFIG: Record<number, { spawnRate: number; duration: number; distractors: number; fadeTime: number; speed: number }> = {
   1: { spawnRate: 1400, duration: 25000, distractors: 0.2, fadeTime: 0, speed: 0.8 },
@@ -29,21 +29,13 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; distractors:
   10: { spawnRate: 600, duration: 45000, distractors: 0.65, fadeTime: 600, speed: 1.8 },
 };
 
-const TIPS = [
-  "💡 Tip: Look for the WARM colors (pink/purple glow) — those are your targets!",
-  "💡 Tip: The blue orbs are distractions. Train your brain to ignore them!",
-  "💡 Tip: Don't rush! It's better to skip an orb than tap the wrong one.",
-  "💡 Tip: Focus on ONE area of the screen at a time, then shift your gaze.",
-  "💡 Tip: Take a breath before you start — calm focus beats frantic tapping!",
-];
-
 const FEEDBACKS = ["Nice focus! 🎯", "Great eyes! 👀", "You're on fire! 🔥", "Keep it up! ⭐"];
 
 let orbIdCounter = 0;
 
 function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [score, setScore] = useState(0);
   const [targetsHit, setTargetsHit] = useState(0);
@@ -53,7 +45,6 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const gameActiveRef = useRef(false);
   const scoreRef = useRef(0);
   const targetsHitRef = useRef(0);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
   const spawnOrb = useCallback(() => {
     if (!gameActiveRef.current || !gameAreaRef.current) return;
@@ -128,6 +119,10 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   useEffect(() => {
+    startGame();
+  }, [startGame]);
+
+  useEffect(() => {
     if (phase !== 'playing') return;
 
     const spawnTimer = setInterval(spawnOrb, config.spawnRate);
@@ -163,38 +158,6 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       clearTimeout(gameTimer);
     };
   }, [phase, config, spawnOrb, onProgress, onEnd]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
-        <div className="text-6xl mb-4">🔮</div>
-        <h2 className="text-2xl font-bold text-purple-400 mb-2">Focus Frenzy</h2>
-        <p className="text-purple-300 mb-4 max-w-xs">
-          Tap the glowing pink/purple orbs!<br />Ignore the blue distractions!
-        </p>
-
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full" style={{ background: 'radial-gradient(circle at 30% 30%, #ff6e6c, #c084fc)', boxShadow: '0 0 15px #ff6e6c' }} />
-            <span className="text-green-400">✓ Tap these! (+10 points)</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full" style={{ background: 'radial-gradient(circle at 30% 30%, #67e8f9, #232146)', boxShadow: '0 0 8px #67e8f9' }} />
-            <span className="text-red-400">✗ Ignore these! (-5 points)</span>
-          </div>
-        </div>
-
-        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
-        >
-          Start Game! 🎯
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

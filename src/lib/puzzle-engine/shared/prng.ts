@@ -2,7 +2,7 @@
  * Mulberry32: fast, seedable, deterministic PRNG.
  * Same seed always produces the same sequence.
  */
-export function mulberry32(seed: number): () => number {
+function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
   return function () {
     t += 0x6D2B79F5;

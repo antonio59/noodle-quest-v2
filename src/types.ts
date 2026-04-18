@@ -71,7 +71,7 @@ export interface Track {
   description: string;
 }
 
-export interface Playlist {
+interface Playlist {
   _id: string;
   playerId: string;
   name: string;
@@ -81,7 +81,7 @@ export interface Playlist {
   updatedAt: number;
 }
 
-export interface FeedPost {
+interface FeedPost {
   id: string;
   authorName: string;
   authorAvatar: string;
@@ -95,7 +95,7 @@ export interface FeedPost {
   createdAt: number;
 }
 
-export interface MultiplayerInvite {
+interface MultiplayerInvite {
   _id: string;
   gameId: string;
   fromId: string;
@@ -109,7 +109,7 @@ export interface MultiplayerInvite {
   expiresAt: number;
 }
 
-export interface MultiplayerSession {
+interface MultiplayerSession {
   _id: string;
   gameId: string;
   player1Id: string;

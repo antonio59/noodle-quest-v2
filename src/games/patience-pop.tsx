@@ -14,7 +14,7 @@ interface Bubble {
   popFeedback: 'too-soon' | 'good' | 'trap' | null;
 }
 
-type Phase = 'intro' | 'playing' | 'done';
+type Phase = 'playing' | 'done';
 
 const CONFIG: Record<number, { spawnRate: number; duration: number; waitMin: number; waitMax: number; trapChance: number; sizeMin: number; sizeMax: number }> = {
   1: { spawnRate: 1800, duration: 25000, waitMin: 2000, waitMax: 3500, trapChance: 0, sizeMin: 65, sizeMax: 95 },
@@ -29,21 +29,13 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; waitMin: num
   10: { spawnRate: 800, duration: 45000, waitMin: 500, waitMax: 1400, trapChance: 0.4, sizeMin: 35, sizeMax: 65 },
 };
 
-const TIPS = [
-  "💡 Tip: Watch the bubble's color — wait for GREEN before you tap!",
-  "💡 Tip: Patience is a superpower! Rushing leads to mistakes.",
-  "💡 Tip: If you see RED, that's a trap bubble — don't pop it!",
-  "💡 Tip: Take a deep breath while waiting. Good things come to those who wait!",
-  "💡 Tip: Focus on one bubble at a time. Don't try to watch them all!",
-];
-
 const POP_FEEDBACKS = ["Perfect patience! 🌟", "Great timing! ⏰", "You waited! 💪"];
 
 let bubbleIdCounter = 0;
 
 function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [score, setScore] = useState(0);
   const [popped, setPopped] = useState(0);
@@ -54,7 +46,6 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const scoreRef = useRef(0);
   const poppedRef = useRef(0);
   const missedRef = useRef(0);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
   const spawnBubble = useCallback(() => {
     if (!gameActiveRef.current || !gameAreaRef.current) return;
@@ -136,6 +127,10 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   useEffect(() => {
+    startGame();
+  }, [startGame]);
+
+  useEffect(() => {
     if (phase !== 'playing') return;
 
     const spawnTimer = setInterval(spawnBubble, config.spawnRate);
@@ -205,42 +200,6 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const interval = setInterval(animFrame, 16);
     return () => clearInterval(interval);
   }, [phase]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
-        <div className="text-6xl mb-4">🫧</div>
-        <h2 className="text-2xl font-bold text-green-400 mb-2">Patience Pop</h2>
-        <p className="text-green-300 mb-4 max-w-xs">Wait for bubbles to turn GREEN, then pop them!</p>
-
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-cyan-500/30 border-2 border-cyan-400 flex items-center justify-center">🫧</div>
-            <span className="text-cyan-300">⏳ Blue = Wait...</span>
-          </div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-green-500/40 border-2 border-green-400 flex items-center justify-center" style={{ boxShadow: '0 0 15px #4ade80' }}>🫧</div>
-            <span className="text-green-400">✓ Green = Pop it! (+15)</span>
-          </div>
-          {stage >= 4 && (
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-500/40 border-2 border-red-400 flex items-center justify-center" style={{ boxShadow: '0 0 15px #ff6e6c' }}>🫧</div>
-              <span className="text-red-400">✗ Red = Trap! Don't tap!</span>
-            </div>
-          )}
-        </div>
-
-        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
-        >
-          Start Game! 🫧
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

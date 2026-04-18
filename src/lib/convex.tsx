@@ -8,4 +8,3 @@ export function ConvexClientProvider({ children }: { children: React.ReactNode }
   return <ConvexProvider client={client}>{children}</ConvexProvider>;
 }
 
-export { client };

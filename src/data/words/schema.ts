@@ -21,7 +21,7 @@ export interface ClueEntry {
   source?: string;
 }
 
-export interface WordPack {
+interface WordPack {
   id: string;
   name: string;
   locale: Locale;

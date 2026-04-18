@@ -56,7 +56,3 @@ export function getGameName(id: string) {
 export function getAllGames() {
   return Array.from(registry.entries()).map(([id, entry]) => ({ id, ...entry.meta }));
 }
-
-export function getGamesByCategory(category: string) {
-  return getAllGames().filter(g => g.category === category);
-}

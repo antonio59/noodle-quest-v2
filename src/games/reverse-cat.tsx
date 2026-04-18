@@ -25,22 +25,13 @@ const CONFIG: Record<number, { colors: number; startLength: number; maxRounds: n
   10: { colors: 8, startLength: 5, maxRounds: 7, speed: 380 },
 };
 
-const TIPS = [
-  '💡 Tip: When you see the sequence, repeat it backwards in your head FIRST.',
-  '💡 Tip: Say the last color first, then work backwards: \'green, blue, red\'.',
-  '💡 Tip: The sequence gets longer each round — focus on remembering the END.',
-  '💡 Tip: Try tracing the pattern in reverse with your finger as you watch.',
-  '💡 Tip: Each round only adds ONE new color at the end — that becomes your FIRST tap!',
-];
-
-type Phase = 'intro' | 'watching' | 'playing' | 'done';
+type Phase = 'watching' | 'playing' | 'done';
 
 function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
   const colors = COLOR_DATA.slice(0, config.colors);
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
 
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('watching');
   const [sequence, setSequence] = useState<number[]>([]);
   const [playerIndex, setPlayerIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -129,6 +120,10 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     }, 2400);
   }, [config, playSequence, schedule]);
 
+  useEffect(() => {
+    startGame();
+  }, [startGame]);
+
   const nextRound = useCallback((currentSeq: number[]) => {
     const newSeq = [...currentSeq, Math.floor(Math.random() * config.colors)];
     setSequence(newSeq);
@@ -176,43 +171,6 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       }
     }
   }, [phase, sequence, playerIndex, score, config, onScore, onProgress, nextRound, schedule, finishGame]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">🔄</div>
-        <h2 className="text-2xl font-bold text-accent mb-2">Reverse Cat</h2>
-        <p className="text-text-dim mb-6 max-w-xs">
-          Watch the pattern, then repeat it <strong>backwards!</strong>
-        </p>
-
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="flex gap-2 justify-center flex-wrap mb-3">
-            {colors.map((c, i) => (
-              <div key={i} className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: c.color }}>
-                {c.emoji}
-              </div>
-            ))}
-          </div>
-          <div className="text-info">Watch: 🔴 🟢 🔵</div>
-          <div className="text-success mt-1">Tap: 🔵 🟢 🔴</div>
-        </div>
-
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-success text-sm">👀 Watch → 🔄 Reverse it → 🖐️ Tap backwards!</div>
-        </div>
-
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
-        >
-          Start Game! 🔄
-        </button>
-      </div>
-    );
-  }
 
   const currentRound = sequence.length - config.startLength + 1;
   const cols = config.colors <= 4 ? 2 : config.colors <= 6 ? 3 : 4;

@@ -5,7 +5,7 @@ interface Point { x: number; y: number }
 interface Checkpoint { x: number; y: number; collected: boolean }
 interface Obstacle { x: number; y: number; radius: number; dx: number; dy: number }
 
-type Phase = 'intro' | 'playing' | 'done';
+type Phase = 'playing' | 'done';
 type EndReason = 'wall' | 'obstacle' | 'finish' | null;
 
 const CONFIG: Record<number, { pathWidth: number; obstacles: boolean; checkpointCount: number }> = {
@@ -21,19 +21,11 @@ const CONFIG: Record<number, { pathWidth: number; obstacles: boolean; checkpoint
   10: { pathWidth: 28, obstacles: true, checkpointCount: 6 },
 };
 
-const TIPS = [
-  "💡 Tip: Go SLOW! There's no time limit — steady beats fast.",
-  "💡 Tip: Focus on the path just ahead of the ball, not the whole maze.",
-  "💡 Tip: Keep your hand/finger relaxed — tension makes you shake!",
-  "💡 Tip: Collect the stars as you go — they mark your progress!",
-  "💡 Tip: If you hit a wall, no worries! Just be more careful next time.",
-];
-
 const STAR_FEEDBACKS = ["Star collected! ⭐", "Nice! Keep going! 🌟", "Great control! ✨"];
 
 function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [score, setScore] = useState(0);
   const [collected, setCollected] = useState(0);
   const [feedback, setFeedback] = useState('Drag to move the ball!');
@@ -51,7 +43,6 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const isDraggingRef = useRef(false);
   const animFrameRef = useRef<number>(0);
   const moveTimeRef = useRef(0);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -213,6 +204,10 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setFeedback('Drag to move the ball!');
   }, []);
 
+  useEffect(() => {
+    startGame();
+  }, [startGame]);
+
   // Resize canvas and generate path
   useEffect(() => {
     if (phase !== 'playing') return;
@@ -356,41 +351,6 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const handlePointerUp = useCallback(() => {
     isDraggingRef.current = false;
   }, []);
-
-  if (phase === 'intro') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
-        <div className="text-6xl mb-4">🎯</div>
-        <h2 className="text-2xl font-bold text-green-400 mb-2">Steady Hands</h2>
-        <p className="text-green-300 mb-4 max-w-xs">Guide the ball through the path without touching the walls!</p>
-
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-5 h-5 rounded-full bg-red-400" style={{ boxShadow: '0 0 10px #ff6e6c' }} />
-            <span className="text-white text-sm">This is your ball — drag it!</span>
-          </div>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-xs">⭐</div>
-            <span className="text-yellow-400 text-sm">Collect {config.checkpointCount} stars on the way</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full bg-green-400 flex items-center justify-center text-xs">🏁</div>
-            <span className="text-green-400 text-sm">Reach the finish!</span>
-          </div>
-          {config.obstacles && <div className="text-red-400 mt-3 text-sm">⚠️ Watch out for moving obstacles!</div>}
-        </div>
-
-        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
-        >
-          Start Game! 🎯
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { WordSearchPuzzle, WSPlacement } from '@/lib/puzzle-engine/wordsearch/types';
 import { loadSession, saveSession } from '@/lib/puzzle-engine/persistence/local';
 
-export interface WSCellState {
+interface WSCellState {
   selected: boolean;
   found: boolean;
   highlightClass: string;

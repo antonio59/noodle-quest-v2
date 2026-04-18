@@ -19,7 +19,7 @@ function w(answer: string, overrides: Partial<Omit<WordEntry, 'id' | 'answer' | 
 // Curated en-GB starter dataset (~180 words)
 // Family-friendly, no obscure abbreviations, no offensive terms.
 // Includes common UK spellings: colour, centre, favour, neighbour, tyre, etc.
-export const EN_GB_WORDS: WordEntry[] = [
+const EN_GB_WORDS: WordEntry[] = [
   // Easy / common (difficulty 1)
   w('CAT', { tags: ['animal', 'easy'], frequency: 950 }),
   w('DOG', { tags: ['animal', 'easy'], frequency: 950 }),

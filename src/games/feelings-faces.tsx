@@ -104,25 +104,16 @@ const emotions: Record<string, { emoji: string; color: string }> = {
   relaxed: { emoji: '😎', color: '#4ade80' }, stressed: { emoji: '😫', color: '#ff6e6c' },
 };
 
-const tips = [
-  '💡 Tip: Think about how YOU would feel in that situation!',
-  '💡 Tip: Picture the scene in your mind — what emotion fits best?',
-  '💡 Tip: Some feelings are similar. Choose the one that matches MOST.',
-  "💡 Tip: It's okay to feel different things at different times!",
-  '💡 Tip: Understanding feelings helps us be better friends.',
-];
-
-type Phase = 'intro' | 'playing' | 'feedback' | 'done';
+type Phase = 'playing' | 'feedback' | 'done';
 
 function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const questions = allQuestions[stage] || allQuestions[10];
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [score, setScore] = useState(0);
   const [currentQ, setCurrentQ] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [feedbackColor, setFeedbackColor] = useState('#67e8f9');
   const [selectedOpt, setSelectedOpt] = useState<string | null>(null);
-  const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -203,33 +194,6 @@ function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       }, 1500);
     }
   }, [phase, currentQ, questions, score, onScore, onProgress, onEnd, schedule]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
-        <div className="text-6xl mb-4">😊</div>
-        <h2 className="text-2xl font-bold text-[#fbbf24] mb-2">Feelings Faces</h2>
-        <p className="text-[#fcd34d] mb-4 max-w-xs">Match the right emotion to each situation!</p>
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="flex gap-2 justify-center flex-wrap mb-3">
-            <span className="text-3xl">😊</span>
-            <span className="text-3xl">😢</span>
-            <span className="text-3xl">😠</span>
-            <span className="text-3xl">😨</span>
-            <span className="text-3xl">🥰</span>
-          </div>
-          <div className="text-[#67e8f9]">{questions.length} scenarios to answer</div>
-        </div>
-        <p className="text-[#67e8f9] text-sm mb-5 max-w-xs">{tip}</p>
-        <button
-          onClick={() => setPhase('playing')}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
-        >
-          Start Game! 😊
-        </button>
-      </div>
-    );
-  }
 
   const q = questions[currentQ];
 

@@ -13,7 +13,7 @@ interface ArcheryTarget {
   hitAnim: boolean;
 }
 
-type Phase = 'intro' | 'playing' | 'done';
+type Phase = 'playing' | 'done';
 
 const CONFIG: Record<number, { spawnRate: number; duration: number; speed: number; move: boolean; decoyChance: number }> = {
   1: { spawnRate: 1800, duration: 25000, speed: 2, move: false, decoyChance: 0.3 },
@@ -31,21 +31,13 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; speed: numbe
 const TARGET_COLORS = ['#ff6e6c', '#c084fc', '#4ade80'];
 const DECOY_COLORS = ['#ff8a88', '#d4a5ff', '#6ee7b7'];
 
-const TIPS = [
-  "💡 Tip: Real targets have a BRIGHT GLOW and show 🎯. Decoys are duller with 🎪.",
-  "💡 Tip: Focus on the glow! Bright = hit it, dull = skip it.",
-  "💡 Tip: Don't panic when targets move — track them with your eyes first, then tap.",
-  "💡 Tip: It's better to let a target pass than to hit a decoy!",
-  "💡 Tip: Watch the left side of the screen — targets come from there!",
-];
-
 const HIT_FEEDBACKS = ["Bullseye! 🎯", "Sharp shooter! 🏹", "Perfect aim! ⭐"];
 
 let targetIdCounter = 0;
 
 function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [targets, setTargets] = useState<ArcheryTarget[]>([]);
   const [score, setScore] = useState(0);
   const [hits, setHits] = useState(0);
@@ -57,7 +49,6 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
   const hitsRef = useRef(0);
   const missesRef = useRef(0);
   const moveTimeRef = useRef(0);
-  const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
   const spawnTarget = useCallback(() => {
     if (!gameActiveRef.current || !gameAreaRef.current) return;
@@ -118,6 +109,10 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
     setTargets([]);
     setFeedback('Hit the glowing targets! 🎯');
   }, []);
+
+  useEffect(() => {
+    startGame();
+  }, [startGame]);
 
   useEffect(() => {
     if (phase !== 'playing') return;
@@ -188,36 +183,6 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
 
     return () => clearInterval(interval);
   }, [phase, config]);
-
-  if (phase === 'intro') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
-        <div className="text-6xl mb-4">🏹</div>
-        <h2 className="text-2xl font-bold text-red-400 mb-2">Attention Archery</h2>
-        <p className="text-red-300 mb-4 max-w-xs">Hit the glowing targets! Skip the decoys!</p>
-
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-11 h-11 rounded-full bg-red-400 border-2 border-white flex items-center justify-center text-xl" style={{ boxShadow: '0 0 15px #ff6e6c' }}>🎯</div>
-            <span className="text-green-400">✓ Hit these! (+20 points)</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-red-300/70 border-2 border-white flex items-center justify-center text-xl">🎪</div>
-            <span className="text-red-400">✗ Skip these! (-10 points)</span>
-          </div>
-        </div>
-
-        <p className="text-cyan-300 text-sm mb-5 max-w-xs">{tip}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-red-600 hover:bg-red-500 text-white font-bold px-8 py-3 rounded-xl text-lg active:scale-95 transition-transform"
-        >
-          Start Game! 🏹
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

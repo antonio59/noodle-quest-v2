@@ -1,6 +1,6 @@
 import type { CrosswordPuzzle, PlacedWord } from '@/lib/puzzle-engine/crossword/types';
 
-export interface CrosswordGridProps {
+interface CrosswordGridProps {
   puzzle: CrosswordPuzzle;
   grid: { value: string; isRevealed: boolean; isError: boolean }[][];
   activeWordId: string | null;

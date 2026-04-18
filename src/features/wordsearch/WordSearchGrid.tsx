@@ -1,4 +1,4 @@
-export interface WordSearchGridProps {
+interface WordSearchGridProps {
   grid: string[][];
   gridSize: number;
   cellStateFor: (r: number, c: number) => { selected: boolean; found: boolean; highlightClass: string };

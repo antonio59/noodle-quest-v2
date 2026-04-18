@@ -16,15 +16,7 @@ const CONFIG: Record<number, { pairs: number; cols: number; time: number }> = {
   10: { pairs: 15, cols: 6, time: 80 },
 };
 
-const TIPS = [
-  '💡 Tip: Focus on ONE row at a time. Remember what\'s in that row before moving on.',
-  '💡 Tip: When you flip a card, try to remember WHERE it is, not just WHAT it is.',
-  '💡 Tip: Create mental stories — \'🦄 is next to 🚀\' helps you remember!',
-  '💡 Tip: Don\'t rush! Take a second to look at each card before flipping another.',
-  '💡 Tip: If you find a match, try to remember cards you saw near it.',
-];
-
-type Phase = 'intro' | 'playing' | 'done';
+type Phase = 'playing' | 'done';
 
 interface Card {
   id: number;
@@ -44,9 +36,8 @@ function shuffle<T>(arr: T[]): T[] {
 
 function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const config = CONFIG[stage] || CONFIG[10];
-  const tip = useRef(TIPS[Math.floor(Math.random() * TIPS.length)]);
 
-  const [phase, setPhase] = useState<Phase>('intro');
+  const [phase, setPhase] = useState<Phase>('playing');
   const [cards, setCards] = useState<Card[]>([]);
   const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
   const [matched, setMatched] = useState(0);
@@ -96,6 +87,10 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     setFeedback('');
     setPhase('playing');
   }, [config]);
+
+  useEffect(() => {
+    startGame();
+  }, [startGame]);
 
   const flipCard = useCallback((index: number) => {
     if (phase !== 'playing' || checkingRef.current) return;
@@ -187,39 +182,6 @@ function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   }, [config, timeLeft, onEnd]);
 
   const cardSize = config.pairs >= 12 ? 52 : config.pairs >= 8 ? 62 : 72;
-
-  if (phase === 'intro') {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">🃏</div>
-        <h2 className="text-2xl font-bold text-accent mb-2">Memory Match</h2>
-        <p className="text-text-dim mb-6 max-w-xs">Find all the matching pairs by flipping cards!</p>
-
-        <div className="bg-card rounded-xl p-4 mb-6 max-w-xs">
-          <div className="text-xl mb-2">🎯 {config.pairs} pairs to find</div>
-          {config.time > 0 ? (
-            <div className="text-warning">⏱️ Time limit: {config.time} seconds</div>
-          ) : (
-            <div className="text-success">✓ No time limit — take your time!</div>
-          )}
-        </div>
-
-        <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
-          <div className="text-info text-sm">How to play:</div>
-          <div className="text-text-dim text-sm mt-1">Flip 2 cards → Match = stay → No match = flip back</div>
-        </div>
-
-        <p className="text-info text-sm mb-6 max-w-xs">{tip.current}</p>
-
-        <button
-          onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
-        >
-          Start Game! 🃏
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col items-center p-4">

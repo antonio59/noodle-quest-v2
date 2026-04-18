@@ -17,10 +17,8 @@ const CENTER = 7;
 
 type BonusType = 'TW' | 'DW' | 'TL' | 'DL' | 'ST';
 
-// Build the standard bonus map (symmetric across both axes AND the main diagonals)
 function buildBonusMap(): Map<string, BonusType> {
   const m = new Map<string, BonusType>();
-  // 8-way symmetry: mirror across both axes + transpose so (7,0) etc are covered
   const set = (r: number, c: number, b: BonusType) => {
     for (const [mr, mc] of [
       [r, c], [r, 14 - c], [14 - r, c], [14 - r, 14 - c],
@@ -29,17 +27,12 @@ function buildBonusMap(): Map<string, BonusType> {
       m.set(`${mr},${mc}`, b);
     }
   };
-  // Triple Word — corners + midpoints of every edge (8 total)
   set(0, 0, 'TW');
   set(0, 7, 'TW');
-  // Double Word (diagonal from corners inward)
   set(1, 1, 'DW'); set(2, 2, 'DW'); set(3, 3, 'DW'); set(4, 4, 'DW');
-  // Triple Letter
   set(1, 5, 'TL'); set(5, 1, 'TL'); set(5, 5, 'TL');
-  // Double Letter
   set(0, 3, 'DL'); set(2, 6, 'DL'); set(3, 0, 'DL'); set(3, 7, 'DL');
   set(6, 2, 'DL'); set(6, 6, 'DL'); set(7, 3, 'DL');
-  // Center star
   m.set(`${CENTER},${CENTER}`, 'ST');
   return m;
 }
@@ -54,7 +47,7 @@ const BONUS_STYLE: Record<BonusType, { bg: string; text: string; label: string }
   ST: { bg: 'bg-amber-500/30',  text: 'text-amber-200',  label: '★' },
 };
 
-// ── Word list ──────────────────────────────────────────────────────────
+// ── Word list (kept inline; large set trimmed for AI feasibility) ─────
 const VALID_WORDS = new Set([
   // 2-letter
   'AA','AB','AD','AE','AG','AH','AI','AL','AM','AN','AR','AS','AT','AW','AX','AY',
@@ -94,47 +87,47 @@ const VALID_WORDS = new Set([
   'ABLE','ACHE','ACID','ACRE','AGED','AIDE','ALSO','ARCH','AREA','ARMY','AVID','AWAY',
   'BABY','BACK','BAKE','BALD','BALE','BALL','BAND','BANE','BANG','BANK','BARE','BARK','BARN','BASE','BASH','BATH','BEAD','BEAK','BEAM','BEAN','BEAR','BEAT','BEEN','BEER','BELL','BELT','BEND','BENT','BEST','BIAS','BIKE','BILL','BIND','BIRD','BITE','BLEW','BLIP','BLOB','BLOC','BLOG','BLOT','BLOW','BLUE','BLUR','BOAR','BOAT','BODY','BOLD','BOLT','BOMB','BOND','BONE','BOOK','BOOM','BOOT','BORE','BORN','BOSS','BOTH','BOUT','BOWL','BRAG','BRAN','BRED','BREW','BULK','BULL','BUMP','BURN','BURP','BURY','BUSH','BUST','BUSY','BUZZ',
   'CAFE','CAGE','CAKE','CALF','CALL','CALM','CAME','CAMP','CANE','CAPE','CARD','CARE','CARP','CART','CASE','CASH','CAST','CAVE','CELL','CHAR','CHAT','CHEF','CHEW','CHIN','CHIP','CHOP','CITE','CITY','CLAD','CLAM','CLAP','CLAW','CLAY','CLIP','CLOD','CLOG','CLOT','CLUB','CLUE','COAL','COAT','CODE','COIL','COIN','COLD','COLT','COMB','COME','CONE','COOK','COOL','COPE','COPY','CORD','CORE','CORK','CORN','COST','COSY','COUP','COVE','COZY','CRAB','CRAM','CREW','CROP','CROW','CRUD','CUBE','CULT','CURB','CURE','CURL','CUTE',
-  'DALE','DAME','DAMP','DARE','DARK','DARN','DART','DASH','DATA','DATE','DAWN','DEAD','DEAF','DEAL','DEAR','DEBT','DECK','DEED','DEEM','DEEP','DEER','DEMO','DENT','DENY','DESK','DIAL','DICE','DIET','DIGS','DIME','DINE','DIRE','DIRT','DISC','DISH','DISK','DOCK','DOES','DOLE','DOLL','DOME','DONE','DOOM','DOOR','DOSE','DOVE','DOWN','DOZE','DRAB','DRAG','DRAW','DREW','DRIP','DROP','DRUM','DUAL','DUCK','DUEL','DUFF','DUKE','DULL','DUMB','DUMP','DUNE','DUNG','DUNK','DUSK','DUST','DUTY',
+  'DALE','DAME','DAMP','DARE','DARK','DARN','DART','DASH','DATA','DATE','DAWN','DEAD','DEAF','DEAL','DEAR','DEBT','DECK','DEED','DEEM','DEEP','DEER','DEMO','DENT','DENY','DESK','DIAL','DICE','DIET','DIME','DINE','DIRE','DIRT','DISC','DISH','DISK','DOCK','DOES','DOLE','DOLL','DOME','DONE','DOOM','DOOR','DOSE','DOVE','DOWN','DOZE','DRAB','DRAG','DRAW','DREW','DRIP','DROP','DRUM','DUAL','DUCK','DUEL','DUFF','DUKE','DULL','DUMB','DUMP','DUNE','DUNG','DUNK','DUSK','DUST','DUTY',
   'EACH','EARL','EARN','EASE','EAST','EASY','EDGE','EDIT','ELSE','EMIT','EPIC','EVEN','EVER','EVIL','EXAM','EXIT',
-  'FACE','FACT','FADE','FAIL','FAIR','FAKE','FALL','FAME','FANG','FARE','FARM','FAST','FATE','FAWN','FEAR','FEAT','FEED','FEEL','FELL','FELT','FEND','FERN','FEST','FILE','FILL','FILM','FIND','FINE','FIRE','FIRM','FISH','FIST','FLAG','FLAK','FLAM','FLAN','FLAP','FLAT','FLAW','FLEA','FLED','FLEW','FLIP','FLIT','FLOG','FLOP','FLOW','FLUE','FLUX','FOAM','FOCI','FOIL','FOLD','FOLK','FOND','FONT','FOOD','FOOL','FOOT','FORD','FORE','FORK','FORM','FORT','FOUL','FOUR','FOWL','FREE','FRET','FROM','FROG','FUEL','FULL','FUME','FUND','FUNK','FURY','FUSE','FUSS','FUZZ',
-  'GAIT','GALE','GALL','GAME','GANG','GAPE','GARB','GASH','GASP','GATE','GAVE','GAWK','GAZE','GEAR','GERM','GIFT','GILD','GILL','GILT','GIST','GIVE','GLAD','GLEE','GLEN','GLIB','GLOB','GLOM','GLOW','GLUE','GLUM','GLUT','GNAT','GNAW','GOAT','GOES','GOLD','GOLF','GONE','GOOD','GORE','GORY','GOWN','GRAB','GRAM','GRAY','GREW','GRID','GRIM','GRIN','GRIP','GRIT','GROW','GRUB','GULF','GULL','GULP','GUNG','GURU','GUSH','GUST','GUTS',
-  'HACK','HAIL','HAIR','HALE','HALF','HALL','HALT','HAND','HANG','HARD','HARE','HARM','HARP','HASH','HASP','HASTE','HATE','HAUL','HAVE','HAWK','HAZE','HAZY','HEAD','HEAL','HEAP','HEAR','HEAT','HEED','HEEL','HELD','HELL','HELM','HELP','HEMP','HERD','HERE','HERO','HIGH','HIKE','HILL','HILT','HIND','HINT','HIRE','HISS','HIVE','HOAX','HOLD','HOLE','HOLY','HOME','HONE','HOOD','HOOK','HOOP','HOPE','HORN','HOSE','HOST','HOUR','HOWL','HUFF','HUGE','HULL','HUMP','HUNG','HUNK','HUNT','HURL','HURT','HUSH','HYMN',
+  'FACE','FACT','FADE','FAIL','FAIR','FAKE','FALL','FAME','FANG','FARE','FARM','FAST','FATE','FAWN','FEAR','FEAT','FEED','FEEL','FELL','FELT','FEND','FERN','FEST','FILE','FILL','FILM','FIND','FINE','FIRE','FIRM','FISH','FIST','FLAG','FLAK','FLAP','FLAT','FLAW','FLEA','FLED','FLEW','FLIP','FLIT','FLOG','FLOP','FLOW','FLUE','FLUX','FOAM','FOCI','FOIL','FOLD','FOLK','FOND','FONT','FOOD','FOOL','FOOT','FORD','FORE','FORK','FORM','FORT','FOUL','FOUR','FOWL','FREE','FRET','FROM','FROG','FUEL','FULL','FUME','FUND','FUNK','FURY','FUSE','FUSS','FUZZ',
+  'GAIT','GALE','GALL','GAME','GANG','GAPE','GARB','GASH','GASP','GATE','GAVE','GAWK','GAZE','GEAR','GERM','GIFT','GILD','GILL','GILT','GIST','GIVE','GLAD','GLEE','GLEN','GLIB','GLOB','GLOM','GLOW','GLUE','GLUM','GLUT','GNAT','GNAW','GOAT','GOES','GOLD','GOLF','GONE','GOOD','GORE','GORY','GOWN','GRAB','GRAM','GRAY','GREW','GRID','GRIM','GRIN','GRIP','GRIT','GROW','GRUB','GULF','GULL','GULP','GURU','GUSH','GUST',
+  'HACK','HAIL','HAIR','HALE','HALF','HALL','HALT','HAND','HANG','HARD','HARE','HARM','HARP','HASH','HASP','HATE','HAUL','HAVE','HAWK','HAZE','HAZY','HEAD','HEAL','HEAP','HEAR','HEAT','HEED','HEEL','HELD','HELL','HELM','HELP','HEMP','HERD','HERE','HERO','HIGH','HIKE','HILL','HILT','HIND','HINT','HIRE','HISS','HIVE','HOAX','HOLD','HOLE','HOLY','HOME','HONE','HOOD','HOOK','HOOP','HOPE','HORN','HOSE','HOST','HOUR','HOWL','HUFF','HUGE','HULL','HUMP','HUNG','HUNK','HUNT','HURL','HURT','HUSH','HYMN',
   'ICON','IDEA','IDLE','INCH','INTO','IRON','ISLE','ITEM',
-  'JACK','JADE','JAIL','JAMB','JAPE','JAZZ','JEAN','JEER','JERK','JEST','JILT','JINX','JIVE','JOBS','JOCK','JOIN','JOKE','JOLT','JOSH','JOWL','JUDO','JUGS','JUMP','JUNE','JUNK','JURY','JUST','JUTE',
-  'KALE','KEEN','KEEP','KELP','KEPT','KETO','KEYS','KICK','KIDS','KILL','KILT','KIND','KING','KISS','KITE','KNAB','KNEE','KNEW','KNIT','KNOB','KNOT','KNOW',
-  'LACE','LACK','LACY','LAID','LAIN','LAIR','LAKE','LAME','LAMP','LAND','LANE','LARD','LARK','LASH','LASS','LAST','LATE','LAUD','LAWN','LAZY','LEAD','LEAF','LEAK','LEAN','LEAP','LEER','LEFT','LEND','LENS','LENT','LESS','LICK','LIEU','LIFE','LIFT','LIKE','LIMB','LIME','LIMP','LINE','LINK','LINT','LION','LIST','LIVE','LOAD','LOAF','LOAM','LOAN','LOBE','LOCK','LODE','LOFT','LOFTY','LOGO','LONE','LONG','LOOK','LOOM','LOOP','LOOT','LORD','LORE','LOSE','LOSS','LOST','LOTS','LOUD','LOVE','LUCK','LULL','LUMP','LURE','LURK','LUSH','LUST',
+  'JACK','JADE','JAIL','JAMB','JAPE','JAZZ','JEAN','JEER','JERK','JEST','JILT','JINX','JIVE','JOCK','JOIN','JOKE','JOLT','JOSH','JOWL','JUDO','JUMP','JUNE','JUNK','JURY','JUST','JUTE',
+  'KALE','KEEN','KEEP','KELP','KEPT','KICK','KILL','KILT','KIND','KING','KISS','KITE','KNEE','KNEW','KNIT','KNOB','KNOT','KNOW',
+  'LACE','LACK','LACY','LAID','LAIN','LAIR','LAKE','LAME','LAMP','LAND','LANE','LARD','LARK','LASH','LASS','LAST','LATE','LAUD','LAWN','LAZY','LEAD','LEAF','LEAK','LEAN','LEAP','LEER','LEFT','LEND','LENS','LENT','LESS','LICK','LIEU','LIFE','LIFT','LIKE','LIMB','LIME','LIMP','LINE','LINK','LINT','LION','LIST','LIVE','LOAD','LOAF','LOAM','LOAN','LOBE','LOCK','LODE','LOFT','LOGO','LONE','LONG','LOOK','LOOM','LOOP','LOOT','LORD','LORE','LOSE','LOSS','LOST','LOUD','LOVE','LUCK','LULL','LUMP','LURE','LURK','LUSH','LUST',
   'MACE','MADE','MAIL','MAIN','MAKE','MALE','MALL','MALT','MANE','MANY','MARE','MARK','MARS','MASH','MASK','MASS','MAST','MATE','MAZE','MEAD','MEAL','MEAN','MEAT','MEEK','MEET','MELD','MELT','MEMO','MEND','MENU','MERE','MESH','MESS','MICE','MILD','MILE','MILK','MILL','MIME','MIND','MINE','MINT','MIRE','MISS','MIST','MITE','MOAT','MOCK','MODE','MOLD','MOLE','MOLT','MONK','MOOD','MOON','MOOR','MOOT','MORE','MORN','MOSS','MOST','MOTH','MOVE','MUCH','MUCK','MUFF','MULE','MULL','MURK','MUSE','MUSH','MUSK','MUST','MUTE','MUTT',
   'NAIL','NAME','NAPE','NAVY','NEAR','NEAT','NECK','NEED','NEST','NEWS','NEXT','NICE','NICK','NINE','NODE','NONE','NOOK','NOON','NORM','NOSE','NOTE','NOUN','NUDE','NULL','NUMB',
-  'OAFS','OAKS','OATH','OBEY','ODDS','ODOR','OINK','OKAY','OMEN','OMIT','ONCE','ONLY','ONTO','OOZE','OPEN','OPUS','ORAL','OVEN','OVER','OWED','OWLS','OWNS',
-  'PACE','PACK','PACT','PAGE','PAID','PAIL','PAIN','PAIR','PALE','PALM','PANE','PANG','PANT','PARE','PARK','PART','PASS','PAST','PATH','PAVE','PAWN','PAYS','PEAK','PEAL','PEAR','PEAT','PECK','PEEK','PEEL','PEER','PELT','PEND','PERK','PEST','PICK','PIER','PIKE','PILE','PILL','PINE','PINK','PINS','PINT','PIPE','PLAN','PLAY','PLEA','PLOD','PLOT','PLOW','PLOY','PLUG','PLUM','PLUS','POCK','POET','POKE','POLE','POLL','POLO','POMP','POND','PONY','POOL','POOR','POPE','POPS','PORE','PORK','PORT','POSE','POST','POUR','POUT','PRAY','PREP','PREY','PRIG','PRIM','PROD','PROP','PROW','PRYS','PUCK','PUFF','PULL','PULP','PUMP','PUNK','PURE','PUSH','PUTS','PUTT',
+  'OATH','OBEY','ODOR','OINK','OKAY','OMEN','OMIT','ONCE','ONLY','ONTO','OOZE','OPEN','OPUS','ORAL','OVEN','OVER','OWED',
+  'PACE','PACK','PACT','PAGE','PAID','PAIL','PAIN','PAIR','PALE','PALM','PANE','PANG','PANT','PARE','PARK','PART','PASS','PAST','PATH','PAVE','PAWN','PEAK','PEAL','PEAR','PEAT','PECK','PEEK','PEEL','PEER','PELT','PEND','PERK','PEST','PICK','PIER','PIKE','PILE','PILL','PINE','PINK','PINT','PIPE','PLAN','PLAY','PLEA','PLOD','PLOT','PLOW','PLOY','PLUG','PLUM','PLUS','POCK','POET','POKE','POLE','POLL','POLO','POMP','POND','PONY','POOL','POOR','POPE','PORE','PORK','PORT','POSE','POST','POUR','POUT','PRAY','PREP','PREY','PRIG','PRIM','PROD','PROP','PROW','PUCK','PUFF','PULL','PULP','PUMP','PUNK','PURE','PUSH','PUTT',
   'QUAD','QUAY','QUIT','QUIZ',
-  'RACE','RACK','RAFT','RAGE','RAID','RAIL','RAIN','RAKE','RAMP','RANG','RANK','RANT','RARE','RASH','RASP','RATE','RAVE','RAYS','RAZE','READ','REAL','REAM','REAP','REAR','REED','REEF','REEL','REIN','RELY','REND','RENT','REST','RICE','RICH','RIDE','RIFT','RILE','RILL','RIND','RING','RIOT','RISE','RISK','RITE','ROAD','ROAM','ROAR','ROBE','ROCK','RODE','ROLE','ROLL','ROOF','ROOM','ROOT','ROPE','ROSE','ROSY','ROTE','ROUT','ROVE','RUDE','RUIN','RULE','RUMP','RUNE','RUNG','RUNT','RUSE','RUSH','RUST',
-  'SACK','SAFE','SAGA','SAGE','SAID','SAIL','SAKE','SALE','SALT','SAME','SAND','SANE','SANG','SANK','SASH','SAVE','SAYS','SCAB','SCAM','SCAN','SCAR','SEAL','SEAM','SEAR','SEAS','SEAT','SECT','SEED','SEEK','SEEM','SEEN','SELF','SELL','SEMI','SEND','SENT','SEPT','SHED','SHIN','SHIP','SHOD','SHOE','SHOO','SHOP','SHOT','SHOW','SHUT','SICK','SIDE','SIFT','SIGH','SIGN','SILK','SILL','SILT','SING','SINK','SIRE','SITE','SIZE','SKIT','SLAB','SLAG','SLAP','SLAT','SLAW','SLAY','SLED','SLEW','SLID','SLIM','SLIT','SLOB','SLOP','SLOT','SLOW','SLUG','SLUM','SLUR','SMOG','SNAP','SNAG','SNIP','SNOB','SNOT','SNOW','SNUB','SNUG','SOAK','SOAP','SOAR','SOCK','SODA','SOFA','SOFT','SOIL','SOLD','SOLE','SOLO','SOME','SONG','SOON','SOOT','SORE','SORT','SOUL','SOUP','SOUR','SPAN','SPAR','SPEC','SPED','SPIN','SPIT','SPOT','SPRY','SPUD','SPUN','SPUR','STAB','STAG','STAR','STAY','STEM','STEP','STEW','STIR','STOP','STUB','STUD','STUN','SUCK','SUIT','SULK','SUMP','SUNG','SUNK','SURE','SURF','SWAB','SWAM','SWAN','SWAP','SWAY','SWIM',
-  'TABS','TACK','TACT','TAIL','TAKE','TALE','TALK','TALL','TAME','TANG','TANK','TAPE','TAPS','TARN','TART','TASK','TAXI','TEAK','TEAL','TEAM','TEAR','TEEM','TELL','TEMP','TEND','TENS','TENT','TERM','TERN','TEST','TEXT','THAN','THAT','THAW','THEM','THEN','THEY','THIN','THIS','THUD','THUG','THUS','TICK','TIDE','TIDY','TIED','TIER','TIES','TIFF','TILE','TILL','TILT','TIME','TINE','TINY','TIPS','TIRE','TOAD','TOCK','TOED','TOIL','TOLD','TOLL','TOMB','TOME','TONE','TOOK','TOOL','TOPS','TORE','TORN','TORT','TOSS','TOUR','TOWN','TOYS','TRAP','TRAY','TREE','TREK','TRIM','TRIO','TRIP','TROD','TROT','TRUE','TSAR','TUBA','TUBE','TUCK','TUFT','TUNA','TUNE','TURF','TURN','TUSK','TUTU','TWIG','TWIN','TYPE',
+  'RACE','RACK','RAFT','RAGE','RAID','RAIL','RAIN','RAKE','RAMP','RANG','RANK','RANT','RARE','RASH','RASP','RATE','RAVE','RAZE','READ','REAL','REAM','REAP','REAR','REED','REEF','REEL','REIN','RELY','REND','RENT','REST','RICE','RICH','RIDE','RIFT','RILE','RILL','RIND','RING','RIOT','RISE','RISK','RITE','ROAD','ROAM','ROAR','ROBE','ROCK','RODE','ROLE','ROLL','ROOF','ROOM','ROOT','ROPE','ROSE','ROSY','ROTE','ROUT','ROVE','RUDE','RUIN','RULE','RUMP','RUNE','RUNG','RUNT','RUSE','RUSH','RUST',
+  'SACK','SAFE','SAGA','SAGE','SAID','SAIL','SAKE','SALE','SALT','SAME','SAND','SANE','SANG','SANK','SASH','SAVE','SCAB','SCAM','SCAN','SCAR','SEAL','SEAM','SEAR','SEAT','SECT','SEED','SEEK','SEEM','SEEN','SELF','SELL','SEMI','SEND','SENT','SEPT','SHED','SHIN','SHIP','SHOD','SHOE','SHOO','SHOP','SHOT','SHOW','SHUT','SICK','SIDE','SIFT','SIGH','SIGN','SILK','SILL','SILT','SING','SINK','SIRE','SITE','SIZE','SKIT','SLAB','SLAG','SLAP','SLAT','SLAW','SLAY','SLED','SLEW','SLID','SLIM','SLIT','SLOB','SLOP','SLOT','SLOW','SLUG','SLUM','SLUR','SMOG','SNAP','SNAG','SNIP','SNOB','SNOT','SNOW','SNUB','SNUG','SOAK','SOAP','SOAR','SOCK','SODA','SOFA','SOFT','SOIL','SOLD','SOLE','SOLO','SOME','SONG','SOON','SOOT','SORE','SORT','SOUL','SOUP','SOUR','SPAN','SPAR','SPEC','SPED','SPIN','SPIT','SPOT','SPRY','SPUD','SPUN','SPUR','STAB','STAG','STAR','STAY','STEM','STEP','STEW','STIR','STOP','STUB','STUD','STUN','SUCK','SUIT','SULK','SUMP','SUNG','SUNK','SURE','SURF','SWAB','SWAM','SWAN','SWAP','SWAY','SWIM',
+  'TACK','TACT','TAIL','TAKE','TALE','TALK','TALL','TAME','TANG','TANK','TAPE','TARN','TART','TASK','TAXI','TEAK','TEAL','TEAM','TEAR','TEEM','TELL','TEMP','TEND','TENT','TERM','TERN','TEST','TEXT','THAN','THAT','THAW','THEM','THEN','THEY','THIN','THIS','THUD','THUG','THUS','TICK','TIDE','TIDY','TIED','TIER','TIFF','TILE','TILL','TILT','TIME','TINE','TINY','TIRE','TOAD','TOED','TOIL','TOLD','TOLL','TOMB','TOME','TONE','TOOK','TOOL','TORE','TORN','TORT','TOSS','TOUR','TOWN','TRAP','TRAY','TREE','TREK','TRIM','TRIO','TRIP','TROD','TROT','TRUE','TSAR','TUBA','TUBE','TUCK','TUFT','TUNA','TUNE','TURF','TURN','TUSK','TUTU','TWIG','TWIN','TYPE',
   'UGLY','UNDO','UNIT','UNTO','UPON','URGE','USED','USER',
-  'VAIN','VALE','VANE','VARY','VASE','VAST','VEAL','VEER','VEIL','VEIN','VENT','VERB','VERY','VEST','VETO','VICE','VIDE','VIEW','VILE','VINE','VOID','VOLE','VOLT','VOTE','VOWL',
-  'WADE','WAGE','WAIL','WAIT','WAKE','WALK','WALL','WAND','WANT','WARD','WARM','WARN','WARP','WART','WARY','WASH','WASP','WAVE','WAVY','WAXY','WAYS','WEAK','WEAN','WEAR','WEED','WEEK','WEEP','WELD','WELL','WELT','WENT','WEPT','WERE','WEST','WHAT','WHEN','WHIM','WHIP','WHOM','WICK','WIDE','WIFE','WILD','WILL','WILT','WILY','WIMP','WIND','WINE','WING','WINK','WIPE','WIRE','WISE','WISH','WISP','WITH','WOKE','WOLF','WOMB','WOOD','WOOL','WORD','WORE','WORK','WORM','WORN','WOVE','WRAP','WREN','WRIT',
+  'VAIN','VALE','VANE','VARY','VASE','VAST','VEAL','VEER','VEIL','VEIN','VENT','VERB','VERY','VEST','VETO','VICE','VIEW','VILE','VINE','VOID','VOLE','VOLT','VOTE',
+  'WADE','WAGE','WAIL','WAIT','WAKE','WALK','WALL','WAND','WANT','WARD','WARM','WARN','WARP','WART','WARY','WASH','WASP','WAVE','WAVY','WAXY','WEAK','WEAN','WEAR','WEED','WEEK','WEEP','WELD','WELL','WELT','WENT','WEPT','WERE','WEST','WHAT','WHEN','WHIM','WHIP','WHOM','WICK','WIDE','WIFE','WILD','WILL','WILT','WILY','WIMP','WIND','WINE','WING','WINK','WIPE','WIRE','WISE','WISH','WISP','WITH','WOKE','WOLF','WOMB','WOOD','WOOL','WORD','WORE','WORK','WORM','WORN','WOVE','WRAP','WREN','WRIT',
   'YANK','YARD','YARN','YAWN','YEAR','YELL','YOGA','YOKE','YOUR',
   'ZEAL','ZERO','ZEST','ZINC','ZING','ZONE','ZOOM',
   // 5-letter (common)
-  'ABOUT','ABOVE','ABUSE','ADMIT','ADOPT','AFTER','AGAIN','AGENT','AGREE','AHEAD','ALARM','ALIEN','ALIGN','ALIVE','ALLOW','ALONE','ALONG','ALTER','AMONG','ANGEL','ANGER','ANGLE','ANGRY','ANIME','ANKLE','APART','APPLE','APPLY','ARENA','ARGUE','ARISE','ASIDE','ASSET',
-  'BASIC','BATCH','BEACH','BEGIN','BEING','BELOW','BENCH','BLACK','BLADE','BLAME','BLAND','BLANK','BLAST','BLAZE','BLEED','BLEND','BLESS','BLIND','BLINK','BLISS','BLOCK','BLOOD','BLOWN','BOARD','BOAST','BONUS','BOOTH','BOUND','BRAIN','BRAND','BRAVE','BREAD','BREAK','BREED','BRICK','BRIDE','BRIEF','BRING','BROAD','BROKE','BROWN','BRUSH','BUILD','BURST','BUYER',
+  'ABOUT','ABOVE','ABUSE','ADMIT','ADOPT','AFTER','AGAIN','AGENT','AGREE','AHEAD','ALARM','ALIEN','ALIGN','ALIVE','ALLOW','ALONE','ALONG','ALTER','AMONG','ANGEL','ANGER','ANGLE','ANGRY','APART','APPLE','APPLY','ARENA','ARGUE','ARISE','ASIDE','ASSET',
+  'BASIC','BATCH','BEACH','BEGIN','BEING','BELOW','BENCH','BLACK','BLADE','BLAME','BLAND','BLANK','BLAST','BLAZE','BLEED','BLEND','BLESS','BLIND','BLINK','BLOCK','BLOOD','BLOWN','BOARD','BOAST','BONUS','BOOTH','BOUND','BRAIN','BRAND','BRAVE','BREAD','BREAK','BREED','BRICK','BRIDE','BRIEF','BRING','BROAD','BROKE','BROWN','BRUSH','BUILD','BURST','BUYER',
   'CABIN','CANDY','CARRY','CATCH','CAUSE','CHAIN','CHAIR','CHALK','CHAMP','CHAOS','CHARM','CHART','CHASE','CHEAP','CHEAT','CHECK','CHEEK','CHEER','CHESS','CHEST','CHIEF','CHILD','CHINA','CHUNK','CIVIC','CIVIL','CLAIM','CLASH','CLASS','CLEAN','CLEAR','CLERK','CLICK','CLIMB','CLING','CLOCK','CLONE','CLOSE','CLOTH','CLOUD','COACH','COAST','COLOR','COMET','CORAL','COUNT','COURT','COVER','CRACK','CRAFT','CRANE','CRASH','CRAZY','CREAM','CRIME','CROSS','CROWD','CROWN','CRUEL','CRUSH','CURVE','CYCLE',
   'DAILY','DANCE','DEBUT','DELAY','DELTA','DEPTH','DOING','DOUBT','DOUGH','DOZEN','DRAFT','DRAIN','DRAMA','DRANK','DRAWN','DREAM','DRESS','DRIED','DRIFT','DRILL','DRINK','DRIVE','DROWN','DYING',
-  'EAGER','EARLY','EARTH','EIGHT','ELDER','ELECT','ELITE','EMPTY','ENEMY','ENJOY','ENTER','EQUAL','ERROR','EVENT','EVERY','EXACT','EXILE','EXIST','EXTRA',
+  'EAGER','EARLY','EARTH','EIGHT','ELDER','ELECT','ELITE','EMPTY','ENEMY','ENJOY','ENTER','EQUAL','ERROR','EVENT','EVERY','EXACT','EXIST','EXTRA',
   'FAINT','FAITH','FALSE','FANCY','FAULT','FEAST','FENCE','FEWER','FIBER','FIELD','FIFTH','FIFTY','FIGHT','FINAL','FLAME','FLASH','FLESH','FLOAT','FLOOD','FLOOR','FLOUR','FLUID','FLUTE','FOCUS','FORCE','FORGE','FORTH','FORUM','FOUND','FRAME','FRANK','FRAUD','FRESH','FRONT','FROST','FRUIT','FULLY',
   'GIANT','GIVEN','GLARE','GLASS','GLOBE','GLOOM','GLORY','GLOVE','GOING','GRACE','GRADE','GRAIN','GRAND','GRANT','GRAPE','GRAPH','GRASP','GRASS','GRAVE','GREAT','GREEN','GREET','GRIEF','GRILL','GRIND','GROAN','GROOM','GROUP','GROVE','GROWN','GUARD','GUESS','GUEST','GUIDE','GUILD','GUILT',
   'HAPPY','HARSH','HEART','HEAVY','HENCE','HOBBY','HONOR','HORSE','HOTEL','HOUSE','HUMAN','HUMOR',
-  'IMAGE','IMPLY','INDEX','INDIE','INNER','INPUT','ISSUE','IVORY',
+  'IMAGE','IMPLY','INDEX','INNER','INPUT','ISSUE','IVORY',
   'JELLY','JEWEL','JOINT','JOKER','JUICE','JUICY',
   'KNIFE','KNOCK','KNOWN',
   'LABEL','LABOR','LARGE','LASER','LATER','LAUGH','LAYER','LEARN','LEASE','LEAVE','LEGAL','LEMON','LEVEL','LIGHT','LIMIT','LINEN','LIVER','LOCAL','LODGE','LOGIC','LOOSE','LOVER','LOWER','LOYAL','LUCKY','LUNAR','LUNCH',
-  'MAGIC','MAJOR','MANOR','MAPLE','MARCH','MASON','MATCH','MAYOR','MEDIA','MERCY','MERGE','MERIT','METAL','METER','MIGHT','MINOR','MINUS','MODEL','MONEY','MONTH','MORAL','MOTOR','MOUNT','MOUSE','MOUTH','MOVED','MOVIE','MUSIC','MYTHS',
+  'MAGIC','MAJOR','MANOR','MAPLE','MARCH','MASON','MATCH','MAYOR','MEDIA','MERCY','MERGE','MERIT','METAL','METER','MIGHT','MINOR','MINUS','MODEL','MONEY','MONTH','MORAL','MOTOR','MOUNT','MOUSE','MOUTH','MOVED','MOVIE','MUSIC',
   'NAIVE','NERVE','NEVER','NIGHT','NOBLE','NOISE','NORTH','NOTED','NOVEL','NURSE',
   'OCEAN','OFFER','OFTEN','OLIVE','ONSET','OPERA','ORDER','OTHER','OUTER','OWNER',
-  'PAINT','PANEL','PANIC','PARTY','PASTA','PATCH','PAUSE','PEACE','PEACH','PEARL','PENNY','PHASE','PHONE','PHOTO','PIANO','PIECE','PILOT','PITCH','PIXEL','PLACE','PLAIN','PLANE','PLANT','PLATE','PLAZA','PLEAD','PLUMB','PLUME','PLUMP','POINT','POLAR','POUND','POWER','PRESS','PRICE','PRIDE','PRIME','PRINT','PRIOR','PRIZE','PROBE','PROOF','PROUD','PROVE','PROXY','PULSE','PUNCH','PUPIL','PURSE','QUEEN','QUEST','QUEUE','QUICK','QUIET','QUITE','QUOTA','QUOTE',
-  'RADAR','RADIO','RAISE','RALLY','RANCH','RANGE','RAPID','RATIO','REACH','REACT','REALM','REBEL','REIGN','RELAX','REPLY','RIDER','RIDGE','RIFLE','RIGHT','RIGID','RISKY','RIVAL','RIVER','ROBIN','ROBOT','ROCKY','ROGER','ROMAN','ROUGH','ROUND','ROUTE','ROVER','ROYAL','RULER','RUMOR','RURAL',
-  'SAINT','SALAD','SAUCE','SCALE','SCARE','SCENE','SCENT','SCOPE','SCORE','SCOUT','SHADE','SHALL','SHAME','SHAPE','SHARE','SHARK','SHARP','SHEAR','SHEEP','SHEER','SHEET','SHELF','SHELL','SHIFT','SHINE','SHIRT','SHOCK','SHORE','SHORT','SHOUT','SHOWN','SIGHT','SINCE','SIXTY','SIZED','SKILL','SKULL','SLASH','SLATE','SLAVE','SLEEP','SLICE','SLIDE','SLOPE','SMALL','SMART','SMELL','SMILE','SMOKE','SOLAR','SOLID','SOLVE','SORRY','SOUND','SOUTH','SPACE','SPARE','SPARK','SPEAK','SPEED','SPEND','SPENT','SPICE','SPIKE','SPINE','SPLIT','SPOKE','SPORT','SPRAY','SQUAD','STACK','STAFF','STAGE','STAIN','STAKE','STALE','STALL','STAMP','STAND','STARE','START','STATE','STAYS','STEAK','STEAL','STEAM','STEEL','STEEP','STEER','STICK','STIFF','STILL','STOCK','STOLE','STONE','STOOD','STOOL','STORE','STORM','STORY','STOVE','STRIP','STUCK','STUDY','STUFF','STUMP','STYLE','SUGAR','SUITE','SURGE','SWAMP','SWEEP','SWEET','SWIFT','SWING','SWIRL','SWORD',
+  'PAINT','PANEL','PANIC','PARTY','PASTA','PATCH','PAUSE','PEACE','PEACH','PEARL','PENNY','PHASE','PHONE','PHOTO','PIANO','PIECE','PILOT','PITCH','PIXEL','PLACE','PLAIN','PLANE','PLANT','PLATE','PLAZA','PLEAD','PLUMB','PLUME','PLUMP','POINT','POLAR','POUND','POWER','PRESS','PRICE','PRIDE','PRIME','PRINT','PRIOR','PRIZE','PROBE','PROOF','PROUD','PROVE','PROXY','PULSE','PUNCH','PUPIL','PURSE','QUEEN','QUEST','QUEUE','QUICK','QUIET','QUITE','QUOTE',
+  'RADAR','RADIO','RAISE','RALLY','RANCH','RANGE','RAPID','RATIO','REACH','REACT','REALM','REBEL','REIGN','RELAX','REPLY','RIDER','RIDGE','RIFLE','RIGHT','RIGID','RISKY','RIVAL','RIVER','ROBIN','ROBOT','ROCKY','ROMAN','ROUGH','ROUND','ROUTE','ROVER','ROYAL','RULER','RUMOR','RURAL',
+  'SAINT','SALAD','SAUCE','SCALE','SCARE','SCENE','SCENT','SCOPE','SCORE','SCOUT','SHADE','SHALL','SHAME','SHAPE','SHARE','SHARK','SHARP','SHEEP','SHEER','SHEET','SHELF','SHELL','SHIFT','SHINE','SHIRT','SHOCK','SHORE','SHORT','SHOUT','SHOWN','SIGHT','SINCE','SIXTY','SIZED','SKILL','SKULL','SLASH','SLATE','SLAVE','SLEEP','SLICE','SLIDE','SLOPE','SMALL','SMART','SMELL','SMILE','SMOKE','SOLAR','SOLID','SOLVE','SORRY','SOUND','SOUTH','SPACE','SPARE','SPARK','SPEAK','SPEED','SPEND','SPENT','SPICE','SPIKE','SPINE','SPLIT','SPOKE','SPORT','SPRAY','SQUAD','STACK','STAFF','STAGE','STAIN','STAKE','STALE','STALL','STAMP','STAND','STARE','START','STATE','STEAK','STEAL','STEAM','STEEL','STEEP','STEER','STICK','STIFF','STILL','STOCK','STOLE','STONE','STOOD','STOOL','STORE','STORM','STORY','STOVE','STRIP','STUCK','STUDY','STUFF','STUMP','STYLE','SUGAR','SUITE','SURGE','SWAMP','SWEEP','SWEET','SWIFT','SWING','SWIRL','SWORD',
   'TABLE','TASTE','TEACH','TEETH','TENSE','THEME','THICK','THIEF','THING','THINK','THIRD','THOSE','THREE','THREW','THROW','THUMB','TIGER','TIGHT','TIMER','TIRED','TITLE','TODAY','TOKEN','TOTAL','TOUCH','TOUGH','TOWEL','TOWER','TOXIC','TRACE','TRACK','TRADE','TRAIL','TRAIN','TRAIT','TRASH','TREAT','TREND','TRIAL','TRIBE','TRICK','TRIED','TROOP','TRUCK','TRULY','TRUMP','TRUNK','TRUST','TRUTH','TULIP','TUMOR','TWICE','TWIST',
   'ULTRA','UNCLE','UNDER','UNION','UNITE','UNITY','UNTIL','UPPER','UPSET','URBAN','USAGE','USUAL','UTTER',
   'VALID','VALUE','VAULT','VERSE','VIDEO','VIGOR','VIRAL','VIRUS','VISIT','VITAL','VIVID','VOCAL','VOICE','VOTER',
@@ -148,7 +141,6 @@ function buildTilePool(): string[] {
   for (const [letter, count] of Object.entries(TILE_COUNTS)) {
     for (let i = 0; i < count; i++) pool.push(letter);
   }
-  // Fisher-Yates shuffle
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -156,58 +148,312 @@ function buildTilePool(): string[] {
   return pool;
 }
 
+// ── AI move generation ─────────────────────────────────────────────────
+type Direction = 'H' | 'V';
+type Placement = { word: string; cells: [number, number][]; newCells: { r: number; c: number; letter: string }[]; score: number };
+
+function letterCount(arr: string[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const l of arr) m.set(l, (m.get(l) ?? 0) + 1);
+  return m;
+}
+
+function findAnchors(board: (string | null)[][]): [number, number][] {
+  const anchors: [number, number][] = [];
+  let any = false;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c]) { any = true; continue; }
+      // adjacent to a placed tile?
+      if (
+        (r > 0 && board[r - 1][c]) ||
+        (r < SIZE - 1 && board[r + 1][c]) ||
+        (c > 0 && board[r][c - 1]) ||
+        (c < SIZE - 1 && board[r][c + 1])
+      ) {
+        anchors.push([r, c]);
+      }
+    }
+  }
+  if (!any) return [[CENTER, CENTER]];
+  return anchors;
+}
+
+function scorePlacement(
+  board: (string | null)[][],
+  cells: [number, number][],
+  newCellSet: Set<string>,
+): number {
+  let wordMult = 1;
+  let letterTotal = 0;
+  for (const [r, c] of cells) {
+    const bonus = BONUS_MAP.get(`${r},${c}`);
+    const ls = TILE_SCORES[board[r][c]!] || 0;
+    const isNew = newCellSet.has(`${r},${c}`);
+    if (isNew && bonus === 'DL') letterTotal += ls * 2;
+    else if (isNew && bonus === 'TL') letterTotal += ls * 3;
+    else letterTotal += ls;
+    if (isNew && bonus === 'DW') wordMult *= 2;
+    if (isNew && (bonus === 'TW' || bonus === 'ST')) wordMult *= 3;
+  }
+  return letterTotal * wordMult;
+}
+
+// Validate cross-words formed perpendicular to a horizontal/vertical placement.
+// Returns total bonus score from all valid cross-words, or -1 if any invalid.
+function validateAndScoreCrossWords(
+  board: (string | null)[][],
+  newCells: { r: number; c: number; letter: string }[],
+  mainDir: Direction,
+): number {
+  let crossScore = 0;
+  for (const { r, c, letter } of newCells) {
+    // Cross direction is perpendicular to mainDir
+    const isVert = mainDir === 'H';
+    let sr = r, sc = c;
+    if (isVert) {
+      while (sr > 0 && board[sr - 1][c]) sr--;
+    } else {
+      while (sc > 0 && board[r][sc - 1]) sc--;
+    }
+    const wordCells: [number, number][] = [];
+    let wr = sr, wc = sc;
+    if (isVert) {
+      while (wr < SIZE && (board[wr][c] || (wr === r && letter))) { wordCells.push([wr, c]); wr++; }
+    } else {
+      while (wc < SIZE && (board[r][wc] || (wc === c && letter))) { wordCells.push([r, wc]); wc++; }
+    }
+    if (wordCells.length < 2) continue; // single letter, no cross-word
+    // Build the word
+    const word = wordCells.map(([rr, cc]) => (rr === r && cc === c) ? letter : board[rr][cc]!).join('');
+    if (!VALID_WORDS.has(word)) return -1;
+    // Score the cross-word with bonuses for the new letter only
+    let wm = 1;
+    let lt = 0;
+    for (const [rr, cc] of wordCells) {
+      const isThisCellNew = (rr === r && cc === c);
+      const ls = TILE_SCORES[isThisCellNew ? letter : board[rr][cc]!] || 0;
+      const bonus = BONUS_MAP.get(`${rr},${cc}`);
+      if (isThisCellNew && bonus === 'DL') lt += ls * 2;
+      else if (isThisCellNew && bonus === 'TL') lt += ls * 3;
+      else lt += ls;
+      if (isThisCellNew && bonus === 'DW') wm *= 2;
+      if (isThisCellNew && (bonus === 'TW' || bonus === 'ST')) wm *= 3;
+    }
+    crossScore += lt * wm;
+  }
+  return crossScore;
+}
+
+function generateAiMoves(
+  board: (string | null)[][],
+  rack: string[],
+  isFirstMove: boolean,
+): Placement[] {
+  const anchors = findAnchors(board);
+  const rackCount = letterCount(rack);
+  const moves: Placement[] = [];
+
+  // Filter words to those whose letters could plausibly be formed from rack + board letters.
+  // For first move, must be formable from rack alone.
+  const candidates: string[] = [];
+  for (const word of VALID_WORDS) {
+    if (word.length < 2 || word.length > 7 + 7) continue;
+    if (isFirstMove) {
+      // Must be ≤ rack.length and use only rack letters
+      if (word.length > rack.length) continue;
+      const need = letterCount(word.split(''));
+      let ok = true;
+      for (const [l, n] of need) {
+        if ((rackCount.get(l) ?? 0) < n) { ok = false; break; }
+      }
+      if (ok) candidates.push(word);
+    } else {
+      // Word uses up to (rack.length) new tiles. Quick filter: check that letters not in
+      // board that the word needs ≤ rack capacity. Skip exact filter (slow); validate later.
+      candidates.push(word);
+    }
+  }
+
+  for (const word of candidates) {
+    for (const anchor of anchors) {
+      for (const dir of ['H', 'V'] as Direction[]) {
+        for (let offset = 0; offset < word.length; offset++) {
+          const startR = dir === 'V' ? anchor[0] - offset : anchor[0];
+          const startC = dir === 'H' ? anchor[1] - offset : anchor[1];
+          const endR = dir === 'V' ? startR + word.length - 1 : startR;
+          const endC = dir === 'H' ? startC + word.length - 1 : startC;
+          if (startR < 0 || startC < 0 || endR >= SIZE || endC >= SIZE) continue;
+
+          // Cell BEFORE start must be empty (or off-board) — otherwise word extends backward
+          const beforeR = dir === 'V' ? startR - 1 : startR;
+          const beforeC = dir === 'H' ? startC - 1 : startC;
+          if (beforeR >= 0 && beforeC >= 0 && beforeR < SIZE && beforeC < SIZE && board[beforeR][beforeC]) continue;
+
+          // Cell AFTER end must be empty (or off-board)
+          const afterR = dir === 'V' ? endR + 1 : endR;
+          const afterC = dir === 'H' ? endC + 1 : endC;
+          if (afterR >= 0 && afterC >= 0 && afterR < SIZE && afterC < SIZE && board[afterR][afterC]) continue;
+
+          // Walk the placement
+          const cells: [number, number][] = [];
+          const newCells: { r: number; c: number; letter: string }[] = [];
+          const needed = new Map<string, number>();
+          let usesAnchor = false;
+          let conflicts = false;
+          let touchesBoard = false;
+          for (let i = 0; i < word.length; i++) {
+            const r = dir === 'V' ? startR + i : startR;
+            const c = dir === 'H' ? startC + i : startC;
+            cells.push([r, c]);
+            const existing = board[r][c];
+            if (existing) {
+              if (existing !== word[i]) { conflicts = true; break; }
+              touchesBoard = true;
+            } else {
+              newCells.push({ r, c, letter: word[i] });
+              needed.set(word[i], (needed.get(word[i]) ?? 0) + 1);
+            }
+            if (r === anchor[0] && c === anchor[1]) usesAnchor = true;
+          }
+          if (conflicts || !usesAnchor) continue;
+          if (newCells.length === 0) continue; // no new tiles → not a play
+          if (!isFirstMove && !touchesBoard) continue; // must touch existing
+          if (isFirstMove && !cells.some(([r, c]) => r === CENTER && c === CENTER)) continue;
+
+          // Rack supply check
+          let rackOk = true;
+          for (const [l, n] of needed) {
+            if ((rackCount.get(l) ?? 0) < n) { rackOk = false; break; }
+          }
+          if (!rackOk) continue;
+
+          // Validate cross-words
+          const crossBonus = validateAndScoreCrossWords(board, newCells, dir);
+          if (crossBonus < 0) continue;
+
+          // Score main word
+          const newCellSet = new Set(newCells.map(nc => `${nc.r},${nc.c}`));
+          const mainScore = scorePlacement(board, cells, newCellSet);
+          const all7Bonus = newCells.length === 7 ? 50 : 0;
+          const total = mainScore + crossBonus + all7Bonus;
+
+          moves.push({ word, cells, newCells, score: total });
+        }
+      }
+    }
+  }
+  return moves;
+}
+
+function pickAiMove(moves: Placement[], difficulty: 'easy' | 'medium' | 'hard'): Placement | null {
+  if (moves.length === 0) return null;
+  const sorted = [...moves].sort((a, b) => b.score - a.score);
+  if (difficulty === 'hard') return sorted[0];
+  if (difficulty === 'medium') {
+    // pick from top half
+    const top = Math.max(1, Math.floor(sorted.length / 2));
+    return sorted[Math.floor(Math.random() * top)];
+  }
+  // easy: pick from bottom-third
+  const start = Math.floor(sorted.length * 2 / 3);
+  return sorted[start + Math.floor(Math.random() * (sorted.length - start))];
+}
+
 // ── Component ──────────────────────────────────────────────────────────
-function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty = 'medium' }: GameProps) {
   const [board, setBoard] = useState<(string | null)[][]>(
     () => Array.from({ length: SIZE }, () => Array(SIZE).fill(null))
   );
-  const [rack, setRack] = useState<string[]>([]);
-  const [pool, setPool] = useState<string[]>(() => buildTilePool());
+  const [playerRack, setPlayerRack] = useState<string[]>([]);
+  const [aiRack, setAiRack] = useState<string[]>([]);
+  const [pool, setPool] = useState<string[]>([]);
   const [selectedTile, setSelectedTile] = useState<number | null>(null);
   const [placedCells, setPlacedCells] = useState<Map<string, true>>(new Map());
   const [lockedCells, setLockedCells] = useState<Set<string>>(new Set());
-  const [totalScore, setTotalScore] = useState(0);
-  const [turn, setTurn] = useState(0);
+  const [playerScore, setPlayerScore] = useState(0);
+  const [aiScore, setAiScore] = useState(0);
+  const [turn, setTurn] = useState(0); // counts player turns
+  const [currentPlayer, setCurrentPlayer] = useState<'player' | 'ai'>('player');
+  const [aiThinking, setAiThinking] = useState(false);
   const [lastWord, setLastWord] = useState('');
-  const maxTurns = 10;
+  const [isFirstMove, setIsFirstMove] = useState(true);
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const maxTurns = 8; // each player plays maxTurns
   const targetScore = stage * 30;
 
-  const drawTiles = useCallback((currentRack: string[], currentPool: string[]) => {
-    const newRack = [...currentRack];
-    const newPool = [...currentPool];
-    while (newRack.length < 7 && newPool.length > 0) {
-      newRack.push(newPool.shift()!);
-    }
-    return { rack: newRack, pool: newPool };
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      if (!endedRef.current) fn();
+    }, ms);
+    timeoutsRef.current.push(id);
   }, []);
 
   useEffect(() => {
-    const { rack: r, pool: p } = drawTiles([], buildTilePool());
-    setRack(r);
-    setPool(p);
-    onMessage('Place tiles to form words!');
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
   }, []);
 
-  // Memoize placed cell keys for quick lookup
+  // Initial deal
+  useEffect(() => {
+    const fresh = buildTilePool();
+    const pRack = fresh.splice(0, 7);
+    const aRack = fresh.splice(0, 7);
+    setPlayerRack(pRack);
+    setAiRack(aRack);
+    setPool(fresh);
+    onMessage(`Your turn — place tiles to make a word (target ${targetScore})`);
+  // intentionally only on mount
+   
+  }, []);
+
   const placedKeys = useMemo(() => new Set(placedCells.keys()), [placedCells]);
 
+  const drawUpTo7 = useCallback((rack: string[], src: string[]): { rack: string[]; pool: string[] } => {
+    const r = [...rack];
+    const p = [...src];
+    while (r.length < 7 && p.length > 0) r.push(p.shift()!);
+    return { rack: r, pool: p };
+  }, []);
+
+  const finishGame = useCallback((finalPlayerScore: number, finalAiScore: number) => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    const margin = finalPlayerScore - finalAiScore;
+    let stars = 1;
+    if (margin > 0) stars = finalPlayerScore >= targetScore ? 3 : 2;
+    else if (margin === 0) stars = 2;
+    const summary = margin > 0
+      ? `You won ${finalPlayerScore}–${finalAiScore}!`
+      : margin === 0
+        ? `Tied at ${finalPlayerScore}!`
+        : `AI won ${finalAiScore}–${finalPlayerScore}.`;
+    schedule(() => onEnd({ score: finalPlayerScore, stars, summary }), 800);
+  }, [targetScore, onEnd, schedule]);
+
   const handleRackClick = (idx: number) => {
+    if (currentPlayer !== 'player') return;
     setSelectedTile(prev => prev === idx ? null : idx);
   };
 
   const handleBoardClick = (r: number, c: number) => {
+    if (currentPlayer !== 'player') return;
     const key = `${r},${c}`;
-    // Can't touch locked (previously submitted) cells
     if (lockedCells.has(key)) return;
 
     if (selectedTile === null) {
-      // Pick up a placed tile
+      // Pick up a placed tile (this turn only)
       if (board[r][c] && placedKeys.has(key)) {
         const letter = board[r][c]!;
         const newBoard = board.map(row => [...row]);
         newBoard[r][c] = null;
         setBoard(newBoard);
-        setRack(prev => [...prev, letter]);
+        setPlayerRack(prev => [...prev, letter]);
         const newPlaced = new Map(placedCells);
         newPlaced.delete(key);
         setPlacedCells(newPlaced);
@@ -216,118 +462,177 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
     }
     if (board[r][c]) return;
 
-    const letter = rack[selectedTile];
+    const letter = playerRack[selectedTile];
     const newBoard = board.map(row => [...row]);
     newBoard[r][c] = letter;
     setBoard(newBoard);
-    setRack(rack.filter((_, i) => i !== selectedTile));
+    setPlayerRack(playerRack.filter((_, i) => i !== selectedTile));
     setSelectedTile(null);
     const newPlaced = new Map(placedCells);
     newPlaced.set(key, true);
     setPlacedCells(newPlaced);
   };
 
-  const findWord = (): { valid: boolean; word: string; cells: [number, number][]; score: number } => {
+  // Validate the player's current placement and return the main word + score (or invalid)
+  const findPlayerPlay = (): { valid: boolean; word: string; cells: [number, number][]; score: number; reason?: string } => {
     const cells = Array.from(placedKeys).map(k => k.split(',').map(Number) as [number, number]);
-    if (cells.length < 2) return { valid: false, word: '', cells: [], score: 0 };
+    if (cells.length === 0) return { valid: false, word: '', cells: [], score: 0, reason: 'Place at least one tile' };
 
     const rows = cells.map(c => c[0]);
     const cols = cells.map(c => c[1]);
     const sameRow = rows.every(r => r === rows[0]);
     const sameCol = cols.every(c => c === cols[0]);
-    if (!sameRow && !sameCol) return { valid: false, word: '', cells: [], score: 0 };
+    if (!sameRow && !sameCol) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must be in a straight line' };
 
-    // Sort by position
+    const dir: Direction = sameRow ? 'H' : 'V';
     const sorted = sameRow
       ? [...cells].sort((a, b) => a[1] - b[1])
       : [...cells].sort((a, b) => a[0] - b[0]);
 
-    // Check contiguous (allow existing tiles in between)
+    // Contiguous (allowing existing tiles in between)
     if (sameRow) {
       for (let c = sorted[0][1]; c <= sorted[sorted.length - 1][1]; c++) {
-        if (!board[sorted[0][0]][c]) return { valid: false, word: '', cells: [], score: 0 };
+        if (!board[sorted[0][0]][c]) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must form one word' };
       }
     } else {
       for (let r = sorted[0][0]; r <= sorted[sorted.length - 1][0]; r++) {
-        if (!board[r][sorted[0][1]]) return { valid: false, word: '', cells: [], score: 0 };
+        if (!board[r][sorted[0][1]]) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must form one word' };
       }
     }
 
-    // Expand to include adjacent locked tiles
+    // Expand to include existing tiles flanking the placement
     let sr = sorted[0][0], sc = sorted[0][1];
-    if (sameRow) {
-      while (sc > 0 && board[sr][sc - 1]) sc--;
-    } else {
-      while (sr > 0 && board[sr - 1]?.[sc]) sr--;
-    }
+    if (sameRow) while (sc > 0 && board[sr][sc - 1]) sc--;
+    else while (sr > 0 && board[sr - 1]?.[sc]) sr--;
 
     const wordCells: [number, number][] = [];
     let wr = sr, wc = sc;
-    if (sameRow) {
-      while (wc < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wc++; }
-    } else {
-      while (wr < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wr++; }
-    }
+    if (sameRow) while (wc < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wc++; }
+    else while (wr < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wr++; }
 
     const word = wordCells.map(([r, c]) => board[r][c]).join('');
-    if (word.length < 2) return { valid: false, word: '', cells: [], score: 0 };
+    if (word.length < 2) return { valid: false, word: '', cells: [], score: 0, reason: 'Word must be at least 2 letters' };
+    if (!VALID_WORDS.has(word)) return { valid: false, word, cells: wordCells, score: 0, reason: `"${word}" is not in the dictionary` };
 
-    // Score with bonuses (only new tiles trigger bonuses)
-    let wordMult = 1;
-    let letterTotal = 0;
-    for (const [r, c] of wordCells) {
-      const bonus = BONUS_MAP.get(`${r},${c}`);
-      const ls = TILE_SCORES[board[r][c]!] || 0;
-      const isNew = placedKeys.has(`${r},${c}`);
-      if (isNew && bonus === 'DL') letterTotal += ls * 2;
-      else if (isNew && bonus === 'TL') letterTotal += ls * 3;
-      else letterTotal += ls;
-      if (isNew && bonus === 'DW') wordMult *= 2;
-      if (isNew && (bonus === 'TW' || bonus === 'ST')) wordMult *= 3;
+    // First move must touch center
+    if (isFirstMove && !wordCells.some(([r, c]) => r === CENTER && c === CENTER)) {
+      return { valid: false, word, cells: wordCells, score: 0, reason: 'First word must cross the center star' };
     }
-    // Bonus for using all 7 tiles
-    const allTilesBonus = cells.length === 7 ? 50 : 0;
+    // Subsequent moves: at least one new tile must be adjacent to a previously-locked tile
+    if (!isFirstMove) {
+      const touches = cells.some(([r, c]) =>
+        (r > 0 && lockedCells.has(`${r - 1},${c}`)) ||
+        (r < SIZE - 1 && lockedCells.has(`${r + 1},${c}`)) ||
+        (c > 0 && lockedCells.has(`${r},${c - 1}`)) ||
+        (c < SIZE - 1 && lockedCells.has(`${r},${c + 1}`))
+      );
+      if (!touches) return { valid: false, word, cells: wordCells, score: 0, reason: 'New tiles must connect to existing words' };
+    }
 
-    return { valid: true, word, cells: wordCells, score: letterTotal * wordMult + allTilesBonus };
+    // Validate cross-words formed by new tiles
+    const newCellsArr = cells.map(([r, c]) => ({ r, c, letter: board[r][c]! }));
+    const crossBonus = validateAndScoreCrossWords(board, newCellsArr, dir);
+    if (crossBonus < 0) return { valid: false, word, cells: wordCells, score: 0, reason: 'Invalid cross-word formed' };
+
+    const newCellSet = new Set(cells.map(([r, c]) => `${r},${c}`));
+    const mainScore = scorePlacement(board, wordCells, newCellSet);
+    const all7Bonus = cells.length === 7 ? 50 : 0;
+    return { valid: true, word, cells: wordCells, score: mainScore + crossBonus + all7Bonus };
   };
 
-  const handleSubmit = () => {
-    const result = findWord();
-    if (!result.valid) {
-      onMessage('Place 2+ tiles in a straight line');
-      return;
+  const advanceAfterMove = useCallback((nextPlayer: 'player' | 'ai', newTurn: number, pScore: number, aScore: number) => {
+    setCurrentPlayer(nextPlayer);
+    onProgress(Math.min(newTurn / maxTurns, 1));
+    if (newTurn >= maxTurns && nextPlayer === 'player') {
+      // Both players finished their last turn
+      finishGame(pScore, aScore);
     }
-    if (!VALID_WORDS.has(result.word.toUpperCase())) {
-      onMessage(`"${result.word}" is not in the dictionary`);
-      return;
-    }
+  }, [maxTurns, onProgress, finishGame]);
 
-    const newScore = totalScore + result.score;
-    setTotalScore(newScore);
+  const handleSubmit = () => {
+    if (currentPlayer !== 'player') return;
+    const result = findPlayerPlay();
+    if (!result.valid) {
+      onMessage(result.reason || 'Invalid placement');
+      return;
+    }
+    const newPlayerScore = playerScore + result.score;
+    setPlayerScore(newPlayerScore);
     onScore(result.score);
-    setLastWord(`${result.word} = ${result.score} pts`);
+    setLastWord(`You: ${result.word} = ${result.score}`);
     onMessage(`+${result.score} for "${result.word}"!`);
 
-    // Lock placed tiles
     const newLocked = new Set(lockedCells);
     for (const k of placedKeys) newLocked.add(k);
     setLockedCells(newLocked);
     setPlacedCells(new Map());
+    setIsFirstMove(false);
 
-    const newTurn = turn + 1;
-    setTurn(newTurn);
-    const { rack: newRack, pool: newPool } = drawTiles(rack, pool);
-    setRack(newRack);
+    const { rack: newRack, pool: newPool } = drawUpTo7(playerRack, pool);
+    setPlayerRack(newRack);
     setPool(newPool);
-    onProgress(newTurn / maxTurns);
 
-    if (newTurn >= maxTurns) {
-      const stars = newScore >= targetScore ? 3 : newScore >= targetScore * 0.6 ? 2 : 1;
-      setTimeout(() => onEnd({ score: newScore, stars, summary: `Scored ${newScore} in Scrabble!` }), 800);
-    }
+    advanceAfterMove('ai', turn, newPlayerScore, aiScore);
   };
 
+  // AI turn — runs when currentPlayer flips to 'ai'
+  useEffect(() => {
+    if (currentPlayer !== 'ai' || endedRef.current) return;
+    setAiThinking(true);
+    onMessage('AI is thinking...');
+
+    schedule(() => {
+      // Generate moves on a snapshot
+      const moves = generateAiMoves(board, aiRack, false);
+      const move = pickAiMove(moves, aiDifficulty);
+      setAiThinking(false);
+
+      if (!move) {
+        // AI passes — exchange (just draw fresh)
+        onMessage('AI passes this turn');
+        setLastWord('AI: pass');
+        const newTurn = turn + 1;
+        setTurn(newTurn);
+        advanceAfterMove('player', newTurn, playerScore, aiScore);
+        return;
+      }
+
+      // Apply AI move to board
+      const newBoard = board.map(row => [...row]);
+      const newLocked = new Set(lockedCells);
+      const usedLetters: string[] = [];
+      for (const nc of move.newCells) {
+        newBoard[nc.r][nc.c] = nc.letter;
+        newLocked.add(`${nc.r},${nc.c}`);
+        usedLetters.push(nc.letter);
+      }
+      // Remove used letters from AI rack (one occurrence each)
+      const newAiRack = [...aiRack];
+      for (const l of usedLetters) {
+        const idx = newAiRack.indexOf(l);
+        if (idx >= 0) newAiRack.splice(idx, 1);
+      }
+      const { rack: refilled, pool: newPool } = drawUpTo7(newAiRack, pool);
+
+      const newAiScore = aiScore + move.score;
+      setBoard(newBoard);
+      setLockedCells(newLocked);
+      setAiRack(refilled);
+      setPool(newPool);
+      setAiScore(newAiScore);
+      setLastWord(`AI: ${move.word} = ${move.score}`);
+      onMessage(`AI played "${move.word}" for ${move.score}`);
+      setIsFirstMove(false);
+
+      const newTurn = turn + 1;
+      setTurn(newTurn);
+      advanceAfterMove('player', newTurn, playerScore, newAiScore);
+    }, 900);
+   
+  }, [currentPlayer]);
+
   const handleClear = () => {
+    if (currentPlayer !== 'player') return;
     const letters: string[] = [];
     const newBoard = board.map(row => [...row]);
     for (const key of placedKeys) {
@@ -338,34 +643,43 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
       }
     }
     setBoard(newBoard);
-    setRack([...rack, ...letters]);
+    setPlayerRack([...playerRack, ...letters]);
     setPlacedCells(new Map());
     setSelectedTile(null);
   };
 
   const handleShuffle = () => {
-    const shuffled = [...rack];
+    if (currentPlayer !== 'player') return;
+    const shuffled = [...playerRack];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    setRack(shuffled);
+    setPlayerRack(shuffled);
+  };
+
+  const handlePass = () => {
+    if (currentPlayer !== 'player') return;
+    // Return any placed tiles to rack first
+    handleClear();
+    onMessage('You passed your turn');
+    setLastWord('You: pass');
+    advanceAfterMove('ai', turn, playerScore, aiScore);
   };
 
   return (
     <div className="h-full w-full flex flex-col items-center px-2 pt-1 pb-2 gap-1.5 overflow-hidden">
       {/* Score bar */}
       <div className="flex gap-1.5 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
-        <span className="bg-accent/20 text-accent rounded-md px-1.5 py-0.5 font-bold">{totalScore} pts</span>
-        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Turn {turn}/{maxTurns}</span>
+        <span className="bg-accent/20 text-accent rounded-md px-1.5 py-0.5 font-bold">You: {playerScore}</span>
+        <span className="bg-danger/20 text-danger rounded-md px-1.5 py-0.5 font-bold">AI: {aiScore}</span>
+        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Turn {turn + (currentPlayer === 'ai' ? 1 : 1)}/{maxTurns}</span>
         <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Target: {targetScore}</span>
         <span className="bg-card rounded-md px-1.5 py-0.5 text-text-dim">{pool.length} left</span>
         {lastWord && <span className="text-accent font-medium">{lastWord}</span>}
       </div>
 
-      {/* Board — grid centering lets a square fit inside a flex column correctly.
-         With aspect-ratio plus max-width+max-height, the browser scales the square down
-         to whichever dimension is smaller, guaranteeing the full 15×15 is visible. */}
+      {/* Board */}
       <div
         className="flex-1 min-h-0 w-full overflow-hidden"
         style={{ display: 'grid', placeItems: 'center' }}
@@ -391,6 +705,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
               <button
                 key={key}
                 onClick={() => handleBoardClick(r, c)}
+                disabled={currentPlayer !== 'player'}
                 className={`relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
                   cell
                     ? isPlaced
@@ -399,7 +714,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
                     : bs
                       ? `${bs.bg} ${bs.text}`
                       : 'bg-card hover:bg-card-hover'
-                }`}
+                } ${currentPlayer !== 'player' ? 'opacity-90 cursor-not-allowed' : ''}`}
               >
                 {cell ? (
                   <>
@@ -419,54 +734,58 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
         </div>
       </div>
 
-      {/* Legend + Actions row */}
+      {/* Status / Actions */}
       <div className="flex items-center justify-center gap-2 flex-shrink-0 flex-wrap">
-        <div className="flex gap-2 text-[7px] sm:text-[8px] text-text-dim">
-          {(['TW','DW','TL','DL'] as const).map(b => (
-            <span key={b} className="flex items-center gap-0.5">
-              <span className={`w-2 h-2 rounded-sm ${BONUS_STYLE[b].bg}`} />
-              <span>{b}</span>
-            </span>
-          ))}
-        </div>
-        <div className="flex gap-1.5">
-          <button
-            onClick={handleSubmit}
-            disabled={placedKeys.size < 2}
-            className="bg-accent text-bg font-bold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
-          >
-            Submit
-          </button>
-          <button
-            onClick={handleClear}
-            disabled={placedKeys.size === 0}
-            className="bg-card text-text font-semibold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
-          >
-            Clear
-          </button>
-          <button
-            onClick={handleShuffle}
-            disabled={rack.length === 0}
-            className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
-          >
-            Shuffle
-          </button>
-        </div>
+        {aiThinking ? (
+          <span className="text-text-muted text-[10px] animate-pulse">🤖 AI thinking...</span>
+        ) : (
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleSubmit}
+              disabled={placedKeys.size < 1 || currentPlayer !== 'player'}
+              className="bg-accent text-bg font-bold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+            >
+              Submit
+            </button>
+            <button
+              onClick={handleClear}
+              disabled={placedKeys.size === 0 || currentPlayer !== 'player'}
+              className="bg-card text-text font-semibold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+            >
+              Clear
+            </button>
+            <button
+              onClick={handleShuffle}
+              disabled={playerRack.length === 0 || currentPlayer !== 'player'}
+              className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+            >
+              Shuffle
+            </button>
+            <button
+              onClick={handlePass}
+              disabled={currentPlayer !== 'player'}
+              className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+            >
+              Pass
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Tile rack — real Scrabble style with visible point values */}
+      {/* Tile rack */}
       <div className="flex justify-center gap-1 flex-shrink-0 pt-1.5">
-        {rack.map((tile, i) => {
+        {playerRack.map((tile, i) => {
           const pts = TILE_SCORES[tile];
           return (
             <button
               key={`${tile}-${i}`}
               onClick={() => handleRackClick(i)}
+              disabled={currentPlayer !== 'player'}
               className={`relative w-10 h-11 rounded-lg font-bold text-base flex flex-col items-center justify-center transition-all shadow-sm ${
                 selectedTile === i
                   ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1'
                   : 'bg-amber-200 text-amber-900 hover:bg-amber-300 active:scale-95'
-              }`}
+              } ${currentPlayer !== 'player' ? 'opacity-60' : ''}`}
             >
               <span className="leading-none">{tile}</span>
               <span className={`text-[8px] leading-none mt-0.5 font-semibold ${
@@ -477,7 +796,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProp
             </button>
           );
         })}
-        {rack.length === 0 && (
+        {playerRack.length === 0 && (
           <span className="text-text-muted text-[10px] py-2">No tiles</span>
         )}
       </div>

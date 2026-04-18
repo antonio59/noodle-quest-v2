@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CrosswordPuzzle, PlacedWord } from '@/lib/puzzle-engine/crossword/types';
 import { loadSession, saveSession } from '@/lib/puzzle-engine/persistence/local';
 
-export interface CellState {
+interface CellState {
   value: string;
   isRevealed: boolean;
   isError: boolean;
