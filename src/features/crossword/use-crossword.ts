@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CrosswordPuzzle, PlacedWord } from '@/lib/puzzle-engine/crossword/types';
-import { loadSession, saveSession } from '@/lib/puzzle-engine/persistence/local';
+import { saveSession } from '@/lib/puzzle-engine/persistence/local';
 
 interface CellState {
   value: string;
@@ -37,19 +37,10 @@ export function useCrossword(puzzle: CrosswordPuzzle, puzzleId: string) {
     return map;
   }, [puzzle]);
 
-  // Hydrate from localStorage
+  // Reset grid whenever the puzzle identity changes so each stage starts fresh.
   useEffect(() => {
-    const session = loadSession('crossword', puzzleId);
-    if (session?.answers) {
-      const next = buildBlankState(puzzle.gridSize);
-      for (const [key, val] of Object.entries(session.answers)) {
-        const [r, c] = key.split(',').map(Number);
-        if (r >= 0 && r < puzzle.gridSize && c >= 0 && c < puzzle.gridSize) {
-          next[r][c] = { ...next[r][c], value: val };
-        }
-      }
-      setGrid(next);
-    }
+    setGrid(buildBlankState(puzzle.gridSize));
+    setCompleted(false);
   }, [puzzle.gridSize, puzzleId]);
 
   // Autosave
@@ -71,7 +62,11 @@ export function useCrossword(puzzle: CrosswordPuzzle, puzzleId: string) {
   const setCellValue = (r: number, c: number, value: string) => {
     setGrid(prev => {
       const next = prev.map(row => row.map(cell => ({ ...cell })));
-      next[r][c] = { ...next[r][c], value: value.toUpperCase().slice(0, 1) };
+      next[r][c] = {
+        ...next[r][c],
+        value: value.toUpperCase().slice(0, 1),
+        isError: false,
+      };
       return next;
     });
   };

@@ -33,9 +33,9 @@ export function generateWordSearch(
     for (const dir of dirs) {
       const cells = findPlacement(rng, grid, cfg.gridSize, word, dir, cfg.allowOverlap);
       if (cells) {
-        for (const [r, c] of cells) {
-          grid[r][c] = word.charAt(cells.indexOf([r, c]));
-        }
+        cells.forEach(([r, c], i) => {
+          grid[r][c] = word.charAt(i);
+        });
         placements.push({ word, cells, direction: dir });
         placed = true;
         break;

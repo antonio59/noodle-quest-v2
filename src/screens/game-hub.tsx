@@ -244,7 +244,11 @@ export function GameHub() {
       {tab === 'board' && (
         <div className="flex-1 overflow-y-auto">
           <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {allGames.filter(g => g.category === 'board').map(g => (
+            {allGames
+              .filter(g => g.category === 'board')
+              .slice()
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map(g => (
               <div
                 key={g.id}
                 onClick={() => navigateToGame(g.id)}

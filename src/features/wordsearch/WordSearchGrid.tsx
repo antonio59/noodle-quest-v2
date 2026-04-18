@@ -23,8 +23,8 @@ export function WordSearchGrid({
 }: WordSearchGridProps) {
   return (
     <div
-      className="grid gap-0.5 select-none touch-none"
-      style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+      className="grid gap-1 select-none touch-none"
+      style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(2.25rem, 3rem))` }}
       onMouseLeave={onMouseUp}
       onMouseUp={onMouseUp}
       onTouchEnd={onTouchEnd}

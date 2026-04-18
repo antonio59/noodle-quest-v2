@@ -41,8 +41,8 @@ export function CrosswordGrid({
 
   return (
     <div
-      className="grid gap-0.5 border-2 border-card-hover p-1 bg-surface rounded-lg"
-      style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, minmax(0, 1fr))` }}
+      className="grid gap-1 border-2 border-card-hover p-1.5 bg-surface rounded-lg"
+      style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, minmax(2.25rem, 3rem))` }}
       role="grid"
       aria-label="Crossword grid"
     >
