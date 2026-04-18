@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 interface Challenge {
@@ -224,6 +224,14 @@ function MistakeMasterGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
   const [lastPoints, setLastPoints] = useState(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
+  const endedRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+    };
+  }, []);
+
   const handleChoice = useCallback(
     (choice: 'tried' | 'admitted') => {
       const points = choice === 'tried' ? 30 : 40;
@@ -242,12 +250,17 @@ function MistakeMasterGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
 
     if (nextRound >= challenges.length) {
       const finalScore = score + lastPoints + 50;
+      const maxScore = challenges.length * 40;
+      const ratio = (score + lastPoints) / maxScore;
+      const stars = ratio >= 0.9 ? 3 : ratio >= 0.75 ? 2 : 1;
       const summary =
         `You learned ${challenges.length} important lessons about mistakes! ` +
         'Remember: your brain grows when you try hard things, even if you "fail." ' +
         'The most successful people in the world made LOTS of mistakes first! 🌟';
       onMessage('All challenges complete!');
-      onEnd({ score: finalScore, stars: 3, summary });
+      if (endedRef.current) return;
+      endedRef.current = true;
+      onEnd({ score: finalScore, stars, summary });
       setPhase('done');
     } else {
       setCurrentRound(nextRound);

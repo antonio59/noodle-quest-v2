@@ -53,6 +53,19 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const moveTimeRef = useRef(0);
   const [tip] = useState(() => TIPS[Math.floor(Math.random() * TIPS.length)]);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      intervalsRef.current.forEach(clearInterval);
+      cancelAnimationFrame(animFrameRef.current);
+    };
+  }, []);
+
   function pointToSegmentDistance(px: number, py: number, a: Point, b: Point): number {
     const l2 = (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
     if (l2 === 0) return Math.hypot(px - a.x, py - a.y);
@@ -250,6 +263,8 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
       const finalScore = reason === 'finish' ? scoreRef.current + 100 : scoreRef.current;
       setPhase('done');
+      if (endedRef.current) return;
+      endedRef.current = true;
       onEnd({ score: finalScore, stars, summary });
     };
 

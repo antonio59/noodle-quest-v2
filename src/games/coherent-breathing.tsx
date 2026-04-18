@@ -30,6 +30,15 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseRef = useRef<Phase>('info');
   const roundRef = useRef(0);
+  const endedRef = useRef(false);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      intervalsRef.current.forEach(clearInterval);
+    };
+  }, []);
 
   const startCycle = useCallback(() => {
     setPhase('inhale');
@@ -42,7 +51,7 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
 
   useEffect(() => {
     if (phase === 'idle' || phase === 'done' || phase === 'info') return;
-    timerRef.current = setInterval(() => {
+    const id = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
           const current = phaseRef.current;
@@ -60,7 +69,11 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
               setPhase('done');
               phaseRef.current = 'done';
               if (timerRef.current) clearInterval(timerRef.current);
-              onEnd({ score: totalRounds * 12, stars: 3, summary: `${totalRounds} rounds of coherent breathing!` });
+              if (!endedRef.current) {
+                endedRef.current = true;
+                const stars = totalRounds >= 8 ? 3 : totalRounds >= 4 ? 2 : 1;
+                onEnd({ score: totalRounds * 12, stars, summary: `${totalRounds} rounds of coherent breathing!` });
+              }
               return 0;
             }
             onMessage(`Round ${newRound}/${totalRounds}`);
@@ -72,7 +85,12 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
         return prev - 1;
       });
     }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    timerRef.current = id;
+    intervalsRef.current.push(id);
+    return () => {
+      clearInterval(id);
+      intervalsRef.current = intervalsRef.current.filter(x => x !== id);
+    };
   }, [phase, totalRounds, breathLen, onScore, onProgress, onMessage, onEnd]);
 
   const breathsPerMin = Math.round(60 / (breathLen * 2) * 10) / 10;

@@ -132,7 +132,7 @@ function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     if (stage >= 8 && newCount > config.target + config.tolerance + 3) {
       endGame(false);
     }
-  }, [phase, config, stage, onScore, endGame]);
+  }, [phase, config, stage, onScore, onProgress, endGame]);
 
   // Draw splatters on canvas
   useEffect(() => {

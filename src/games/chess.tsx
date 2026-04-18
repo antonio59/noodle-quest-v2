@@ -228,7 +228,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       setSelected(null);
       setLegalMoves([]);
     }
-  }, [turn, selected, game, wins, targetWins, onScore, onProgress, onMessage, onEnd, doAiMove, resetBoard]);
+  }, [turn, selected, game, targetWins, onScore, onProgress, onMessage, doAiMove, resetBoard, schedule, finishMatch]);
 
   const board = game.board();
   const cs = boardSize / 8;

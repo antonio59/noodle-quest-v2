@@ -29,6 +29,15 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseRef = useRef<Phase>('info');
   const roundRef = useRef(0);
+  const endedRef = useRef(false);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      intervalsRef.current.forEach(clearInterval);
+    };
+  }, []);
 
   const phaseLabels: Record<string, string> = {
     inhale: 'Breathe In...',
@@ -73,7 +82,7 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
   useEffect(() => {
     if (phase === 'idle' || phase === 'done' || phase === 'info') return;
 
-    timerRef.current = setInterval(() => {
+    const id = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
           const current = phaseRef.current;
@@ -93,7 +102,10 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
               setPhase('done');
               phaseRef.current = 'done';
               if (timerRef.current) clearInterval(timerRef.current);
-              onEnd({ score: totalRounds * 10, stars: totalRounds >= 10 ? 3 : totalRounds >= 6 ? 2 : 1, summary: `Completed ${totalRounds} rounds of box breathing!` });
+              if (!endedRef.current) {
+                endedRef.current = true;
+                onEnd({ score: totalRounds * 10, stars: totalRounds >= 10 ? 3 : totalRounds >= 6 ? 2 : 1, summary: `Completed ${totalRounds} rounds of box breathing!` });
+              }
               return 0;
             }
           }
@@ -103,8 +115,13 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
         return prev - 1;
       });
     }, 1000);
+    timerRef.current = id;
+    intervalsRef.current.push(id);
 
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    return () => {
+      clearInterval(id);
+      intervalsRef.current = intervalsRef.current.filter(x => x !== id);
+    };
   }, [phase, totalRounds, nextPhase, onScore, onProgress, onMessage, onEnd]);
 
   const estimatedMinutes = Math.ceil(totalRounds * 16 / 60);

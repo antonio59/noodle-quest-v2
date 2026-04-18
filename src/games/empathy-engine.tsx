@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 interface Scenario {
@@ -256,6 +256,27 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
 
+  const endedRef = useRef(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      intervalsRef.current.forEach(clearInterval);
+    };
+  }, []);
+
   const handleOption = useCallback((optIdx: number) => {
     if (phase !== 'playing') return;
     const opt = scenarios[currentQ].options[optIdx];
@@ -279,7 +300,7 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       setFeedbackColor('#ff6e6c');
     }
 
-    setTimeout(() => {
+    schedule(() => {
       const next = currentQ + 1;
       if (next >= scenarios.length) {
         const finalScore = score + points;
@@ -296,6 +317,8 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           stars = 1;
           summary = 'Keep practicing! The best responses show you understand AND offer support. Try asking yourself: "How would I feel?"';
         }
+        if (endedRef.current) return;
+        endedRef.current = true;
         onEnd({ score: finalScore + 50, stars, summary });
       } else {
         setCurrentQ(next);
@@ -305,7 +328,7 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         onProgress(next / scenarios.length);
       }
     }, 1200);
-  }, [phase, currentQ, scenarios, score, onScore, onProgress, onEnd]);
+  }, [phase, currentQ, scenarios, score, onScore, onProgress, onEnd, schedule]);
 
   if (phase === 'intro') {
     return (
