@@ -18,6 +18,7 @@ export function PlayGame() {
   const fromTab = (location.state as any)?.fromTab ?? 'brain';
   const isMultiplayer = (location.state as any)?.multiplayer ?? false;
   const initialDifficulty = (location.state as any)?.aiDifficulty as string | undefined;
+  const joinerSessionId = (location.state as any)?.sessionId as string | undefined;
 
   const [currentStage, setCurrentStage] = useState(stage);
   const [score, setScore] = useState(0);
@@ -65,8 +66,9 @@ export function PlayGame() {
 
   const createInvite = useMutation(api.multiplayer.createInvite);
   const startSession = useMutation(api.multiplayer.startSession);
+  const makeMove = useMutation(api.multiplayer.makeMove);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(joinerSessionId ?? null);
   const [creatingInvite, setCreatingInvite] = useState(false);
 
   // Live lobby state — roster of players who've joined so far.
@@ -80,8 +82,61 @@ export function PlayGame() {
   const minPlayers = gameMeta.minPlayers ?? 2;
   const maxPlayers = gameMeta.maxPlayers ?? 2;
 
-  // Multiplayer invite flow
-  if (isMultiplayer && !inviteCode && !creatingInvite) {
+  // Once the session is live, the normal GameComponent render path kicks in.
+  const isLivePlaying = isMultiplayer && !!liveSession && liveSession.status === 'playing';
+  const mySeat = liveSession?.players.find(
+    p => player && p.id === (player.playerId as any),
+  );
+
+  // Joiner waiting-in-lobby screen: has sessionId, no inviteCode of their own,
+  // and the session isn't playing yet.
+  if (isMultiplayer && sessionId && !inviteCode && liveSession && liveSession.status !== 'playing') {
+    const roster = liveSession.players ?? [];
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">{gameMeta.emoji}</div>
+        <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
+        <p className="text-text-muted text-sm mb-5">
+          Waiting for {liveSession.player1Name} to start the game...
+        </p>
+        <div className="w-full max-w-xs mb-6">
+          <div className="text-xs font-semibold text-text-dim mb-2">
+            {roster.length} of {liveSession.maxPlayers} joined
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {roster.map(seat => (
+              <div
+                key={seat.id}
+                className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 text-left"
+              >
+                <span className="text-lg">{seat.avatar}</span>
+                <span className="text-sm font-semibold flex-1">{seat.name}</span>
+                {seat.seat === 1 && (
+                  <span className="text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full font-bold">
+                    Host
+                  </span>
+                )}
+                {player && seat.id === (player.playerId as any) && (
+                  <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-bold">
+                    You
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/games')}
+          className="text-text-muted text-sm hover:text-text transition-colors"
+        >
+          <ArrowLeft size={14} className="inline mr-1" /> Back to Games
+        </button>
+      </div>
+    );
+  }
+
+  // Multiplayer invite flow (host creating invite)
+  if (isMultiplayer && !sessionId && !inviteCode && !creatingInvite && !isLivePlaying) {
     const handleCreateInvite = async () => {
       if (!player) return;
       setCreatingInvite(true);
@@ -129,7 +184,7 @@ export function PlayGame() {
     );
   }
 
-  if (isMultiplayer && inviteCode) {
+  if (isMultiplayer && inviteCode && !isLivePlaying) {
     const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
     const handleCopy = () => {
       navigator.clipboard.writeText(inviteUrl).catch(() => {});
@@ -522,14 +577,33 @@ export function PlayGame() {
           </div>
         }>
           {GameComponent && createElement(GameComponent, {
-            key: `${gameId}-${currentStage}-${aiDifficulty}-${numPlayers}`,
+            key: `${gameId}-${currentStage}-${aiDifficulty}-${numPlayers}-${sessionId ?? 'solo'}`,
             stage: currentStage,
             onScore: (pts: number) => setScore(s => s + pts),
             onProgress: setProgress,
             onMessage: setMessage,
             onEnd: handleEnd,
-            multiplayerState: isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' as const } : undefined,
-            onMultiplayerMove: (_move: unknown) => {},
+            multiplayerState: isLivePlaying && liveSession && mySeat
+              ? {
+                  sessionId: sessionId ?? '',
+                  playerNumber: mySeat.seat,
+                  currentPlayer: liveSession.currentPlayer,
+                  boardState: liveSession.boardState,
+                  opponentName: liveSession.players.find(p => p.seat !== mySeat.seat)?.name ?? '',
+                  opponentAvatar: liveSession.players.find(p => p.seat !== mySeat.seat)?.avatar ?? '',
+                  players: liveSession.players,
+                  status: liveSession.status as 'waiting' | 'lobby' | 'playing' | 'finished',
+                  winner: liveSession.winner,
+                }
+              : undefined,
+            onMultiplayerMove: (move: unknown) => {
+              if (!sessionId || !player) return;
+              makeMove({
+                sessionId: sessionId as any,
+                playerId: player.playerId as any,
+                move,
+              }).catch(() => {});
+            },
             aiDifficulty,
             numPlayers,
           })}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 
 // Define AI difficulty levels
@@ -62,7 +62,12 @@ function aiMove(board: Cell[], ai: Player, difficulty: 'easy' | 'medium' | 'hard
   return empty[Math.floor(Math.random() * empty.length)];
 }
 
-function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
+function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
+  const isOnline = !!multiplayerState;
+  // In online play seat 1 plays X, seat 2 plays O; local uses X vs AI.
+  const myMark: Player = isOnline ? (multiplayerState.playerNumber === 1 ? 'X' : 'O') : 'X';
+  const otherMark: Player = myMark === 'X' ? 'O' : 'X';
+
   const [board, setBoard] = useState<Cell[]>(Array(9).fill(null));
   const [turn, setTurn] = useState<Player>('X');
   const [winner, setWinner] = useState<Cell | 'draw' | null>(null);
@@ -70,13 +75,61 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
   const [wins, setWins] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const targetWins = stage <= 3 ? stage : 3 + Math.floor(stage / 2);
+  const endedRef = useRef(false);
 
   const human: Player = 'X';
   const ai: Player = 'O';
   const difficulty = aiDifficulty || 'medium';
 
+  // Sync from server boardState in online mode.
+  useEffect(() => {
+    if (!isOnline) return;
+    const bs = multiplayerState.boardState as { board?: Cell[] } | null | undefined;
+    if (bs && Array.isArray(bs.board) && bs.board.length === 9) {
+      const incoming = bs.board as Cell[];
+      setBoard(incoming);
+      // Seat whose turn it is, mapped to mark.
+      const currentMark: Player = multiplayerState.currentPlayer === 1 ? 'X' : 'O';
+      setTurn(currentMark);
+      const { result, line } = checkWinner(incoming);
+      if (result) {
+        setWinner(result);
+        setWinLine(line);
+        if (!endedRef.current) {
+          endedRef.current = true;
+          const won = result === myMark;
+          const stars = result === 'draw' ? 2 : won ? 3 : 1;
+          const summary = result === 'draw' ? "It's a draw!" : won ? 'You won!' : 'You lost this round.';
+          onEnd({ score: won ? 100 : result === 'draw' ? 50 : 10, stars, summary });
+        }
+      }
+    } else if (bs === null || bs === undefined) {
+      // First-time init from server: empty board, seat 1 (X) moves first.
+      setBoard(Array(9).fill(null));
+      setTurn('X');
+    }
+  }, [isOnline, multiplayerState, myMark, onEnd]);
+
   const handleCell = (i: number) => {
-    if (board[i] || winner || turn !== human) return;
+    if (board[i] || winner) return;
+
+    if (isOnline) {
+      if (turn !== myMark) return;
+      const next = [...board];
+      next[i] = myMark;
+      setBoard(next);
+      const { result, line } = checkWinner(next);
+      if (result) setWinLine(line);
+      // Dispatch to server; server relays to opponent and the useEffect above
+      // will reconcile when the query updates.
+      const serverWinner = result === 'draw' ? 0 : result === myMark ? multiplayerState.playerNumber : result ? (multiplayerState.playerNumber === 1 ? 2 : 1) : undefined;
+      onMultiplayerMove?.({ boardState: { board: next }, winner: serverWinner });
+      // Optimistic local turn flip (server will re-confirm).
+      setTurn(otherMark);
+      return;
+    }
+
+    if (turn !== human) return;
     const next = [...board];
     next[i] = human;
     setBoard(next);
@@ -136,12 +189,30 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     onMessage('Your turn! (X)');
   };
 
+  const isMyTurn = isOnline ? turn === myMark : turn === human;
+  const inputDisabled = !!winner || !isMyTurn;
+
   return (
     <div className="h-full flex flex-col items-center justify-center p-4">
-      <div className="flex gap-4 mb-4 text-sm">
-        <span className="bg-card rounded-lg px-3 py-1.5 text-accent font-bold">Wins: {wins}/{targetWins}</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">Games: {gamesPlayed}</span>
-      </div>
+      {isOnline ? (
+        <div className="flex gap-3 mb-4 text-sm items-center">
+          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
+            You: {myMark}
+          </span>
+          <span className="text-text-dim text-xs">vs</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
+            {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName}: {otherMark}
+          </span>
+          <span className={`text-xs font-bold ${isMyTurn ? 'text-success animate-pulse' : 'text-text-dim'}`}>
+            {isMyTurn ? 'Your turn' : 'Waiting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex gap-4 mb-4 text-sm">
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent font-bold">Wins: {wins}/{targetWins}</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">Games: {gamesPlayed}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-4 game-board">
         {board.map((cell, i) => {
@@ -150,10 +221,10 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
             <button
               key={i}
               onClick={() => handleCell(i)}
-              disabled={!!cell || !!winner || turn !== human}
+              disabled={!!cell || inputDisabled}
               className={`game-cell w-20 h-20 rounded-xl text-3xl font-bold flex items-center justify-center transition-all active:scale-90 ${
                 cell === 'X' ? 'text-accent' : cell === 'O' ? 'text-danger' : 'bg-card-hover hover:bg-card-hover'
-              } ${!cell && !winner && turn === human ? 'hover:bg-card-hover' : ''} ${
+              } ${!cell && !inputDisabled ? 'hover:bg-card-hover' : ''} ${
                 isWinCell ? 'ring-3 ring-success bg-success/20' : ''
               }`}
               style={{ boxShadow: cell ? 'none' : '0 2px 0 rgba(0,0,0,0.2)' }}
@@ -164,13 +235,20 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
         })}
       </div>
 
-      {winner && (
+      {winner && !isOnline && (
         <button
           onClick={resetBoard}
           className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95"
         >
           {winner === 'draw' ? 'Draw — Play Again' : winner === human ? 'You Win! Play Again' : 'You Lost — Try Again'}
         </button>
+      )}
+      {winner && isOnline && (
+        <div className="text-center">
+          <p className="text-lg font-bold mb-1">
+            {winner === 'draw' ? "It's a draw!" : winner === myMark ? 'You Win! 🎉' : 'You lost this round.'}
+          </p>
+        </div>
       )}
     </div>
   );
