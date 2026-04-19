@@ -467,6 +467,23 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
       setPlayerHand(newPlayerHand);
       setDiscardPile(newDiscard);
       setCurrentColor(color);
+      if (isOnline && onMultiplayerMove && multiplayerState) {
+        onMultiplayerMove({
+          boardState: {
+            hands: { [mySeat]: newPlayerHand, [oppSeat]: aiHand },
+            deck,
+            discard: newDiscard,
+            color,
+            currentPlayer: oppSeat,
+          },
+          winner: mySeat,
+        });
+        if (!endedRef.current) {
+          endedRef.current = true;
+          onEnd({ score: 200, stars: 3, summary: 'You won UNO!' });
+        }
+        return;
+      }
       handleEndRound('player');
       return;
     }
@@ -479,6 +496,22 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
     setCurrentColor(effect.color);
     setDeck(effect.deck);
     setMessage(effect.message);
+
+    if (isOnline && onMultiplayerMove) {
+      // Online: dispatch and stop; opponent plays via their own client
+      const nextPlayer = effect.skip ? mySeat : oppSeat;
+      onMultiplayerMove({
+        boardState: {
+          hands: { [mySeat]: effect.pHand, [oppSeat]: effect.aHand },
+          deck: effect.deck,
+          discard: effect.discard,
+          color: effect.color,
+          currentPlayer: nextPlayer,
+        },
+      });
+      setIsPlayerTurn(effect.skip);
+      return;
+    }
 
     if (effect.skip) {
       setMessage(effect.message + ' Your turn again!');
@@ -508,8 +541,20 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
     if (canPlay(drawnCard, topCard, currentColor)) {
       setMessage(`You drew ${cardLabel(drawnCard)} — you can play it!`);
     } else {
-      setMessage("No match. AI's turn.");
+      setMessage(isOnline ? "No match. Opponent's turn." : "No match. AI's turn.");
       setIsPlayerTurn(false);
+      if (isOnline && onMultiplayerMove) {
+        onMultiplayerMove({
+          boardState: {
+            hands: { [mySeat]: newPlayerHand, [oppSeat]: aiHand },
+            deck: remaining,
+            discard: discardPile,
+            color: currentColor,
+            currentPlayer: oppSeat,
+          },
+        });
+        return;
+      }
       doAiTurn(remaining, discardPile, currentColor, aiHand, newPlayerHand);
     }
   };
@@ -538,7 +583,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
 
   const hasPlayableCard = playerHand.some(c => canPlay(c, topCard, currentColor));
   const isAdverseMessage = message.includes('skip') || (message.includes('draw') && message.includes('You'));
-  if (!started) {
+  if (!started && !isOnline) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">🃏</div>
@@ -559,7 +604,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
     <div className="h-full flex flex-col items-center justify-between p-2 select-none overflow-hidden">
       <div className="w-full flex justify-between items-center px-2 py-1 text-xs">
         <span className="bg-card rounded-lg px-2 py-1">
-          AI: {aiHand.length} card{aiHand.length !== 1 ? 's' : ''}
+          {isOnline ? (multiplayerState?.opponentName || 'Opponent') : 'AI'}: {aiHand.length} card{aiHand.length !== 1 ? 's' : ''}
         </span>
         <span className="bg-card rounded-lg px-2 py-1 text-accent font-bold">
           {roundWins}/{targetWins} wins
