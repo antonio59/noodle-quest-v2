@@ -29,6 +29,7 @@ export function PlayGame() {
   const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>(
     (initialDifficulty as any) || 'medium'
   );
+  const [numPlayers, setNumPlayers] = useState<number>(2);
   const [showLobby, setShowLobby] = useState(!initialDifficulty);
   const [showStagePicker, setShowStagePicker] = useState(false);
 
@@ -242,6 +243,30 @@ export function PlayGame() {
         <div className="text-6xl mb-4">{gameMeta.emoji}</div>
         <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
         <p className="text-text-muted text-sm mb-6 max-w-xs">{gameMeta.description}</p>
+
+        {maxPlayers > 2 && (
+          <div className="w-full max-w-xs mb-5">
+            <h3 className="text-sm font-semibold text-text-dim mb-2">Players</h3>
+            <div className="flex gap-2 justify-center">
+              {Array.from({ length: maxPlayers - 1 }, (_, i) => i + 2).map(n => (
+                <button
+                  key={n}
+                  onClick={() => setNumPlayers(n)}
+                  className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all active:scale-95 ${
+                    numPlayers === n
+                      ? 'bg-accent text-bg'
+                      : 'bg-card text-text hover:bg-card-hover'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-text-dim mt-1.5 text-center">
+              You + {numPlayers - 1} AI opponent{numPlayers > 2 ? 's' : ''}
+            </p>
+          </div>
+        )}
 
         <div className="w-full max-w-xs space-y-3 mb-6">
           <h3 className="text-sm font-semibold text-text-dim">Choose Difficulty</h3>
@@ -497,7 +522,7 @@ export function PlayGame() {
           </div>
         }>
           {GameComponent && createElement(GameComponent, {
-            key: `${gameId}-${currentStage}-${aiDifficulty}`,
+            key: `${gameId}-${currentStage}-${aiDifficulty}-${numPlayers}`,
             stage: currentStage,
             onScore: (pts: number) => setScore(s => s + pts),
             onProgress: setProgress,
@@ -506,6 +531,7 @@ export function PlayGame() {
             multiplayerState: isMultiplayer ? { sessionId: '', playerNumber: 1, currentPlayer: 1, boardState: {}, opponentName: '', opponentAvatar: '', status: 'waiting' as const } : undefined,
             onMultiplayerMove: (_move: unknown) => {},
             aiDifficulty,
+            numPlayers,
           })}
         </Suspense>
       </div>

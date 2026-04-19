@@ -183,13 +183,16 @@ function scorePlacement(
   board: (string | null)[][],
   cells: [number, number][],
   newCellSet: Set<string>,
+  newCellLetters?: Map<string, string>,
 ): number {
   let wordMult = 1;
   let letterTotal = 0;
   for (const [r, c] of cells) {
     const bonus = BONUS_MAP.get(`${r},${c}`);
-    const ls = TILE_SCORES[board[r][c]!] || 0;
-    const isNew = newCellSet.has(`${r},${c}`);
+    const key = `${r},${c}`;
+    const letter = newCellLetters?.get(key) ?? board[r][c]!;
+    const ls = TILE_SCORES[letter] || 0;
+    const isNew = newCellSet.has(key);
     if (isNew && bonus === 'DL') letterTotal += ls * 2;
     else if (isNew && bonus === 'TL') letterTotal += ls * 3;
     else letterTotal += ls;
@@ -334,7 +337,8 @@ function generateAiMoves(
 
           // Score main word
           const newCellSet = new Set(newCells.map(nc => `${nc.r},${nc.c}`));
-          const mainScore = scorePlacement(board, cells, newCellSet);
+          const newCellMap = new Map(newCells.map(nc => [`${nc.r},${nc.c}`, nc.letter]));
+          const mainScore = scorePlacement(board, cells, newCellSet, newCellMap);
           const all7Bonus = newCells.length === 7 ? 50 : 0;
           const total = mainScore + crossBonus + all7Bonus;
 
@@ -385,7 +389,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const maxRounds = 8; // each seat plays maxRounds turns
+  const maxRounds = 6 + stage * 6; // each seat plays maxRounds turns
   const targetScore = stage * 30;
   const isHumanTurn = currentSeat === 0;
   const playerRack = racks[0] ?? [];
@@ -501,33 +505,68 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     const sameCol = cols.every(c => c === cols[0]);
     if (!sameRow && !sameCol) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must be in a straight line' };
 
-    const dir: Direction = sameRow ? 'H' : 'V';
-    const sorted = sameRow
-      ? [...cells].sort((a, b) => a[1] - b[1])
-      : [...cells].sort((a, b) => a[0] - b[0]);
+    let dir: Direction;
+    let wordCells: [number, number][];
+    let word: string;
 
-    // Contiguous (allowing existing tiles in between)
-    if (sameRow) {
-      for (let c = sorted[0][1]; c <= sorted[sorted.length - 1][1]; c++) {
-        if (!board[sorted[0][0]][c]) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must form one word' };
+    if (cells.length === 1) {
+      const [r, c] = cells[0];
+
+      // Horizontal word through this cell
+      let hsc = c;
+      while (hsc > 0 && board[r][hsc - 1]) hsc--;
+      const hCells: [number, number][] = [];
+      let hwc = hsc;
+      while (hwc < SIZE && board[r][hwc]) { hCells.push([r, hwc]); hwc++; }
+
+      // Vertical word through this cell
+      let vsr = r;
+      while (vsr > 0 && board[vsr - 1][c]) vsr--;
+      const vCells: [number, number][] = [];
+      let vwr = vsr;
+      while (vwr < SIZE && board[vwr][c]) { vCells.push([vwr, c]); vwr++; }
+
+      if (hCells.length < 2 && vCells.length < 2) {
+        return { valid: false, word: '', cells: [], score: 0, reason: 'Word must be at least 2 letters' };
       }
+
+      if (hCells.length >= vCells.length) {
+        dir = 'H';
+        wordCells = hCells;
+      } else {
+        dir = 'V';
+        wordCells = vCells;
+      }
+      word = wordCells.map(([rr, cc]) => board[rr][cc]).join('');
     } else {
-      for (let r = sorted[0][0]; r <= sorted[sorted.length - 1][0]; r++) {
-        if (!board[r][sorted[0][1]]) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must form one word' };
+      dir = sameRow ? 'H' : 'V';
+      const sorted = sameRow
+        ? [...cells].sort((a, b) => a[1] - b[1])
+        : [...cells].sort((a, b) => a[0] - b[0]);
+
+      // Contiguous (allowing existing tiles in between)
+      if (sameRow) {
+        for (let c = sorted[0][1]; c <= sorted[sorted.length - 1][1]; c++) {
+          if (!board[sorted[0][0]][c]) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must form one word' };
+        }
+      } else {
+        for (let r = sorted[0][0]; r <= sorted[sorted.length - 1][0]; r++) {
+          if (!board[r][sorted[0][1]]) return { valid: false, word: '', cells: [], score: 0, reason: 'Tiles must form one word' };
+        }
       }
+
+      // Expand to include existing tiles flanking the placement
+      let sr = sorted[0][0], sc = sorted[0][1];
+      if (sameRow) while (sc > 0 && board[sr][sc - 1]) sc--;
+      else while (sr > 0 && board[sr - 1][sc]) sr--;
+
+      wordCells = [];
+      let wr = sr, wc = sc;
+      if (sameRow) while (wc < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wc++; }
+      else while (wr < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wr++; }
+
+      word = wordCells.map(([r, c]) => board[r][c]).join('');
     }
-
-    // Expand to include existing tiles flanking the placement
-    let sr = sorted[0][0], sc = sorted[0][1];
-    if (sameRow) while (sc > 0 && board[sr][sc - 1]) sc--;
-    else while (sr > 0 && board[sr - 1]?.[sc]) sr--;
-
-    const wordCells: [number, number][] = [];
-    let wr = sr, wc = sc;
-    if (sameRow) while (wc < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wc++; }
-    else while (wr < SIZE && board[wr][wc]) { wordCells.push([wr, wc]); wr++; }
-
-    const word = wordCells.map(([r, c]) => board[r][c]).join('');
     if (word.length < 2) return { valid: false, word: '', cells: [], score: 0, reason: 'Word must be at least 2 letters' };
     if (!VALID_WORDS.has(word)) return { valid: false, word, cells: wordCells, score: 0, reason: `"${word}" is not in the dictionary` };
 
@@ -734,7 +773,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
                 key={key}
                 onClick={() => handleBoardClick(r, c)}
                 disabled={!isHumanTurn}
-                className={`relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
+                className={`group relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
                   cell
                     ? isPlaced
                       ? 'bg-amber-200 text-amber-900 ring-1 ring-accent/60'
@@ -746,13 +785,25 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
               >
                 {cell ? (
                   <>
-                    <span>{cell}</span>
-                    <span className="absolute bottom-0 right-px text-[4px] sm:text-[5px] opacity-50 leading-none">
+                    <span className="text-[9px] sm:text-xs font-bold">{cell}</span>
+                    <span className="absolute bottom-0.5 right-0.5 text-[6px] sm:text-[8px] opacity-70 leading-none font-bold text-amber-900">
                       {TILE_SCORES[cell]}
                     </span>
+                    {bonus && bonus !== 'ST' && (
+                      <span className="absolute inset-0 flex items-start justify-start p-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                        <span className={`text-[5px] sm:text-[6px] font-bold px-0.5 rounded leading-none ${
+                          bonus === 'TW' ? 'bg-red-600/70 text-red-100' :
+                          bonus === 'DW' ? 'bg-rose-500/70 text-rose-100' :
+                          bonus === 'TL' ? 'bg-blue-600/70 text-blue-100' :
+                          'bg-sky-500/70 text-sky-100'
+                        }`}>
+                          {bonus}
+                        </span>
+                      </span>
+                    )}
                   </>
                 ) : bs ? (
-                  <span className="text-[4px] sm:text-[6px] font-semibold opacity-70 leading-none select-none">
+                  <span className="text-[5px] sm:text-[7px] font-semibold opacity-80 leading-none select-none">
                     {bs.label}
                   </span>
                 ) : null}
