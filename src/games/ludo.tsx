@@ -99,7 +99,17 @@ function cellType(r: number, c: number): string | null {
 
 const MAX_LOSSES = 3;
 
-function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const mySide: 'red' | 'blue' = isOnline
+    ? (multiplayerState.playerNumber === 1 ? 'red' : 'blue')
+    : 'red';
+  const oppSide: 'red' | 'blue' = mySide === 'red' ? 'blue' : 'red';
+  const myStretch = mySide === 'red' ? RED_STRETCH : BLUE_STRETCH;
+  const oppStretch = mySide === 'red' ? BLUE_STRETCH : RED_STRETCH;
+  const myColor = mySide === 'red' ? '#ef4444' : '#3b82f6';
+  const oppColor = mySide === 'red' ? '#3b82f6' : '#ef4444';
+
   const [pPos, setPPos] = useState(-1);
   const [aPos, setAPos] = useState(-1);
   const [turn, setTurn] = useState<'p' | 'a'>('p');
@@ -139,8 +149,31 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   }, []);
 
   useEffect(() => {
-    onMessage('Roll a 6 to enter the track!');
-  }, [onMessage]);
+    onMessage(isOnline ? 'Online Ludo — roll a 6 to enter!' : 'Roll a 6 to enter the track!');
+  }, [onMessage, isOnline]);
+
+  // Online sync: reconcile from server boardState
+  useEffect(() => {
+    if (!isOnline || !multiplayerState) return;
+    const bs = multiplayerState.boardState as { redPos?: number; bluePos?: number; lastRoll?: number } | null | undefined;
+    if (!bs) return;
+    const redPos = typeof bs.redPos === 'number' ? bs.redPos : -1;
+    const bluePos = typeof bs.bluePos === 'number' ? bs.bluePos : -1;
+    const myPos = mySide === 'red' ? redPos : bluePos;
+    const oppPos = mySide === 'red' ? bluePos : redPos;
+    pPosRef.current = myPos;
+    aPosRef.current = oppPos;
+    setPPos(myPos);
+    setAPos(oppPos);
+    if (typeof bs.lastRoll === 'number') setDice(bs.lastRoll);
+    setTurn(multiplayerState.currentPlayer === multiplayerState.playerNumber ? 'p' : 'a');
+    // Endgame: anyone reached home
+    if ((redPos >= 58 || bluePos >= 58) && !endedRef.current) {
+      endedRef.current = true;
+      const iWon = myPos >= 58;
+      onEnd({ score: iWon ? 100 : 0, stars: iWon ? 3 : 1, summary: iWon ? 'You won online Ludo!' : 'Opponent reached home first.' });
+    }
+  }, [isOnline, multiplayerState, mySide, onEnd]);
 
   const finishMatch = useCallback((outcome: 'win' | 'lose') => {
     if (endedRef.current) return;
@@ -244,6 +277,40 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     const curA = aPosRef.current;
     const d = rollDie();
     setDice(d);
+
+    if (isOnline && multiplayerState && onMultiplayerMove) {
+      // Online: my side uses appropriate advance fn (red=advance, blue=advanceAI semantics)
+      const myAdvance = mySide === 'red' ? advance : advanceAI;
+      const np = myAdvance(curP, d);
+      if (np === curP && curP !== -1) {
+        onMessage(`Rolled ${d} — can't move.`);
+        return;
+      }
+      if (np === -1) {
+        onMessage(`Rolled ${d} — need a 6.`);
+        return;
+      }
+      // Capture opponent if I land on their main-track position
+      let newOpp = curA;
+      if (np >= 0 && np < 52 && np === curA) {
+        newOpp = -1;
+        onMessage(`Rolled ${d} — captured opponent!`);
+      }
+      updatePPos(np);
+      if (newOpp !== curA) updateAPos(newOpp);
+      const redPos = mySide === 'red' ? np : newOpp;
+      const bluePos = mySide === 'red' ? newOpp : np;
+      const iWon = np >= 58;
+      onMultiplayerMove({
+        boardState: { redPos, bluePos, lastRoll: d },
+        winner: iWon ? multiplayerState.playerNumber : undefined,
+      });
+      if (iWon) {
+        onScore(100);
+      }
+      return;
+    }
+
     const np = advance(curP, d);
 
     if (np === curP && curP !== -1) {
@@ -385,32 +452,40 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   const renderTokens = () => {
     const el: React.ReactElement[] = [];
     const r = C * 0.4;
+    const pColor = isOnline ? myColor : '#ef4444';
+    const aColor = isOnline ? oppColor : '#3b82f6';
+    const pStretch = isOnline ? myStretch : RED_STRETCH;
+    const aStretch = isOnline ? oppStretch : BLUE_STRETCH;
+    const pBaseR = mySide === 'red' ? 2 : 12;
+    const pBaseC = mySide === 'red' ? 2 : 12;
+    const aBaseR = mySide === 'red' ? 12 : 2;
+    const aBaseC = mySide === 'red' ? 12 : 2;
 
-    // Player (red)
+    // Player
     if (pPos === -1) {
       el.push(
-        <circle key="pt" cx={cx(2)} cy={cy(2)} r={r + 1} fill="#ef4444" stroke="white" strokeWidth={1.5} />,
-        <text key="ptl" x={cx(2)} y={cy(2) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">P</text>,
+        <circle key="pt" cx={cx(pBaseC)} cy={cy(pBaseR)} r={r + 1} fill={pColor} stroke="white" strokeWidth={1.5} />,
+        <text key="ptl" x={cx(pBaseC)} y={cy(pBaseR) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">P</text>,
       );
     } else {
-      const [row, col] = posCoord(pPos, RED_STRETCH);
+      const [row, col] = posCoord(pPos, pStretch);
       el.push(
-        <circle key="pt" cx={cx(col)} cy={cy(row)} r={r} fill="#ef4444" stroke="white" strokeWidth={1.5} />,
+        <circle key="pt" cx={cx(col)} cy={cy(row)} r={r} fill={pColor} stroke="white" strokeWidth={1.5} />,
         <text key="ptl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">P</text>,
       );
     }
 
-    // AI (blue)
+    // Opponent
     if (aPos === -1) {
       el.push(
-        <circle key="at" cx={cx(12)} cy={cy(12)} r={r + 1} fill="#3b82f6" stroke="white" strokeWidth={1.5} />,
-        <text key="atl" x={cx(12)} y={cy(12) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">A</text>,
+        <circle key="at" cx={cx(aBaseC)} cy={cy(aBaseR)} r={r + 1} fill={aColor} stroke="white" strokeWidth={1.5} />,
+        <text key="atl" x={cx(aBaseC)} y={cy(aBaseR) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">{isOnline ? 'O' : 'A'}</text>,
       );
     } else {
-      const [row, col] = posCoord(aPos, BLUE_STRETCH);
+      const [row, col] = posCoord(aPos, aStretch);
       el.push(
-        <circle key="at" cx={cx(col)} cy={cy(row)} r={r} fill="#3b82f6" stroke="white" strokeWidth={1.5} />,
-        <text key="atl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">A</text>,
+        <circle key="at" cx={cx(col)} cy={cy(row)} r={r} fill={aColor} stroke="white" strokeWidth={1.5} />,
+        <text key="atl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">{isOnline ? 'O' : 'A'}</text>,
       );
     }
 
@@ -428,16 +503,16 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
     <div className="h-full flex flex-col items-center p-2 gap-1.5">
       {/* Status bar */}
       <div className="flex gap-2 text-xs items-center flex-wrap justify-center">
-        <span className="bg-card rounded-lg px-2 py-0.5 text-danger font-bold flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#ef4444]" />
+        <span className="bg-card rounded-lg px-2 py-0.5 font-bold flex items-center gap-1" style={{ color: isOnline ? myColor : undefined }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: isOnline ? myColor : '#ef4444' }} />
           You: {posLabel(pPos)}
         </span>
-        <span className="bg-card rounded-lg px-2 py-0.5 text-blue-400 font-bold flex items-center gap-1">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#3b82f6]" />
-          AI: {posLabel(aPos)}
+        <span className="bg-card rounded-lg px-2 py-0.5 font-bold flex items-center gap-1" style={{ color: isOnline ? oppColor : undefined }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: isOnline ? oppColor : '#3b82f6' }} />
+          {isOnline ? (multiplayerState?.opponentName || 'Opponent') : 'AI'}: {posLabel(aPos)}
         </span>
-        <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{wins}/{target}</span>
-        {losses > 0 && (
+        {!isOnline && <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{wins}/{target}</span>}
+        {!isOnline && losses > 0 && (
           <span className="bg-card rounded-lg px-2 py-0.5 text-danger">L: {losses}/{MAX_LOSSES}</span>
         )}
       </div>
@@ -464,7 +539,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
           disabled={over || turn !== 'p'}
           className="bg-accent text-bg font-bold px-5 py-2 rounded-xl text-sm hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all"
         >
-          {turn === 'p' ? 'Roll!' : 'AI thinking...'}
+          {turn === 'p' ? 'Roll!' : (isOnline ? 'Opponent rolling...' : 'AI thinking...')}
         </button>
       </div>
 
