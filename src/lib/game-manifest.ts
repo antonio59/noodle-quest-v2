@@ -234,6 +234,18 @@ reg('scrabble', {
   category: 'board', stages: 10, aiDifficulty: 'medium',
 }, () => import('@/games/scrabble'));
 
+reg('bookworm', {
+  name: 'Bookworm', emoji: '🐛',
+  description: 'Chain adjacent letter tiles to spell words. Longer words = big points!',
+  category: 'board', stages: 10,
+}, () => import('@/games/bookworm'));
+
+reg('connect-lines', {
+  name: 'Connect Lines', emoji: '🔌',
+  description: 'Rotate pipe tiles until every connection matches — no dead ends!',
+  category: 'board', stages: 10,
+}, () => import('@/games/connect-lines'));
+
 // ── Breathing exercises ──────────────────────────────────────────
 reg('box-breathing', {
   name: 'Box Breathing', emoji: '📦',
