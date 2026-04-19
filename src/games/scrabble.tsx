@@ -767,12 +767,23 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
             const bonus = BONUS_MAP.get(key);
             const isPlaced = placedKeys.has(key);
             const bs = bonus ? BONUS_STYLE[bonus] : null;
+            const bonusTitle = bonus === 'TW' ? 'Triple Word Score'
+              : bonus === 'DW' ? 'Double Word Score'
+              : bonus === 'TL' ? 'Triple Letter Score'
+              : bonus === 'DL' ? 'Double Letter Score'
+              : bonus === 'ST' ? 'Star — Center' : '';
+            const bonusChipBg = bonus === 'TW' ? 'bg-red-600 text-red-50'
+              : bonus === 'DW' ? 'bg-rose-500 text-rose-50'
+              : bonus === 'TL' ? 'bg-blue-600 text-blue-50'
+              : bonus === 'DL' ? 'bg-sky-500 text-sky-50'
+              : bonus === 'ST' ? 'bg-amber-500 text-amber-50' : '';
 
             return (
               <button
                 key={key}
                 onClick={() => handleBoardClick(r, c)}
                 disabled={!isHumanTurn}
+                title={cell ? `${cell} (${TILE_SCORES[cell]} pts)${bonusTitle ? ` · on ${bonusTitle}` : ''}` : bonusTitle || undefined}
                 className={`group relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
                   cell
                     ? isPlaced
@@ -785,21 +796,19 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
               >
                 {cell ? (
                   <>
-                    <span className="text-[9px] sm:text-xs font-bold">{cell}</span>
-                    <span className="absolute bottom-0.5 right-0.5 text-[6px] sm:text-[8px] opacity-70 leading-none font-bold text-amber-900">
+                    <span className="text-[10px] sm:text-sm font-extrabold tracking-tight">{cell}</span>
+                    <span className="absolute bottom-0 right-0.5 text-[7px] sm:text-[10px] leading-none font-extrabold text-amber-950">
                       {TILE_SCORES[cell]}
                     </span>
                     {bonus && bonus !== 'ST' && (
-                      <span className="absolute inset-0 flex items-start justify-start p-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <span className={`text-[5px] sm:text-[6px] font-bold px-0.5 rounded leading-none ${
-                          bonus === 'TW' ? 'bg-red-600/70 text-red-100' :
-                          bonus === 'DW' ? 'bg-rose-500/70 text-rose-100' :
-                          bonus === 'TL' ? 'bg-blue-600/70 text-blue-100' :
-                          'bg-sky-500/70 text-sky-100'
-                        }`}>
-                          {bonus}
-                        </span>
+                      <span
+                        className={`absolute top-0 left-0 text-[5px] sm:text-[7px] font-bold px-0.5 leading-[1.1] rounded-br-sm ${bonusChipBg}`}
+                      >
+                        {bonus}
                       </span>
+                    )}
+                    {bonus === 'ST' && (
+                      <span className="absolute top-0 left-0 text-[7px] sm:text-[9px] text-amber-600 leading-none">★</span>
                     )}
                   </>
                 ) : bs ? (
