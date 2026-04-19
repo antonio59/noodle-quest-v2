@@ -9,22 +9,16 @@ function makePuzzleId() {
   return `crossword_${Date.now()}`;
 }
 
-// Stage difficulty ramp
-const STAGE_CFG: Record<number, { gridSize: number; maxWords: number; targetDifficulty: 1 | 2 | 3 }> = {
-  1: { gridSize: 7, maxWords: 5, targetDifficulty: 1 },
-  2: { gridSize: 8, maxWords: 6, targetDifficulty: 1 },
-  3: { gridSize: 8, maxWords: 7, targetDifficulty: 2 },
-  4: { gridSize: 9, maxWords: 8, targetDifficulty: 2 },
-  5: { gridSize: 9, maxWords: 9, targetDifficulty: 2 },
-  6: { gridSize: 10, maxWords: 10, targetDifficulty: 2 },
-  7: { gridSize: 10, maxWords: 11, targetDifficulty: 3 },
-  8: { gridSize: 11, maxWords: 12, targetDifficulty: 3 },
-  9: { gridSize: 11, maxWords: 13, targetDifficulty: 3 },
-  10: { gridSize: 12, maxWords: 14, targetDifficulty: 3 },
-};
+function crosswordCfg(stage: number) {
+  return {
+    gridSize: Math.min(18, 7 + Math.floor((stage - 1) * 0.6)),
+    maxWords: Math.min(22, 5 + stage),
+    targetDifficulty: Math.min(3, 1 + Math.floor((stage - 1) / 3)) as 1 | 2 | 3,
+  };
+}
 
 export default function CrosswordGame({ stage = 1, onScore, onProgress, onEnd }: Partial<GameProps>) {
-  const cfg = STAGE_CFG[stage] ?? STAGE_CFG[1];
+  const cfg = crosswordCfg(stage);
   const [puzzleId, setPuzzleId] = useState(() => makePuzzleId());
   const [seed, setSeed] = useState(() => Date.now());
   const startedAtRef = useRef<number>(Date.now());

@@ -107,7 +107,8 @@ const emotions: Record<string, { emoji: string; color: string }> = {
 type Phase = 'playing' | 'feedback' | 'done';
 
 function FeelingsFacesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const questions = allQuestions[stage] || allQuestions[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const questions = allQuestions[cycledStage] || allQuestions[1];
   const [phase, setPhase] = useState<Phase>('playing');
   const [score, setScore] = useState(0);
   const [currentQ, setCurrentQ] = useState(0);

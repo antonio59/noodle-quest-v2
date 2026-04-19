@@ -201,7 +201,9 @@ function drawScene(
 type Phase = 'intro' | 'playing';
 
 function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const shapes = SHAPES_BY_STAGE[stage] || SHAPES_BY_STAGE[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const shapes = SHAPES_BY_STAGE[cycledStage] || SHAPES_BY_STAGE[1];
+  const toleranceMult = Math.max(0.35, 1 - (stage - 1) * 0.012);
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentShape, setCurrentShape] = useState(0);
   const [drawnPoints, setDrawnPoints] = useState<Point[]>([]);
@@ -314,7 +316,7 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
         const dist = Math.hypot(p.x - pp.x, p.y - pp.y);
         minDist = Math.min(minDist, dist);
       });
-      if (minDist < shape.tolerance) closePoints++;
+      if (minDist < shape.tolerance * toleranceMult) closePoints++;
     });
 
     const accuracy = closePoints / drawnPoints.length;

@@ -63,7 +63,7 @@ const MAX_LOSSES = 3;
 
 function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const difficulty = aiDifficulty || 'medium';
-  const targetWins = Math.max(1, Math.min(stage + 1, 4));
+  const targetWins = Math.max(1, stage + 1);
   const callSpeed = stage <= 3 ? 2500 : stage <= 6 ? 2000 : 1500;
 
   const [playerCard, setPlayerCard] = useState<(number | 'FREE')[][]>(genCard);

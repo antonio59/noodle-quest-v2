@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 interface Point { x: number; y: number }
 interface Checkpoint { x: number; y: number; collected: boolean }
@@ -24,7 +25,11 @@ const CONFIG: Record<number, { pathWidth: number; obstacles: boolean; checkpoint
 const STAR_FEEDBACKS = ["Star collected! ⭐", "Nice! Keep going! 🌟", "Great control! ✨"];
 
 function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
+  const config = scaleFromLast(stage, CONFIG, {
+    pathWidth: -0.1, checkpointCount: 0.1,
+  }, {
+    pathWidth: 12, checkpointCount: 10,
+  });
   const [phase, setPhase] = useState<Phase>('playing');
   const [score, setScore] = useState(0);
   const [collected, setCollected] = useState(0);
@@ -100,7 +105,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
     const obstacles: Obstacle[] = [];
     if (config.obstacles) {
-      const numObs = Math.min(2 + Math.floor(stage / 3), 4);
+      const numObs = Math.min(2 + Math.floor(stage / 3), 8);
       for (let i = 0; i < numObs; i++) {
         obstacles.push({
           x: 100 + Math.random() * (w - 200),

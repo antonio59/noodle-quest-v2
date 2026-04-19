@@ -138,7 +138,8 @@ const tips = [
 type Phase = 'intro' | 'playing' | 'result' | 'done';
 
 function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const story = allStories[stage] || allStories[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const story = allStories[cycledStage] || allStories[1];
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentOrder, setCurrentOrder] = useState<Panel[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);

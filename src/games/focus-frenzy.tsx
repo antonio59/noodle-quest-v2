@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 interface Orb {
   id: number;
@@ -14,7 +15,7 @@ interface Orb {
   burstY: number;
 }
 
-type Phase = 'playing' | 'done';
+type Phase = 'ready' | 'playing' | 'done';
 
 const CONFIG: Record<number, { spawnRate: number; duration: number; distractors: number; fadeTime: number; speed: number }> = {
   1: { spawnRate: 1400, duration: 25000, distractors: 0.2, fadeTime: 0, speed: 0.8 },
@@ -34,8 +35,12 @@ const FEEDBACKS = ["Nice focus! 🎯", "Great eyes! 👀", "You're on fire! 🔥
 let orbIdCounter = 0;
 
 function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('playing');
+  const config = scaleFromLast(stage, CONFIG, {
+    spawnRate: -0.15, duration: 0.1, distractors: 0.1, fadeTime: 0.1, speed: 0.15,
+  }, {
+    spawnRate: 300, duration: 70000, distractors: 0.9, fadeTime: 300, speed: 3,
+  });
+  const [phase, setPhase] = useState<Phase>('ready');
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [score, setScore] = useState(0);
   const [targetsHit, setTargetsHit] = useState(0);
@@ -118,7 +123,7 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setFeedback('');
   }, []);
 
-  useEffect(() => {
+  const handleStart = useCallback(() => {
     startGame();
   }, [startGame]);
 
@@ -158,6 +163,25 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       clearTimeout(gameTimer);
     };
   }, [phase, config, spawnOrb, onProgress, onEnd]);
+
+  if (phase === 'ready') {
+    return (
+      <div className="flex flex-col h-full min-h-[350px] items-center justify-center gap-4">
+        <div className="text-6xl">🔮</div>
+        <h2 className="text-xl font-bold text-text">Focus Frenzy</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">
+          Tap the <span className="text-pink-400">pink/purple</span> orbs.<br />
+          Ignore the blue distractions!
+        </p>
+        <button
+          onClick={handleStart}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

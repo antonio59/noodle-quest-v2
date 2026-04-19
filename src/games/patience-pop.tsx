@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 type BubbleState = 'waiting' | 'ready' | 'trap';
 
@@ -14,7 +15,7 @@ interface Bubble {
   popFeedback: 'too-soon' | 'good' | 'trap' | null;
 }
 
-type Phase = 'playing' | 'done';
+type Phase = 'ready' | 'playing' | 'done';
 
 const CONFIG: Record<number, { spawnRate: number; duration: number; waitMin: number; waitMax: number; trapChance: number; sizeMin: number; sizeMax: number }> = {
   1: { spawnRate: 1800, duration: 25000, waitMin: 2000, waitMax: 3500, trapChance: 0, sizeMin: 65, sizeMax: 95 },
@@ -34,8 +35,12 @@ const POP_FEEDBACKS = ["Perfect patience! 🌟", "Great timing! ⏰", "You waite
 let bubbleIdCounter = 0;
 
 function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
-  const [phase, setPhase] = useState<Phase>('playing');
+  const config = scaleFromLast(stage, CONFIG, {
+    spawnRate: -0.15, duration: 0.1, waitMin: -0.15, waitMax: -0.15, trapChance: 0.1, sizeMin: -0.1, sizeMax: -0.1,
+  }, {
+    spawnRate: 400, duration: 70000, waitMin: 200, waitMax: 600, trapChance: 0.8, sizeMin: 20, sizeMax: 45,
+  });
+  const [phase, setPhase] = useState<Phase>('ready');
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [score, setScore] = useState(0);
   const [popped, setPopped] = useState(0);
@@ -126,7 +131,7 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setFeedback('Wait for GREEN! 💚');
   }, []);
 
-  useEffect(() => {
+  const handleStart = useCallback(() => {
     startGame();
   }, [startGame]);
 
@@ -200,6 +205,26 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const interval = setInterval(animFrame, 16);
     return () => clearInterval(interval);
   }, [phase]);
+
+  if (phase === 'ready') {
+    return (
+      <div className="flex flex-col h-full min-h-[350px] items-center justify-center gap-4">
+        <div className="text-6xl">🫧</div>
+        <h2 className="text-xl font-bold text-text">Patience Pop</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">
+          Bubbles will float up.<br />
+          Wait until they turn <span className="text-green-400">green</span>, then pop them!<br />
+          Avoid red traps.
+        </p>
+        <button
+          onClick={handleStart}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">

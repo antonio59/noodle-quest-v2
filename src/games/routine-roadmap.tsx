@@ -145,7 +145,8 @@ const tips = [
 type Phase = 'intro' | 'playing' | 'result' | 'done';
 
 function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const routine = allRoutines[stage] || allRoutines[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const routine = allRoutines[cycledStage] || allRoutines[1];
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentOrder, setCurrentOrder] = useState<Task[]>([]);
   const [feedback, setFeedback] = useState('');

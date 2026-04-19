@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 const COLOR_DATA = [
   { color: '#ff6e6c', emoji: '🔴' },
@@ -10,6 +11,8 @@ const COLOR_DATA = [
   { color: '#f472b6', emoji: '🩷' },
   { color: '#fb923c', emoji: '🟠' },
   { color: '#a3e635', emoji: '🟩' },
+  { color: '#06b6d4', emoji: '💠' },
+  { color: '#a0522d', emoji: '🟤' },
 ];
 
 const CONFIG: Record<number, { colors: number; startLength: number; maxRounds: number; speed: number }> = {
@@ -28,8 +31,12 @@ const CONFIG: Record<number, { colors: number; startLength: number; maxRounds: n
 type Phase = 'intro' | 'watching' | 'playing' | 'done';
 
 function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
-  const colors = COLOR_DATA.slice(0, config.colors);
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
+    colors: 0.15, startLength: 0.15, maxRounds: 0.1, speed: -0.15,
+  }, {
+    colors: 12, startLength: 8, maxRounds: 12, speed: 250,
+  }), [stage]);
+
   const [phase, setPhase] = useState<Phase>('intro');
   const [sequence, setSequence] = useState<number[]>([]);
   const [playerIndex, setPlayerIndex] = useState(0);
@@ -37,6 +44,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   const [round, setRound] = useState(1);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
+  const [colorCount, setColorCount] = useState(4);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -57,9 +65,9 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     };
   }, []);
 
-  const generateSequence = useCallback((length: number) => {
-    return Array.from({ length }, () => Math.floor(Math.random() * config.colors));
-  }, [config.colors]);
+  const generateSequence = useCallback((length: number, count: number) => {
+    return Array.from({ length }, () => Math.floor(Math.random() * count));
+  }, []);
 
   const playSequence = useCallback((seq: number[]) => {
     if (endedRef.current) return;
@@ -83,13 +91,16 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   }, [config.speed, onMessage, schedule]);
 
   const startGame = useCallback(() => {
-    const seq = generateSequence(config.startLength);
+    const options = [4, 6, 8, 10].filter(n => n <= Math.min(config.colors, COLOR_DATA.length));
+    const count = options[Math.floor(Math.random() * options.length)] || 4;
+    setColorCount(count);
+    const seq = generateSequence(config.startLength, count);
     setSequence(seq);
     setScore(0);
     setRound(1);
     setPlayerIndex(0);
     schedule(() => playSequence(seq), 500);
-  }, [config.startLength, generateSequence, playSequence, schedule]);
+  }, [config.colors, config.startLength, generateSequence, playSequence, schedule]);
 
   const finishGame = useCallback((finalScore: number, rounds: number, perfect: boolean) => {
     if (endedRef.current) return;
@@ -133,7 +144,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
       } else {
         onMessage('✨ Perfect! Get ready for more...');
         setFeedback('+1 color coming up!');
-        const newSeq = [...sequence, Math.floor(Math.random() * config.colors)];
+        const newSeq = [...sequence, Math.floor(Math.random() * colorCount)];
         setSequence(newSeq);
         setRound(currentRound + 1);
         setPlayerIndex(0);
@@ -141,7 +152,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         schedule(() => playSequence(newSeq), 700);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, onScore, onProgress, onMessage, playSequence, schedule, finishGame]);
+  }, [phase, sequence, playerIndex, score, config, colorCount, onScore, onProgress, onMessage, playSequence, schedule, finishGame]);
 
   if (phase === 'intro') {
     return (
@@ -150,7 +161,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         <h2 className="text-2xl font-bold text-accent mb-2">Copy Cat</h2>
         <p className="text-text-dim mb-6 max-w-xs">Watch the pattern light up, then repeat it!</p>
         <div className="flex gap-2 mb-6">
-          {colors.map((c, i) => (
+          {COLOR_DATA.slice(0, colorCount).map((c, i) => (
             <div key={i} className="w-8 h-8 rounded-lg" style={{ background: c.color }} />
           ))}
         </div>
@@ -165,7 +176,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     );
   }
 
-  const cols = config.colors <= 4 ? 2 : config.colors <= 6 ? 3 : 4;
+  const cols = colorCount <= 4 ? 2 : colorCount <= 6 ? 3 : colorCount <= 8 ? 4 : 5;
 
   return (
     <div className="h-full flex flex-col items-center p-4">
@@ -183,7 +194,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         className="grid gap-2 p-4 bg-card rounded-2xl"
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
       >
-        {colors.map((c, i) => (
+        {COLOR_DATA.slice(0, colorCount).map((c, i) => (
           <button
             key={i}
             onPointerDown={() => handleTap(i)}

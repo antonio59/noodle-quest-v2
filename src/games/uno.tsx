@@ -183,7 +183,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
   const [, setLastPlayedBy] = useState<'player' | 'ai' | null>(null);
   const [highlightCard, setHighlightCard] = useState<number | null>(null);
 
-  const targetWins = Math.max(1, Math.min(stage + 1, 10));
+  const targetWins = Math.max(1, stage + 1);
   const topCard = discardPile[discardPile.length - 1];
 
   const endedRef = useRef(false);

@@ -21,7 +21,7 @@ const BEST_FOR = [
 ];
 
 function TriangleBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const breathLen = Math.min(4 + Math.floor(stage / 3), 7);
+  const breathLen = Math.min(4 + Math.floor(stage / 3), 10);
   const totalRounds = 3 + stage;
   const [phase, setPhase] = useState<Phase>('info');
   const [round, setRound] = useState(0);

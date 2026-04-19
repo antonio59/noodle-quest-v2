@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 const CONFIG: Record<number, { target: number; time: number; tolerance: number }> = {
   1: { target: 5, time: 0, tolerance: 2 },
@@ -35,7 +36,11 @@ interface SplatterData {
 }
 
 function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
+  const config = scaleFromLast(stage, CONFIG, {
+    target: 0.1, time: 0.1, tolerance: 0.05,
+  }, {
+    target: 50, time: 45, tolerance: 6,
+  });
   const [phase, setPhase] = useState<Phase>('intro');
   const [splatters, setSplatters] = useState(0);
   const [timeLeft, setTimeLeft] = useState(config.time);

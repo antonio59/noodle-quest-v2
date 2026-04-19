@@ -91,7 +91,8 @@ function getHeatDisplay(heat: number) {
 }
 
 function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const scenarios = allScenarios[stage] || allScenarios[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const scenarios = allScenarios[cycledStage] || allScenarios[1];
   const [phase, setPhase] = useState<Phase>('intro');
   const [score, setScore] = useState(0);
   const [currentScenario, setCurrentScenario] = useState(0);
@@ -173,6 +174,7 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   // Auto-heat increase
   useEffect(() => {
     if (phase !== 'playing') return;
+    const heatIntervalMs = Math.max(400, 1500 - (stage - 1) * 20);
     heatIntervalRef.current = setInterval(() => {
       setHeat(prev => {
         const next = Math.min(100, prev + 2);
@@ -185,7 +187,7 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         }
         return next;
       });
-    }, 1500);
+    }, heatIntervalMs);
     return cleanup;
   }, [phase, cleanup, advanceScenario, schedule]);
 

@@ -111,7 +111,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
   const difficulty = aiDifficulty || 'medium';
   const numFlags = difficulty === 'hard' ? 8 : difficulty === 'medium' ? 6 : 4;
 
@@ -142,17 +142,19 @@ function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDiff
     };
   }, []);
 
+  const numRounds = Math.min(10 + stage, 50);
+
   const allRounds = useMemo(() => {
     const shuffled = shuffle(COUNTRIES);
-    return Array.from({ length: 10 }, (_, i) => shuffled.slice(i * numFlags, (i + 1) * numFlags));
-  }, [numFlags]);
+    return Array.from({ length: numRounds }, (_, i) => shuffled.slice(i * numFlags, (i + 1) * numFlags));
+  }, [numFlags, numRounds]);
 
   useEffect(() => {
-    if (gameRound >= 10) {
+    if (gameRound >= numRounds) {
       if (endedRef.current) return;
       endedRef.current = true;
       const stars = score >= 80 ? 3 : score >= 50 ? 2 : 1;
-      onEnd({ score, stars, summary: `Matched ${score / 10} flags correctly!` });
+      onEnd({ score, stars, summary: `Matched ${score / 10} flags correctly across ${numRounds} rounds!` });
       return;
     }
 
@@ -174,8 +176,7 @@ function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDiff
     setRoundComplete(true);
 
     if (isCorrect) {
-      const newScore = score + 10;
-      setScore(newScore);
+      setScore(prev => prev + 10);
       onScore(10);
       onMessage('Correct! Great job!');
     } else {
@@ -183,10 +184,10 @@ function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDiff
     }
 
     // Report progress after every round (correct or wrong)
-    onProgress(Math.min((gameRound + 1) / 10, 1));
+    onProgress(Math.min((gameRound + 1) / numRounds, 1));
 
     schedule(() => setGameRound(prev => prev + 1), 1500);
-  }, [score, gameRound, onScore, onMessage, onProgress, schedule]);
+  }, [gameRound, onScore, onMessage, onProgress, schedule, numRounds]);
 
   const handleFlagClick = (country: Country) => {
     if (feedback || roundComplete) return;
@@ -209,7 +210,7 @@ function FlagGame({ stage: _stage, onScore, onProgress, onMessage, onEnd, aiDiff
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-bold">Flag Match</h2>
         <div className="flex gap-2 text-xs">
-          <span className="bg-card rounded-lg px-2 py-1 text-text-muted">Round {gameRound + 1}/10</span>
+          <span className="bg-card rounded-lg px-2 py-1 text-text-muted">Round {gameRound + 1}/{numRounds}</span>
           <span className="bg-accent rounded-lg px-2 py-1 text-bg font-bold">{score} pts</span>
         </div>
       </div>

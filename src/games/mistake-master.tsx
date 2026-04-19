@@ -216,7 +216,8 @@ const TIPS = [
 type Phase = 'intro' | 'challenge' | 'result' | 'done';
 
 function MistakeMasterGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const challenges = ALL_CHALLENGES[stage] || ALL_CHALLENGES[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const challenges = ALL_CHALLENGES[cycledStage] || ALL_CHALLENGES[1];
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentRound, setCurrentRound] = useState(0);
   const [score, setScore] = useState(0);

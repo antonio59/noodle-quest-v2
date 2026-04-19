@@ -179,7 +179,7 @@ function matchRatio(p: Puzzle): number {
 }
 
 function stageSize(stage: number): number {
-  return Math.min(9, 4 + Math.floor((stage - 1) / 2)); // 4,4,5,5,6,6,7,7,8,8
+  return Math.min(16, 4 + Math.floor((stage - 1) / 1.5));
 }
 
 export default function ConnectLinesGame({ stage = 1, onScore, onProgress, onEnd, onMessage }: Partial<GameProps>) {

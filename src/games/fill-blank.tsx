@@ -263,8 +263,8 @@ interface StageConfig {
 
 function computeConfig(stage: number, wordCount: number): StageConfig {
   // Endless scaling: rounds grow slowly, capped. Blank ratio grows and caps at 0.85.
-  const rounds = Math.min(8, 4 + Math.floor((stage - 1) / 3));
-  const blankRatio = Math.min(0.85, 0.3 + (stage - 1) * 0.03);
+  const rounds = Math.min(20, 4 + Math.floor((stage - 1) / 2));
+  const blankRatio = Math.min(0.95, 0.3 + (stage - 1) * 0.03);
   // Start index rotates so each stage sees different words; grows toward harder end.
   const base = Math.min(wordCount - rounds, Math.floor((stage - 1) / 2));
   const startIdx = Math.max(0, base) % Math.max(1, wordCount);

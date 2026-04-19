@@ -247,7 +247,8 @@ const tips = [
 type Phase = 'intro' | 'playing' | 'feedback' | 'done';
 
 function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const scenarios = allScenarios[stage] || allScenarios[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const scenarios = allScenarios[cycledStage] || allScenarios[1];
   const [phase, setPhase] = useState<Phase>('intro');
   const [score, setScore] = useState(0);
   const [currentQ, setCurrentQ] = useState(0);

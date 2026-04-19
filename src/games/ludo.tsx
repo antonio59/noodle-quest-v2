@@ -107,7 +107,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [over, setOver] = useState(false);
-  const target = Math.max(1, Math.min(stage, 10));
+  const target = Math.max(1, stage);
   const diff = aiDifficulty || 'medium';
 
   // Blue AI enters at position 26 (its entry square) instead of 0

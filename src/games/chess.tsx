@@ -82,7 +82,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [captured, setCaptured] = useState<{ w: string[]; b: string[] }>({ w: [], b: [] });
-  const targetWins = Math.max(1, Math.min(stage, 10));
+  const targetWins = Math.max(1, stage);
   const difficulty = aiDifficulty || 'medium';
   const [boardSize, setBoardSize] = useState(320);
 

@@ -277,7 +277,7 @@ export function Auth() {
               className={`bg-gradient-to-br ${profile.color} p-5 sm:p-6 rounded-3xl shadow-xl text-white flex flex-col items-center justify-center gap-4 hover:scale-105 transition-transform active:scale-95 min-h-[160px] sm:min-h-[180px]`}
             >
               <span className="text-6xl drop-shadow-md">{profile.avatar}</span>
-              <span className="text-base sm:text-lg font-bold capitalize truncate w-full px-1">{profile.name}</span>
+              <span className="text-sm sm:text-base font-bold capitalize text-center leading-tight">{profile.name}</span>
             </button>
           ))}
         </div>

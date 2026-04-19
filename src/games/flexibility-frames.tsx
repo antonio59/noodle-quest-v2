@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 interface Rule {
   name: string;
@@ -62,8 +63,13 @@ interface GameItem {
 type Phase = 'playing' | 'done';
 
 function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const rules = STAGE_RULES[stage] || ALL_RULES;
-  const config = STAGE_CONFIG[stage] || STAGE_CONFIG[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const rules = STAGE_RULES[cycledStage] || ALL_RULES;
+  const config = scaleFromLast(stage, STAGE_CONFIG, {
+    spawnRate: -0.15, ruleChange: -0.1, duration: 0.1,
+  }, {
+    spawnRate: 400, ruleChange: 3, duration: 70000,
+  });
   const [phase, setPhase] = useState<Phase>('playing');
   const [currentRuleIdx, setCurrentRuleIdx] = useState(0);
   const [score, setScore] = useState(0);

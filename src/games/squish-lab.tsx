@@ -85,7 +85,8 @@ const TIPS = [
 type Phase = 'intro' | 'playing' | 'done';
 
 function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const items = ALL_TEXTURES[stage] || ALL_TEXTURES[10];
+  const cycledStage = ((stage - 1) % 10) + 1;
+  const items = ALL_TEXTURES[cycledStage] || ALL_TEXTURES[1];
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentItem, setCurrentItem] = useState(0);
   const [holdTime, setHoldTime] = useState(0);

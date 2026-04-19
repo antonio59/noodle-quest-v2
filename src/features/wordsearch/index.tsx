@@ -10,23 +10,20 @@ function makePuzzleId() {
   return `wordsearch_${Date.now()}`;
 }
 
-// Stage → grid size and word count. Difficulty ramps via grid size and
-// directional variety (adding reverse, then diagonals).
-const STAGE_CFG: Record<number, { gridSize: number; maxWords: number; directions: ('across' | 'down' | 'reverse' | 'diagonal')[] }> = {
-  1: { gridSize: 8, maxWords: 5, directions: ['across', 'down'] },
-  2: { gridSize: 9, maxWords: 6, directions: ['across', 'down'] },
-  3: { gridSize: 10, maxWords: 7, directions: ['across', 'down'] },
-  4: { gridSize: 10, maxWords: 8, directions: ['across', 'down', 'reverse'] },
-  5: { gridSize: 11, maxWords: 9, directions: ['across', 'down', 'reverse'] },
-  6: { gridSize: 12, maxWords: 10, directions: ['across', 'down', 'reverse'] },
-  7: { gridSize: 12, maxWords: 11, directions: ['across', 'down', 'reverse', 'diagonal'] },
-  8: { gridSize: 13, maxWords: 12, directions: ['across', 'down', 'reverse', 'diagonal'] },
-  9: { gridSize: 14, maxWords: 13, directions: ['across', 'down', 'reverse', 'diagonal'] },
-  10: { gridSize: 15, maxWords: 14, directions: ['across', 'down', 'reverse', 'diagonal'] },
-};
+function wordSearchCfg(stage: number) {
+  const dirs: ('across' | 'down' | 'reverse' | 'diagonal')[] =
+    stage <= 3 ? ['across', 'down']
+    : stage <= 6 ? ['across', 'down', 'reverse']
+    : ['across', 'down', 'reverse', 'diagonal'];
+  return {
+    gridSize: Math.min(22, 8 + Math.floor((stage - 1) * 0.7)),
+    maxWords: Math.min(24, 5 + stage),
+    directions: dirs,
+  };
+}
 
 export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }: Partial<GameProps>) {
-  const cfg = STAGE_CFG[stage] ?? STAGE_CFG[1];
+  const cfg = wordSearchCfg(stage);
   const [puzzleId, setPuzzleId] = useState(() => makePuzzleId());
   const [seed, setSeed] = useState(() => Date.now());
   const startedAtRef = useRef<number>(Date.now());

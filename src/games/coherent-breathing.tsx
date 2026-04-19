@@ -22,7 +22,7 @@ const BEST_FOR = [
 ];
 
 function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const breathLen = Math.min(5 + Math.floor(stage / 3), 7);
+  const breathLen = Math.min(5 + Math.floor(stage / 3), 10);
   const totalRounds = 2 + stage;
   const [phase, setPhase] = useState<Phase>('info');
   const [round, setRound] = useState(0);

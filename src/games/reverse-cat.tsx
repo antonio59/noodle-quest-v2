@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 const COLOR_DATA = [
   { color: '#ff6e6c', name: 'red', emoji: '🔴' },
@@ -10,6 +11,8 @@ const COLOR_DATA = [
   { color: '#f472b6', name: 'pink', emoji: '🩷' },
   { color: '#fb923c', name: 'orange', emoji: '🟠' },
   { color: '#a3e635', name: 'lime', emoji: '🟩' },
+  { color: '#06b6d4', name: 'cyan', emoji: '💠' },
+  { color: '#a0522d', name: 'brown', emoji: '🟤' },
 ];
 
 const CONFIG: Record<number, { colors: number; startLength: number; maxRounds: number; speed: number }> = {
@@ -28,10 +31,13 @@ const CONFIG: Record<number, { colors: number; startLength: number; maxRounds: n
 type Phase = 'watching' | 'playing' | 'done';
 
 function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
-  const colors = COLOR_DATA.slice(0, config.colors);
-
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
+    colors: 0.15, startLength: 0.15, maxRounds: 0.1, speed: -0.15,
+  }, {
+    colors: 12, startLength: 8, maxRounds: 12, speed: 250,
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('watching');
+  const [colorCount, setColorCount] = useState(4);
   const [sequence, setSequence] = useState<number[]>([]);
   const [playerIndex, setPlayerIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -102,9 +108,12 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   }, [config.speed, schedule]);
 
   const startGame = useCallback(() => {
+    const options = [4, 6, 8, 10].filter(n => n <= Math.min(config.colors, COLOR_DATA.length));
+    const count = options[Math.floor(Math.random() * options.length)] || 4;
+    setColorCount(count);
     const seq: number[] = [];
     for (let i = 0; i < config.startLength; i++) {
-      seq.push(Math.floor(Math.random() * config.colors));
+      seq.push(Math.floor(Math.random() * count));
     }
     setSequence(seq);
     setScore(0);
@@ -118,19 +127,19 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       setStatusColor('#67e8f9');
       playSequence(seq);
     }, 2400);
-  }, [config, playSequence, schedule]);
+  }, [config.colors, config.startLength, playSequence, schedule]);
 
   useEffect(() => {
     startGame();
   }, [startGame]);
 
-  const nextRound = useCallback((currentSeq: number[]) => {
-    const newSeq = [...currentSeq, Math.floor(Math.random() * config.colors)];
+  const nextRound = useCallback((currentSeq: number[], count: number) => {
+    const newSeq = [...currentSeq, Math.floor(Math.random() * count)];
     setSequence(newSeq);
     const currentRound = newSeq.length - config.startLength + 1;
     onProgress(currentRound / config.maxRounds);
     schedule(() => playSequence(newSeq), 700);
-  }, [config, playSequence, onProgress, schedule]);
+  }, [config.startLength, config.maxRounds, playSequence, onProgress, schedule]);
 
   const handleTap = useCallback((index: number) => {
     if (phase !== 'playing') return;
@@ -167,14 +176,14 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
         setStatusText('✨ Perfect! Get ready for more...');
         setFeedback('+1 color coming up!');
         setFeedbackColor('#fbbf24');
-        nextRound(sequence);
+        nextRound(sequence, colorCount);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, onScore, onProgress, nextRound, schedule, finishGame]);
+  }, [phase, sequence, playerIndex, score, config, colorCount, onScore, onProgress, nextRound, schedule, finishGame]);
 
   const currentRound = sequence.length - config.startLength + 1;
-  const cols = config.colors <= 4 ? 2 : config.colors <= 6 ? 3 : 4;
-  const size = config.colors >= 8 ? 65 : 80;
+  const cols = colorCount <= 4 ? 2 : colorCount <= 6 ? 3 : colorCount <= 8 ? 4 : 5;
+  const size = colorCount >= 8 ? 56 : 80;
 
   return (
     <div className="h-full flex flex-col items-center p-4">
@@ -191,7 +200,7 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
         className="grid gap-2 p-4 bg-card rounded-2xl"
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
       >
-        {colors.map((c, i) => (
+        {COLOR_DATA.slice(0, colorCount).map((c, i) => (
           <button
             key={i}
             onPointerDown={() => handleTap(i)}

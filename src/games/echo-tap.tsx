@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 const CONFIG: Record<number, { beats: number; tolerance: number; bpm: number }> = {
   1: { beats: 3, tolerance: 400, bpm: 80 },
@@ -80,7 +81,11 @@ function getIntervals(times: number[]) {
 }
 
 function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
+  const config = scaleFromLast(stage, CONFIG, {
+    beats: 0.1, tolerance: -0.1, bpm: 0.05,
+  }, {
+    beats: 12, tolerance: 100, bpm: 160,
+  });
   const beatInterval = 60000 / config.bpm;
 
   const [phase, setPhase] = useState<Phase>('listening');

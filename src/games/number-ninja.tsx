@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
+import { scaleFromLast } from '@/lib/endless-stage';
 
 const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number; maxRounds: number }> = {
   1: { minLen: 2, maxLen: 3, showTime: 2500, maxRounds: 4 },
@@ -17,7 +18,11 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
 type Phase = 'memorize' | 'input' | 'result' | 'done';
 
 function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = CONFIG[stage] || CONFIG[10];
+  const config = scaleFromLast(stage, CONFIG, {
+    minLen: 0.1, maxLen: 0.08, showTime: -0.1, maxRounds: 0.05,
+  }, {
+    minLen: 12, maxLen: 16, showTime: 1500, maxRounds: 8,
+  });
 
   const [phase, setPhase] = useState<Phase>('memorize');
   const [round, setRound] = useState(1);

@@ -68,7 +68,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
   const [losses, setLosses] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const targetWins = Math.max(1, Math.min(stage, 10));
+  const targetWins = Math.max(1, stage);
   const difficulty = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
