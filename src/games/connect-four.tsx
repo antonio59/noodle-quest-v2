@@ -89,13 +89,19 @@ function aiCol(b: Board, difficulty: 'easy' | 'medium' | 'hard'): number {
   return emptyCols[Math.floor(Math.random() * emptyCols.length)];
 }
 
-function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const myColor: 'red' | 'yellow' = isOnline
+    ? (multiplayerState.playerNumber === 1 ? 'red' : 'yellow')
+    : 'red';
+  const otherColor: 'red' | 'yellow' = myColor === 'red' ? 'yellow' : 'red';
+
   const [board, setBoard] = useState<Board>(initBoard);
   const [turn, setTurn] = useState<'red' | 'yellow'>('red');
   const [winner, setWinner] = useState<string | null>(null);
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
-  const targetWins = Math.max(1, Math.min(stage + 1, 10));
+  const targetWins = Math.max(1, stage + 1);
   const difficulty = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
@@ -118,6 +124,35 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       timeoutsRef.current.forEach(clearTimeout);
     };
   }, []);
+
+  // Online sync: reflect server board + whose turn it is.
+  useEffect(() => {
+    if (!isOnline) return;
+    const bs = multiplayerState.boardState as { board?: Board; last?: { row: number; col: number; color: 'red' | 'yellow' } } | null | undefined;
+    if (bs && Array.isArray(bs.board)) {
+      setBoard(bs.board);
+      setTurn(multiplayerState.currentPlayer === 1 ? 'red' : 'yellow');
+      // Detect end via last move (server-winner or draw).
+      if (bs.last && checkWin(bs.board, bs.last.row, bs.last.col, bs.last.color)) {
+        setWinner(bs.last.color);
+        if (!endedRef.current) {
+          endedRef.current = true;
+          const won = bs.last.color === myColor;
+          onEnd({
+            score: won ? 120 : 10,
+            stars: won ? 3 : 1,
+            summary: won ? 'You connected four!' : 'Opponent connected four.',
+          });
+        }
+      } else if (isFull(bs.board)) {
+        setWinner('draw');
+        if (!endedRef.current) {
+          endedRef.current = true;
+          onEnd({ score: 40, stars: 2, summary: "It's a draw!" });
+        }
+      }
+    }
+  }, [isOnline, multiplayerState, myColor, onEnd]);
 
   const resetBoard = useCallback(() => {
     if (endedRef.current) return;
@@ -142,7 +177,28 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
   }, [onEnd]);
 
   const handleDrop = (col: number) => {
-    if (endedRef.current || winner || turn !== 'red' || board[0][col]) return;
+    if (endedRef.current || winner || board[0][col]) return;
+
+    if (isOnline) {
+      if (turn !== myColor) return;
+      const nb = clone(board);
+      const row = dropPiece(nb, col, myColor);
+      if (row < 0) return;
+      setBoard(nb);
+      const iWon = checkWin(nb, row, col, myColor);
+      const drew = !iWon && isFull(nb);
+      const serverWinner = iWon ? multiplayerState.playerNumber : drew ? 0 : undefined;
+      onMultiplayerMove?.({
+        boardState: { board: nb, last: { row, col, color: myColor } },
+        winner: serverWinner,
+      });
+      setTurn(otherColor);
+      if (iWon) setWinner(myColor);
+      else if (drew) setWinner('draw');
+      return;
+    }
+
+    if (turn !== 'red') return;
     const nb = clone(board);
     const row = dropPiece(nb, col, 'red');
     if (row < 0) return;
@@ -203,16 +259,35 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     }, 400);
   };
 
+  const isMyTurn = isOnline ? turn === myColor : turn === 'red';
+  const inputDisabled = !!winner || !isMyTurn;
+  const myChip = myColor === 'red' ? '🔴' : '🟡';
+  const otherChip = otherColor === 'red' ? '🔴' : '🟡';
+
   return (
     <div className="h-full flex flex-col items-center p-3">
-      <div className="flex gap-3 mb-3 text-sm">
-        <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: 🔴</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: 🟡</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
-        {losses > 0 && (
-          <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
-        )}
-      </div>
+      {isOnline ? (
+        <div className="flex gap-2 mb-3 text-xs items-center flex-wrap justify-center">
+          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
+            You: {myChip}
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
+            {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName}: {otherChip}
+          </span>
+          <span className={`font-bold ${isMyTurn ? 'text-success animate-pulse' : 'text-text-dim'}`}>
+            {isMyTurn ? 'Your turn' : 'Waiting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex gap-3 mb-3 text-sm">
+          <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: 🔴</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: 🟡</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
+          {losses > 0 && (
+            <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
+          )}
+        </div>
+      )}
 
       <div className="text-xs text-text-muted text-center mb-2">
         Click a column to drop your disc
@@ -225,7 +300,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
             <button
               key={`arrow-${c}`}
               onClick={() => handleDrop(c)}
-              disabled={!!winner || turn !== 'red' || !!board[0][c]}
+              disabled={inputDisabled || !!board[0][c]}
               className="game-cell h-5 flex items-center justify-center text-text-muted hover:text-danger transition-colors disabled:opacity-0"
             >
               ▼
@@ -238,7 +313,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
               <button
                 key={`${r}-${c}`}
                 onClick={() => handleDrop(c)}
-                disabled={!!winner || turn !== 'red'}
+                disabled={inputDisabled}
                 className="game-cell w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
                 style={{
                   background: cell === 'red' ? '#ef4444' : cell === 'yellow' ? '#fbbf24' : '#0f1d3a',
