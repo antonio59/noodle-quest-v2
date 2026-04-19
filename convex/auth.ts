@@ -59,6 +59,18 @@ export const updateAvatar = mutation({
   },
 });
 
+export const updateName = mutation({
+  args: { playerId: v.id("players"), name: v.string() },
+  handler: async (ctx, args) => {
+    const trimmed = args.name.trim();
+    if (trimmed.length < 2) return { error: "Name needs at least 2 characters!" };
+    const existing = await ctx.db.query("players").withIndex("by_name", q => q.eq("name", trimmed)).unique();
+    if (existing && existing._id !== args.playerId) return { error: "Name already taken!" };
+    await ctx.db.patch(args.playerId, { name: trimmed });
+    return { success: true, name: trimmed };
+  },
+});
+
 export const getAllPlayers = query({
   args: {},
   handler: async (ctx) => {

@@ -4,11 +4,15 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { AVATARS } from '@/lib/avatars';
-import { LogOut, Star, Gamepad2, Trophy, Zap, X, AlertTriangle } from 'lucide-react';
+import { LogOut, Star, Gamepad2, Trophy, Zap, X, AlertTriangle, Pencil, Check } from 'lucide-react';
 
 export function Profile() {
-  const { player, logout, updateAvatar } = useAuth();
+  const { player, logout, updateAvatar, updateName } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState(player?.name || '');
+  const [nameError, setNameError] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
   const games = getAllGames();
 
   // Fetch real stats
@@ -31,8 +35,54 @@ export function Profile() {
           <button className="text-6xl mb-3 active:scale-90 transition-transform">
             {player?.avatar || '🎮'}
           </button>
-          <h2 className="text-xl font-bold">{player?.name}</h2>
-          <p className="text-text-muted text-sm">
+
+          {editingName ? (
+            <div className="space-y-2">
+              <input
+                value={newName}
+                onChange={e => { setNewName(e.target.value); setNameError(''); }}
+                className="w-full max-w-[200px] bg-surface rounded-xl px-4 py-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-accent"
+                maxLength={20}
+                autoFocus
+              />
+              {nameError && <p className="text-danger text-xs">{nameError}</p>}
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => { setEditingName(false); setNewName(player?.name || ''); setNameError(''); }}
+                  className="text-text-muted hover:text-text px-3 py-1 rounded-lg text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setNameSaving(true);
+                    const err = await updateName(newName);
+                    setNameSaving(false);
+                    if (err) setNameError(err);
+                    else setEditingName(false);
+                  }}
+                  disabled={nameSaving || !newName.trim()}
+                  className="bg-accent text-bg font-semibold px-4 py-1 rounded-lg text-sm hover:opacity-90 active:scale-95 disabled:opacity-50"
+                >
+                  <Check size={14} className="inline mr-1" />
+                  {nameSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-xl font-bold">{player?.name}</h2>
+              <button
+                onClick={() => { setEditingName(true); setNewName(player?.name || ''); }}
+                className="text-text-muted hover:text-accent p-1 rounded-lg transition-colors"
+                title="Edit name"
+              >
+                <Pencil size={16} />
+              </button>
+            </div>
+          )}
+
+          <p className="text-text-muted text-sm mt-1">
             {gamesPlayed > 0 ? `${gamesPlayed} games played` : 'New player'}
           </p>
         </div>

@@ -7,6 +7,7 @@ interface AuthCtx {
   signup: (name: string, pin: string, avatar?: string) => Promise<string | null>;
   logout: () => void;
   updateAvatar: (emoji: string) => Promise<void>;
+  updateName: (name: string) => Promise<string | null>;
 }
 
 const Ctx = createContext<AuthCtx>(null!);
@@ -65,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateAvatar = async (emoji: string) => {
     setPlayer(prev => prev ? { ...prev, avatar: emoji } : null);
-    // Sync to Convex
     if (player) {
       try {
         await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
@@ -77,7 +77,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  return <Ctx.Provider value={{ player, login, signup, logout, updateAvatar }}>{children}</Ctx.Provider>;
+  const updateName = async (name: string): Promise<string | null> => {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) return 'Name needs at least 2 characters!';
+    if (player) {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+          body: JSON.stringify({ path: 'auth:updateName', format: 'convex_encoded_json', args: [{ playerId: player.playerId, name: trimmed }] }),
+        });
+        const data = await res.json();
+        if (data.status === 'error' || data.value?.error) {
+          return data.value?.error || data.errorMessage || 'Failed to update name';
+        }
+        setPlayer(prev => prev ? { ...prev, name: trimmed } : null);
+        return null;
+      } catch {
+        return 'Connection error. Check your internet.';
+      }
+    }
+    return null;
+  };
+
+  return <Ctx.Provider value={{ player, login, signup, logout, updateAvatar, updateName }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);
