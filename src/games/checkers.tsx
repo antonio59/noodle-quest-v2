@@ -206,7 +206,15 @@ function CheckersGame({
   onMessage,
   onEnd,
   aiDifficulty,
+  multiplayerState,
+  onMultiplayerMove,
 }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const myColor: 'red' | 'black' = isOnline
+    ? (multiplayerState.playerNumber === 1 ? 'red' : 'black')
+    : 'red';
+  const otherColor: 'red' | 'black' = myColor === 'red' ? 'black' : 'red';
+
   const [board, setBoard] = useState<Board>(initBoard);
   const [selected, setSelected] = useState<Pos | null>(null);
   const [targets, setTargets] = useState<Pos[]>([]);
@@ -215,7 +223,7 @@ function CheckersGame({
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [boardSize, setBoardSize] = useState(320);
-  const targetWins = Math.max(1, Math.min(stage + 1, 10));
+  const targetWins = Math.max(1, stage + 1);
   const diff = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
@@ -245,6 +253,38 @@ function CheckersGame({
     window.addEventListener('resize', u);
     return () => window.removeEventListener('resize', u);
   }, []);
+
+  // Online sync: pull board + turn from server state.
+  useEffect(() => {
+    if (!isOnline) return;
+    const bs = multiplayerState.boardState as { board?: Board } | null | undefined;
+    if (bs && Array.isArray(bs.board)) {
+      setBoard(bs.board);
+      setTurn(multiplayerState.currentPlayer === 1 ? 'red' : 'black');
+      setSelected(null);
+      setTargets([]);
+      setMultiJumpPos(null);
+      // End-of-game detection: a side has 0 pieces or no legal moves.
+      if (!endedRef.current) {
+        const redMoves = allMoves(bs.board, 'red').length;
+        const blackMoves = allMoves(bs.board, 'black').length;
+        const redPieces = countPieces(bs.board, 'red');
+        const blackPieces = countPieces(bs.board, 'black');
+        const redDead = redPieces === 0 || redMoves === 0;
+        const blackDead = blackPieces === 0 || blackMoves === 0;
+        if (redDead || blackDead) {
+          endedRef.current = true;
+          const winnerColor: 'red' | 'black' = redDead ? 'black' : 'red';
+          const won = winnerColor === myColor;
+          onEnd({
+            score: won ? 150 : 10,
+            stars: won ? 3 : 1,
+            summary: won ? 'You won the match!' : 'Opponent won this match.',
+          });
+        }
+      }
+    }
+  }, [isOnline, multiplayerState, myColor, onEnd]);
 
   const finishMatch = useCallback((outcome: 'win' | 'lose') => {
     if (endedRef.current) return;
@@ -343,9 +383,26 @@ function CheckersGame({
     [diff, onMessage, handleEnd, schedule],
   );
 
+  // Online-mode end-of-turn: dispatch the resulting board to the server.
+  const finishOnlineTurn = useCallback((nb: Board) => {
+    if (!isOnline) return;
+    // Determine winner from the post-move board.
+    const oppMoves = allMoves(nb, otherColor).length;
+    const oppPieces = countPieces(nb, otherColor);
+    const myPieces = countPieces(nb, myColor);
+    let serverWinner: number | undefined;
+    if (oppPieces === 0 || oppMoves === 0) {
+      serverWinner = multiplayerState!.playerNumber;
+    } else if (myPieces === 0) {
+      serverWinner = multiplayerState!.playerNumber === 1 ? 2 : 1;
+    }
+    onMultiplayerMove?.({ boardState: { board: nb }, winner: serverWinner });
+  }, [isOnline, myColor, otherColor, multiplayerState, onMultiplayerMove]);
+
   const handleClick = useCallback(
     (r: number, c: number) => {
-      if (turn !== 'red') return;
+      const activeColor: 'red' | 'black' = isOnline ? myColor : 'red';
+      if (turn !== activeColor) return;
       const p = board[r][c];
 
       if (multiJumpPos) {
@@ -362,7 +419,10 @@ function CheckersGame({
             setSelected(null);
             setTargets([]);
             setMultiJumpPos(null);
-            if (!handleEnd(nb)) {
+            if (isOnline) {
+              setTurn(otherColor);
+              finishOnlineTurn(nb);
+            } else if (!handleEnd(nb)) {
               setTurn('black');
               doAiTurn(nb);
             }
@@ -371,8 +431,8 @@ function CheckersGame({
         return;
       }
 
-      if (p?.color === 'red') {
-        const t = pieceTargets(board, r, c, 'red');
+      if (p?.color === activeColor) {
+        const t = pieceTargets(board, r, c, activeColor);
         setSelected([r, c]);
         setTargets(t);
         return;
@@ -394,37 +454,56 @@ function CheckersGame({
         }
         setSelected(null);
         setTargets([]);
-        if (!handleEnd(nb)) {
+        if (isOnline) {
+          setTurn(otherColor);
+          finishOnlineTurn(nb);
+        } else if (!handleEnd(nb)) {
           setTurn('black');
           doAiTurn(nb);
         }
       }
     },
-    [board, selected, targets, turn, multiJumpPos, onMessage, handleEnd, doAiTurn],
+    [board, selected, targets, turn, multiJumpPos, onMessage, handleEnd, doAiTurn, isOnline, myColor, otherColor, finishOnlineTurn],
   );
 
   const cs = boardSize / SIZE;
   const redCount = countPieces(board, 'red');
   const blackCount = countPieces(board, 'black');
+  const activeColor: 'red' | 'black' = isOnline ? myColor : 'red';
+  const isMyTurn = turn === activeColor;
 
   return (
     <div className="h-full flex flex-col items-center p-2">
-      <div className="flex gap-3 mb-2 text-sm">
-        <span className="bg-card rounded-lg px-3 py-1.5">
-          <span className="text-red-500 font-bold">You: {redCount}</span>
-        </span>
-        <span className="bg-card rounded-lg px-3 py-1.5">
-          <span className="text-gray-400 font-bold">AI: {blackCount}</span>
-        </span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
-          {wins}/{targetWins}
-        </span>
-        {losses > 0 && (
-          <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">
-            L: {losses}/{MAX_LOSSES}
+      {isOnline ? (
+        <div className="flex gap-2 mb-2 text-xs items-center flex-wrap justify-center">
+          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
+            You ({myColor}): {myColor === 'red' ? redCount : blackCount}
           </span>
-        )}
-      </div>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
+            {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName} ({otherColor}): {otherColor === 'red' ? redCount : blackCount}
+          </span>
+          <span className={`font-bold ${isMyTurn ? 'text-success animate-pulse' : 'text-text-dim'}`}>
+            {isMyTurn ? 'Your turn' : 'Waiting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex gap-3 mb-2 text-sm">
+          <span className="bg-card rounded-lg px-3 py-1.5">
+            <span className="text-red-500 font-bold">You: {redCount}</span>
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1.5">
+            <span className="text-gray-400 font-bold">AI: {blackCount}</span>
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
+            {wins}/{targetWins}
+          </span>
+          {losses > 0 && (
+            <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">
+              L: {losses}/{MAX_LOSSES}
+            </span>
+          )}
+        </div>
+      )}
 
       <svg
         width={boardSize}
@@ -444,7 +523,7 @@ function CheckersGame({
               <g
                 key={`${r}-${c}`}
                 onClick={() => handleClick(r, c)}
-                style={{ cursor: turn === 'red' ? 'pointer' : 'default' }}
+                style={{ cursor: isMyTurn ? 'pointer' : 'default' }}
               >
                 <rect
                   x={c * cs}
@@ -539,11 +618,13 @@ function CheckersGame({
       </svg>
 
       <div className="mt-2 text-xs text-text-muted text-center">
-        {turn === 'red'
+        {isMyTurn
           ? multiJumpPos
             ? 'Continue your jump!'
             : 'Your turn — tap a piece then tap a square'
-          : 'AI is thinking...'}
+          : isOnline
+            ? 'Opponent is moving...'
+            : 'AI is thinking...'}
       </div>
     </div>
   );
