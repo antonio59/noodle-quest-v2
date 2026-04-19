@@ -39,12 +39,12 @@ function buildBonusMap(): Map<string, BonusType> {
 
 const BONUS_MAP = buildBonusMap();
 
-const BONUS_STYLE: Record<BonusType, { bg: string; text: string; label: string }> = {
-  TW: { bg: 'bg-red-600/40',    text: 'text-red-200',    label: 'TW' },
-  DW: { bg: 'bg-rose-400/30',   text: 'text-rose-200',   label: 'DW' },
-  TL: { bg: 'bg-blue-500/40',   text: 'text-blue-200',   label: 'TL' },
-  DL: { bg: 'bg-sky-400/30',    text: 'text-sky-200',    label: 'DL' },
-  ST: { bg: 'bg-amber-500/30',  text: 'text-amber-200',  label: '★' },
+const BONUS_STYLE: Record<BonusType, { bg: string; text: string; label: string; chip: string }> = {
+  TW: { bg: 'bg-red-700/50',    text: 'text-red-200',    label: 'TW', chip: 'bg-red-600 text-red-50' },
+  DW: { bg: 'bg-rose-500/35',   text: 'text-rose-200',   label: 'DW', chip: 'bg-rose-500 text-rose-50' },
+  TL: { bg: 'bg-blue-600/45',   text: 'text-blue-200',   label: 'TL', chip: 'bg-blue-600 text-blue-50' },
+  DL: { bg: 'bg-sky-500/35',    text: 'text-sky-200',    label: 'DL', chip: 'bg-sky-500 text-sky-50' },
+  ST: { bg: 'bg-amber-500/35',  text: 'text-amber-200',  label: '★',  chip: 'bg-amber-500 text-amber-50' },
 };
 
 // ── Word list (kept inline; large set trimmed for AI feasibility) ─────
@@ -364,6 +364,53 @@ function pickAiMove(moves: Placement[], difficulty: 'easy' | 'medium' | 'hard'):
   return sorted[start + Math.floor(Math.random() * (sorted.length - start))];
 }
 
+// ── Score breakdown helper ─────────────────────────────────────────────
+interface ScoreBreakdown {
+  word: string;
+  mainWordScore: number;
+  crossWordsScore: number;
+  bingoBonus: number;
+  total: number;
+  details: string[];
+}
+
+function buildScoreBreakdown(
+  board: (string | null)[][],
+  wordCells: [number, number][],
+  newCellSet: Set<string>,
+  crossScore: number,
+  all7Bonus: number,
+): ScoreBreakdown {
+  const word = wordCells.map(([r, c]) => board[r][c]).join('');
+  let wordMult = 1;
+  let letterTotal = 0;
+  const details: string[] = [];
+
+  for (const [r, c] of wordCells) {
+    const bonus = BONUS_MAP.get(`${r},${c}`);
+    const letter = board[r][c]!;
+    const ls = TILE_SCORES[letter] || 0;
+    const isNew = newCellSet.has(`${r},${c}`);
+    let pts = ls;
+    if (isNew && bonus === 'DL') { pts = ls * 2; details.push(`${letter} on DL = ${pts}`); }
+    else if (isNew && bonus === 'TL') { pts = ls * 3; details.push(`${letter} on TL = ${pts}`); }
+    else if (isNew && bonus === 'DW') { wordMult *= 2; details.push(`${letter} on DW`); }
+    else if (isNew && (bonus === 'TW' || bonus === 'ST')) { wordMult *= 3; details.push(`${letter} on ${bonus === 'ST' ? '★' : 'TW'}`); }
+    letterTotal += pts;
+  }
+  const mainScore = letterTotal * wordMult;
+  if (wordMult > 1) details.push(`×${wordMult} word multiplier`);
+
+  return {
+    word,
+    mainWordScore: mainScore,
+    crossWordsScore: crossScore,
+    bingoBonus: all7Bonus,
+    total: mainScore + crossScore + all7Bonus,
+    details,
+  };
+}
+
 // ── Component ──────────────────────────────────────────────────────────
 // Seat 0 = local human. Seats 1..N-1 = AI opponents (until online relay is wired).
 function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty = 'medium', numPlayers }: GameProps) {
@@ -387,6 +434,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   const [started, setStarted] = useState(false);
   const [lastWord, setLastWord] = useState('');
   const [isFirstMove, setIsFirstMove] = useState(true);
+  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | null>(null);
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -496,7 +544,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   };
 
   // Validate the player's current placement and return the main word + score (or invalid)
-  const findPlayerPlay = (): { valid: boolean; word: string; cells: [number, number][]; score: number; reason?: string } => {
+  const findPlayerPlay = (): { valid: boolean; word: string; cells: [number, number][]; score: number; reason?: string; breakdown?: ScoreBreakdown } => {
     const cells = Array.from(placedKeys).map(k => k.split(',').map(Number) as [number, number]);
     if (cells.length === 0) return { valid: false, word: '', cells: [], score: 0, reason: 'Place at least one tile' };
 
@@ -594,7 +642,8 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     const newCellSet = new Set(cells.map(([r, c]) => `${r},${c}`));
     const mainScore = scorePlacement(board, wordCells, newCellSet);
     const all7Bonus = cells.length === 7 ? 50 : 0;
-    return { valid: true, word, cells: wordCells, score: mainScore + crossBonus + all7Bonus };
+    const breakdown = buildScoreBreakdown(board, wordCells, newCellSet, crossBonus, all7Bonus);
+    return { valid: true, word, cells: wordCells, score: mainScore + crossBonus + all7Bonus, breakdown };
   };
 
   /** Advance to the next seat. Increments the round counter each time we
@@ -615,12 +664,14 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     const result = findPlayerPlay();
     if (!result.valid) {
       onMessage(result.reason || 'Invalid placement');
+      setScoreBreakdown(null);
       return;
     }
     const newScores = scores.map((s, i) => (i === 0 ? s + result.score : s));
     setScores(newScores);
     onScore(result.score);
-    setLastWord(`You: ${result.word} = ${result.score}`);
+    setLastWord(`You played "${result.word}" for ${result.score}`);
+    setScoreBreakdown(result.breakdown ?? null);
     onMessage(`+${result.score} for "${result.word}"!`);
 
     const newLocked = new Set(lockedCells);
@@ -641,6 +692,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     if (isHumanTurn || endedRef.current) return;
     const seat = currentSeat;
     setAiThinking(true);
+    setScoreBreakdown(null);
     onMessage(`AI ${seat} is thinking...`);
 
     schedule(() => {
@@ -651,7 +703,8 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
 
       if (!move) {
         onMessage(`AI ${seat} passes this turn`);
-        setLastWord(`AI ${seat}: pass`);
+        setLastWord(`AI ${seat} passed`);
+        setScoreBreakdown(null);
         advanceSeat(scores);
         return;
       }
@@ -672,12 +725,18 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
       const { rack: refilled, pool: newPool } = drawUpTo7(depleted, pool);
       const newScores = scores.map((s, i) => (i === seat ? s + move.score : s));
 
+      // Build breakdown for AI move too
+      const aiNewCellSet = new Set(move.newCells.map(nc => `${nc.r},${nc.c}`));
+      const aiCross = move.score - scorePlacement(board, move.cells, aiNewCellSet, new Map(move.newCells.map(nc => [`${nc.r},${nc.c}`, nc.letter]))) - (move.newCells.length === 7 ? 50 : 0);
+      const aiBreakdown = buildScoreBreakdown(newBoard, move.cells, aiNewCellSet, aiCross, move.newCells.length === 7 ? 50 : 0);
+
       setBoard(newBoard);
       setLockedCells(newLocked);
       setRacks(prev => prev.map((rack, i) => (i === seat ? refilled : rack)));
       setPool(newPool);
       setScores(newScores);
-      setLastWord(`AI ${seat}: ${move.word} = ${move.score}`);
+      setLastWord(`AI ${seat} played "${move.word}" for ${move.score}`);
+      setScoreBreakdown(aiBreakdown);
       onMessage(`AI ${seat} played "${move.word}" for ${move.score}`);
       setIsFirstMove(false);
 
@@ -701,6 +760,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     setRacks(prev => prev.map((rack, i) => (i === 0 ? [...rack, ...letters] : rack)));
     setPlacedCells(new Map());
     setSelectedTile(null);
+    setScoreBreakdown(null);
   };
 
   const handleShuffle = () => {
@@ -717,9 +777,19 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     if (!isHumanTurn) return;
     handleClear();
     onMessage('You passed your turn');
-    setLastWord('You: pass');
+    setLastWord('You passed');
+    setScoreBreakdown(null);
     advanceSeat(scores);
   };
+
+  // Live preview of current placement score
+  let livePreview: { valid: false; reason?: string } | { valid: true; score: number; word: string; breakdown?: ScoreBreakdown } | null = null;
+  if (placedKeys.size > 0) {
+    const result = findPlayerPlay();
+    if (!result.valid) livePreview = { valid: false, reason: result.reason };
+    else livePreview = { valid: true, score: result.score, word: result.word, breakdown: result.breakdown };
+  }
+
   if (!started) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
@@ -736,34 +806,73 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     );
   }
 
-
   return (
-    <div className="h-full w-full flex flex-col items-center px-2 pt-1 pb-2 gap-1.5 overflow-hidden">
-      {/* Score bar */}
-      <div className="flex gap-1.5 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
-        {scores.map((s, i) => (
-          <span
-            key={i}
-            className={`rounded-md px-1.5 py-0.5 font-bold ${
-              i === 0
-                ? 'bg-accent/20 text-accent'
-                : i === currentSeat
-                  ? 'bg-danger/30 text-danger ring-1 ring-danger/60'
-                  : 'bg-danger/20 text-danger'
-            }`}
-          >
-            {i === 0 ? 'You' : `AI ${i}`}: {s}
-          </span>
-        ))}
-        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">
-          Round {Math.min(round + 1, maxRounds)}/{maxRounds}
-        </span>
-        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Target: {targetScore}</span>
-        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-dim">{pool.length} left</span>
-        {lastWord && <span className="text-accent font-medium">{lastWord}</span>}
+    <div className="h-full w-full flex flex-col items-center px-2 pt-1 pb-2 gap-1 overflow-hidden">
+      {/* ── Top HUD ── */}
+      <div className="w-full flex-shrink-0 flex flex-col gap-1">
+        {/* Scores row */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {scores.map((s, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold ${
+                  i === 0
+                    ? 'bg-accent/15 text-accent ring-1 ring-accent/40'
+                    : i === currentSeat
+                      ? 'bg-danger/20 text-danger ring-1 ring-danger/40'
+                      : 'bg-card text-text-muted'
+                }`}
+              >
+                <span className="text-[10px] opacity-70">{i === 0 ? 'You' : `AI ${i}`}</span>
+                <span className="text-sm">{s}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-text-muted">
+            <span className="bg-card rounded-md px-1.5 py-0.5">
+              Round <span className="text-text font-bold">{Math.min(round + 1, maxRounds)}</span>/{maxRounds}
+            </span>
+            <span className="bg-card rounded-md px-1.5 py-0.5">
+              Target <span className="text-text font-bold">{targetScore}</span>
+            </span>
+            <span className="bg-card rounded-md px-1.5 py-0.5">
+              Bag: <span className="text-text font-bold">{pool.length}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Turn indicator + last move */}
+        <div className="flex items-center justify-between gap-2">
+          <div className={`flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold ${
+            isHumanTurn
+              ? 'bg-accent/20 text-accent'
+              : 'bg-card text-text-muted'
+          }`}>
+            {isHumanTurn ? (
+              <>
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                </span>
+                Your turn
+              </>
+            ) : (
+              <>
+                <span className="animate-pulse">🤖</span>
+                AI {currentSeat} is thinking...
+              </>
+            )}
+          </div>
+          {lastWord && (
+            <span className="text-[10px] text-text-muted truncate max-w-[50%]">
+              {lastWord}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Board */}
+      {/* ── Board ── */}
       <div
         className="flex-1 min-h-0 w-full overflow-hidden"
         style={{ display: 'grid', placeItems: 'center' }}
@@ -789,11 +898,6 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
               : bonus === 'TL' ? 'Triple Letter Score'
               : bonus === 'DL' ? 'Double Letter Score'
               : bonus === 'ST' ? 'Star — Center' : '';
-            const bonusChipBg = bonus === 'TW' ? 'bg-red-600 text-red-50'
-              : bonus === 'DW' ? 'bg-rose-500 text-rose-50'
-              : bonus === 'TL' ? 'bg-blue-600 text-blue-50'
-              : bonus === 'DL' ? 'bg-sky-500 text-sky-50'
-              : bonus === 'ST' ? 'bg-amber-500 text-amber-50' : '';
 
             return (
               <button
@@ -804,8 +908,8 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
                 className={`group relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
                   cell
                     ? isPlaced
-                      ? 'bg-amber-200 text-amber-900 ring-1 ring-accent/60'
-                      : 'bg-amber-100 text-amber-800'
+                      ? 'bg-amber-300 text-amber-950 ring-2 ring-accent shadow-md'
+                      : 'bg-amber-100 text-amber-800 border border-amber-300/60'
                     : bs
                       ? `${bs.bg} ${bs.text}`
                       : 'bg-card hover:bg-card-hover'
@@ -817,19 +921,21 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
                     <span className="absolute bottom-0 right-0.5 text-[7px] sm:text-[10px] leading-none font-extrabold text-amber-950">
                       {TILE_SCORES[cell]}
                     </span>
-                    {bonus && bonus !== 'ST' && (
+                    {/* Premium badge — visible on ALL tiles placed on premium squares */}
+                    {bonus && (
                       <span
-                        className={`absolute top-0 left-0 text-[5px] sm:text-[7px] font-bold px-0.5 leading-[1.1] rounded-br-sm ${bonusChipBg}`}
+                        className={`absolute top-0 left-0 text-[5px] sm:text-[7px] font-bold px-0.5 py-[1px] leading-[1] rounded-br-sm ${bs?.chip}`}
                       >
-                        {bonus}
+                        {bonus === 'ST' ? '★' : bonus}
                       </span>
-                    )}
-                    {bonus === 'ST' && (
-                      <span className="absolute top-0 left-0 text-[7px] sm:text-[9px] text-amber-600 leading-none">★</span>
                     )}
                   </>
                 ) : bs ? (
-                  <span className="text-[5px] sm:text-[7px] font-semibold opacity-80 leading-none select-none">
+                  <span className={`font-semibold leading-none select-none ${
+                    bonus === 'ST'
+                      ? 'text-[9px] sm:text-sm text-amber-500'
+                      : 'text-[6px] sm:text-[8px] opacity-80'
+                  }`}>
                     {bs.label}
                   </span>
                 ) : null}
@@ -839,37 +945,81 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         </div>
       </div>
 
-      {/* Status / Actions */}
+      {/* ── Score preview / breakdown ── */}
+      {livePreview && (
+        <div className="flex-shrink-0 w-full">
+          {livePreview.valid === true ? (
+            <div className="flex items-center justify-between bg-accent/10 rounded-lg px-3 py-1 ring-1 ring-accent/30">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-accent">
+                  {livePreview.word}
+                </span>
+                <span className="text-[10px] text-text-muted">
+                  = {livePreview.score} pts
+                </span>
+              </div>
+              {livePreview.breakdown && livePreview.breakdown.details.length > 0 && (
+                <span className="text-[9px] text-text-muted truncate max-w-[50%]">
+                  {livePreview.breakdown.details.join(' · ')}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center bg-danger/10 rounded-lg px-3 py-1 ring-1 ring-danger/20">
+              <span className="text-[10px] text-danger">{livePreview.reason}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Last move breakdown (when not placing tiles) ── */}
+      {placedKeys.size === 0 && scoreBreakdown && (
+        <div className="flex-shrink-0 w-full bg-card/50 rounded-lg px-3 py-1 ring-1 ring-white/5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-text-muted">
+              <span className="font-bold text-text">{scoreBreakdown.word}</span>
+              {' = '}
+              {scoreBreakdown.mainWordScore > 0 && `${scoreBreakdown.mainWordScore}`}
+              {scoreBreakdown.crossWordsScore > 0 && ` + ${scoreBreakdown.crossWordsScore} cross`}
+              {scoreBreakdown.bingoBonus > 0 && ` + ${scoreBreakdown.bingoBonus} bingo`}
+              {' = '}
+              <span className="font-bold text-accent">{scoreBreakdown.total}</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Actions ── */}
       <div className="flex items-center justify-center gap-2 flex-shrink-0 flex-wrap">
         {aiThinking ? (
-          <span className="text-text-muted text-[10px] animate-pulse">🤖 AI thinking...</span>
+          <span className="text-text-muted text-xs animate-pulse">🤖 AI thinking...</span>
         ) : (
-          <div className="flex gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={handleSubmit}
               disabled={placedKeys.size < 1 || !isHumanTurn}
-              className="bg-accent text-bg font-bold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+              className="bg-accent text-bg font-bold px-4 py-1.5 rounded-lg text-xs shadow-md hover:shadow-lg disabled:opacity-30 disabled:shadow-none active:scale-95 transition-all"
             >
               Submit
             </button>
             <button
               onClick={handleClear}
               disabled={placedKeys.size === 0 || !isHumanTurn}
-              className="bg-card text-text font-semibold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+              className="bg-card text-text font-semibold px-3 py-1.5 rounded-lg text-xs border border-text-muted/20 disabled:opacity-30 active:scale-95 transition-all hover:bg-card-hover"
             >
               Clear
             </button>
             <button
               onClick={handleShuffle}
               disabled={playerRack.length === 0 || !isHumanTurn}
-              className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+              className="bg-card text-text-muted font-semibold px-3 py-1.5 rounded-lg text-xs disabled:opacity-30 active:scale-95 transition-all hover:bg-card-hover"
             >
               Shuffle
             </button>
             <button
               onClick={handlePass}
               disabled={!isHumanTurn}
-              className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
+              className="bg-transparent text-text-muted font-semibold px-3 py-1.5 rounded-lg text-xs border border-danger/30 hover:bg-danger/10 disabled:opacity-30 active:scale-95 transition-all"
             >
               Pass
             </button>
@@ -877,8 +1027,8 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         )}
       </div>
 
-      {/* Tile rack */}
-      <div className="flex justify-center gap-1 flex-shrink-0 pt-1.5">
+      {/* ── Tile rack ── */}
+      <div className="flex justify-center gap-1.5 flex-shrink-0 pt-1">
         {playerRack.map((tile, i) => {
           const pts = TILE_SCORES[tile];
           return (
@@ -888,13 +1038,13 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
               disabled={!isHumanTurn}
               className={`relative w-10 h-11 rounded-lg font-bold text-base flex flex-col items-center justify-center transition-all shadow-sm ${
                 selectedTile === i
-                  ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1'
-                  : 'bg-amber-200 text-amber-900 hover:bg-amber-300 active:scale-95'
+                  ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1 shadow-lg'
+                  : 'bg-amber-200 text-amber-900 hover:bg-amber-300 hover:scale-105 hover:-translate-y-0.5 active:scale-95'
               } ${!isHumanTurn ? 'opacity-60' : ''}`}
             >
               <span className="leading-none">{tile}</span>
-              <span className={`text-[8px] leading-none mt-0.5 font-semibold ${
-                selectedTile === i ? 'text-bg/70' : 'text-amber-700'
+              <span className={`text-[9px] leading-none mt-0.5 font-bold ${
+                selectedTile === i ? 'text-bg/80' : 'text-amber-700'
               }`}>
                 {pts}
               </span>
