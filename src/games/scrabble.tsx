@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { Check } from 'lucide-react';
 import type { GameProps } from '@/types';
 
 // ── Tile data ──────────────────────────────────────────────────────────
@@ -47,7 +48,8 @@ const BONUS_STYLE: Record<BonusType, { bg: string; text: string; label: string; 
   ST: { bg: 'bg-amber-500/35',  text: 'text-amber-200',  label: '★',  chip: 'bg-amber-500 text-amber-50' },
 };
 
-// ── Word list (kept inline; large set trimmed for AI feasibility) ─────
+// ── Word list ─────────────────────────────────────────────────────────
+// Embedded fallback list + full SOWPODS dictionary loaded at runtime.
 const VALID_WORDS = new Set([
   // 2-letter
   'AA','AB','AD','AE','AG','AH','AI','AL','AM','AN','AR','AS','AT','AW','AX','AY',
@@ -135,6 +137,9 @@ const VALID_WORDS = new Set([
   'YACHT','YIELD','YOUNG','YOUTH',
   'ZEBRA',
 ]);
+
+// Module-level mutable reference — swapped to full dictionary once loaded.
+let ACTIVE_WORD_SET: Set<string> = VALID_WORDS;
 
 function buildTilePool(): string[] {
   const pool: string[] = [];
@@ -229,7 +234,7 @@ function validateAndScoreCrossWords(
     if (wordCells.length < 2) continue; // single letter, no cross-word
     // Build the word
     const word = wordCells.map(([rr, cc]) => (rr === r && cc === c) ? letter : board[rr][cc]!).join('');
-    if (!VALID_WORDS.has(word)) return -1;
+    if (!ACTIVE_WORD_SET.has(word)) return -1;
     // Score the cross-word with bonuses for the new letter only
     let wm = 1;
     let lt = 0;
@@ -260,7 +265,7 @@ function generateAiMoves(
   // Filter words to those whose letters could plausibly be formed from rack + board letters.
   // For first move, must be formable from rack alone.
   const candidates: string[] = [];
-  for (const word of VALID_WORDS) {
+  for (const word of ACTIVE_WORD_SET) {
     if (word.length < 2 || word.length > 7 + 7) continue;
     if (isFirstMove) {
       // Must be ≤ rack.length and use only rack letters
@@ -435,8 +440,26 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   const [lastWord, setLastWord] = useState('');
   const [isFirstMove, setIsFirstMove] = useState(true);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | null>(null);
+  const [dictLoaded, setDictLoaded] = useState(false);
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Load full SOWPODS dictionary
+  useEffect(() => {
+    fetch('/scrabble-dictionary.txt')
+      .then(r => r.text())
+      .then(text => {
+        const words = text.split('\n')
+          .map(w => w.trim().toUpperCase())
+          .filter(w => w.length >= 2 && w.length <= 15 && /^[A-Z]+$/.test(w));
+        ACTIVE_WORD_SET = new Set(words);
+        setDictLoaded(true);
+      })
+      .catch(() => {
+        // Keep embedded fallback
+        setDictLoaded(true);
+      });
+  }, []);
 
   const maxRounds = 6 + stage * 6; // each seat plays maxRounds turns
   const targetScore = stage * 30;
@@ -663,7 +686,6 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     if (!isHumanTurn) return;
     const result = findPlayerPlay();
     if (!result.valid) {
-      onMessage(result.reason || 'Invalid placement');
       setScoreBreakdown(null);
       return;
     }
@@ -878,7 +900,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         style={{ display: 'grid', placeItems: 'center' }}
       >
         <div
-          className="grid gap-[1px] bg-white/5 rounded-md overflow-hidden"
+          className="grid gap-[0.5px] bg-black/20 rounded-md overflow-hidden"
           style={{
             gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))`,
             gridTemplateRows: `repeat(${SIZE}, minmax(0, 1fr))`,
@@ -909,7 +931,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
                   cell
                     ? isPlaced
                       ? 'bg-amber-300 text-amber-950 ring-2 ring-accent shadow-md'
-                      : 'bg-amber-100 text-amber-800 border border-amber-300/60'
+                      : 'bg-[#eaddcf] text-[#5c4d3c] border border-[#c9b8a3] shadow-inner'
                     : bs
                       ? `${bs.bg} ${bs.text}`
                       : 'bg-card hover:bg-card-hover'
@@ -998,8 +1020,9 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
             <button
               onClick={handleSubmit}
               disabled={placedKeys.size < 1 || !isHumanTurn}
-              className="bg-accent text-bg font-bold px-4 py-1.5 rounded-lg text-xs shadow-md hover:shadow-lg disabled:opacity-30 disabled:shadow-none active:scale-95 transition-all"
+              className="bg-accent text-bg font-bold px-5 py-2 rounded-xl text-sm shadow-lg hover:shadow-xl disabled:opacity-30 disabled:shadow-none active:scale-95 transition-all flex items-center gap-1.5"
             >
+              <Check size={16} strokeWidth={3} />
               Submit
             </button>
             <button
