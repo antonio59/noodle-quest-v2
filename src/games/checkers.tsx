@@ -222,6 +222,7 @@ function CheckersGame({
   const [multiJumpPos, setMultiJumpPos] = useState<Pos | null>(null);
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
+  const [started, setStarted] = useState(false);
   const [boardSize, setBoardSize] = useState(320);
   const targetWins = Math.max(1, stage + 1);
   const diff = aiDifficulty || 'medium';
@@ -471,6 +472,22 @@ function CheckersGame({
   const blackCount = countPieces(board, 'black');
   const activeColor: 'red' | 'black' = isOnline ? myColor : 'red';
   const isMyTurn = turn === activeColor;
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">♟</div>
+        <h2 className="text-2xl font-bold">Checkers</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Jump over and capture all opponent pieces. Diagonal moves only!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center p-2">

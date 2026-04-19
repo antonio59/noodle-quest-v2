@@ -74,6 +74,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
   const difficulty = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
+  const [started, setStarted] = useState(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
@@ -290,6 +291,22 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
       }
     });
   };
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">🐍</div>
+        <h2 className="text-2xl font-bold">Snakes & Ladders</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Roll the dice, climb ladders, avoid snakes. Reach square 100 first!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center p-3">

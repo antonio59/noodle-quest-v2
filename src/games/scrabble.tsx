@@ -384,6 +384,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   const [round, setRound] = useState(0); // completed full rounds
   const [currentSeat, setCurrentSeat] = useState(0);
   const [aiThinking, setAiThinking] = useState(false);
+  const [started, setStarted] = useState(false);
   const [lastWord, setLastWord] = useState('');
   const [isFirstMove, setIsFirstMove] = useState(true);
   const endedRef = useRef(false);
@@ -719,6 +720,22 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     setLastWord('You: pass');
     advanceSeat(scores);
   };
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">🅰️</div>
+        <h2 className="text-2xl font-bold">Scrabble</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Build words on the board using letter tiles. Highest score wins!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full w-full flex flex-col items-center px-2 pt-1 pb-2 gap-1.5 overflow-hidden">

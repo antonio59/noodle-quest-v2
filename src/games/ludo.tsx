@@ -117,6 +117,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [over, setOver] = useState(false);
+  const [started, setStarted] = useState(false);
   const target = Math.max(1, stage);
   const diff = aiDifficulty || 'medium';
 
@@ -498,6 +499,22 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     if (pos < 58) return `Stretch ${pos - 51}/6`;
     return 'HOME';
   };
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">🎲</div>
+        <h2 className="text-2xl font-bold">Ludo</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Roll the dice and race all 4 pieces to the center home!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center p-2 gap-1.5">

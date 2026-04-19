@@ -490,8 +490,12 @@ export function PlayGame() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-3 bg-surface border-b border-white/5 flex-shrink-0">
-        <button onClick={goBackToGames} className="text-text-muted hover:text-text p-2">
-          <ArrowLeft size={20} />
+        <button
+          onClick={goBackToGames}
+          className="flex items-center gap-1.5 text-text-muted hover:text-text bg-card hover:bg-card-hover px-3 py-2 rounded-xl transition-colors active:scale-95"
+        >
+          <ArrowLeft size={18} />
+          <span className="text-sm font-semibold">Quit</span>
         </button>
         <button
           onClick={() => maxUnlocked > 1 && setShowStagePicker(!showStagePicker)}

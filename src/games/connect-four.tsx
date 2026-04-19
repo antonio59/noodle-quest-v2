@@ -102,6 +102,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
   const [wins, setWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const targetWins = Math.max(1, stage + 1);
+  const [started, setStarted] = useState(false);
   const difficulty = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
@@ -263,6 +264,22 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
   const inputDisabled = !!winner || !isMyTurn;
   const myChip = myColor === 'red' ? '🔴' : '🟡';
   const otherChip = otherColor === 'red' ? '🔴' : '🟡';
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">🔴</div>
+        <h2 className="text-2xl font-bold">Connect Four</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Drop discs to connect 4 in a row — horizontally, vertically, or diagonally!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center p-3">

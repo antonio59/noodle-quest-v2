@@ -76,6 +76,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const targetWins = stage <= 3 ? stage : 3 + Math.floor(stage / 2);
   const endedRef = useRef(false);
+  const [started, setStarted] = useState(false);
 
   const human: Player = 'X';
   const ai: Player = 'O';
@@ -191,6 +192,22 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
 
   const isMyTurn = isOnline ? turn === myMark : turn === human;
   const inputDisabled = !!winner || !isMyTurn;
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">⭕</div>
+        <h2 className="text-2xl font-bold">Tic-Tac-Toe</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Get 3 of your marks in a row to win! Play against the AI.</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-4">

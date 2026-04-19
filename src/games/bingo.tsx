@@ -76,6 +76,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const [currentCall, setCurrentCall] = useState<number | null>(null);
   const [calling, setCalling] = useState(false);
   const [gameOver, setGameOver] = useState(false);
+  const [started, setStarted] = useState(false);
   const [roundWins, setRoundWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [, setTotalCalled] = useState(0);
@@ -137,8 +138,8 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   }, [onMessage, stage]);
 
   useEffect(() => {
-    startRound();
-  }, []);
+    if (started) startRound();
+  }, [started]);
 
   // Online: reconcile called[] from server; stop local AI calling loop
   useEffect(() => {
@@ -263,6 +264,22 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const aiScale = 0.72;
   const aiCs = cs * aiScale;
   const aiHdrH = hdrH * aiScale;
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">🔢</div>
+        <h2 className="text-2xl font-bold">Bingo</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Mark numbers as they are called. Complete a line to win!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center gap-2 p-2 overflow-auto">

@@ -89,6 +89,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const targetWins = Math.max(1, stage);
   const difficulty = aiDifficulty || 'medium';
   const [boardSize, setBoardSize] = useState(320);
+  const [started, setStarted] = useState(false);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -293,6 +294,22 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const ranks = '87654321'.split('');
   const activeColor = isOnline ? myColor : 'w';
   const isMyTurn = turn === activeColor;
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">♔</div>
+        <h2 className="text-2xl font-bold">Chess</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Classic strategy game. Capture the opponent's king to win!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center p-2">

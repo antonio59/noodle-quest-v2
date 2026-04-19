@@ -183,6 +183,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
   const [roundWins, setRoundWins] = useState(0);
   const [losses, setLosses] = useState(0);
   const [message, setMessage] = useState('Your turn! Play a card.');
+  const [started, setStarted] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const [, setLastPlayedBy] = useState<'player' | 'ai' | null>(null);
   const [highlightCard, setHighlightCard] = useState<number | null>(null);
@@ -537,6 +538,22 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
 
   const hasPlayableCard = playerHand.some(c => canPlay(c, topCard, currentColor));
   const isAdverseMessage = message.includes('skip') || (message.includes('draw') && message.includes('You'));
+  if (!started) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+        <div className="text-6xl">🃏</div>
+        <h2 className="text-2xl font-bold">UNO</h2>
+        <p className="text-text-muted text-sm text-center max-w-xs">Match colors and numbers. Play all your cards before the AI does!</p>
+        <button
+          onClick={() => setStarted(true)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Game
+        </button>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-full flex flex-col items-center justify-between p-2 select-none overflow-hidden">
