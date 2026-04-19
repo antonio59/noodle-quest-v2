@@ -59,7 +59,9 @@ function aiMove(aiPos: number, difficulty: 'easy' | 'medium' | 'hard'): number {
   return rollDie();
 }
 
-function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const mySeat = isOnline ? multiplayerState.playerNumber : 1;
   const [playerPos, setPlayerPos] = useState(0);
   const [aiPos, setAiPos] = useState(0);
   const [turn, setTurn] = useState<'player' | 'ai'>('player');
@@ -91,6 +93,29 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
       intervalsRef.current.forEach(clearInterval);
     };
   }, []);
+
+  // Online sync: read positions[0]=seat1, positions[1]=seat2 and whose turn.
+  useEffect(() => {
+    if (!isOnline) return;
+    const bs = multiplayerState.boardState as { positions?: [number, number]; lastRoll?: number } | null | undefined;
+    if (bs && Array.isArray(bs.positions)) {
+      setPlayerPos(bs.positions[mySeat - 1] ?? 0);
+      setAiPos(bs.positions[mySeat === 1 ? 1 : 0] ?? 0);
+      setTurn(multiplayerState.currentPlayer === mySeat ? 'player' : 'ai');
+      if (typeof bs.lastRoll === 'number') setDie(bs.lastRoll);
+      const myPos = bs.positions[mySeat - 1] ?? 0;
+      const oppPos = bs.positions[mySeat === 1 ? 1 : 0] ?? 0;
+      if (!endedRef.current && (myPos >= BOARD_SIZE || oppPos >= BOARD_SIZE)) {
+        endedRef.current = true;
+        const won = myPos >= BOARD_SIZE;
+        onEnd({
+          score: won ? 80 : 10,
+          stars: won ? 3 : 1,
+          summary: won ? 'You reached 100 first!' : 'Opponent reached 100 first.',
+        });
+      }
+    }
+  }, [isOnline, multiplayerState, mySeat, onEnd]);
 
   // Resolve snake/ladder chains (a ladder landing on a snake or vice versa)
   const resolveSquare = (pos: number): number => {
@@ -227,6 +252,28 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
     const d = rollDie();
     setDie(d);
 
+    if (isOnline) {
+      const overshoot = playerPos + d > BOARD_SIZE;
+      const finalPos = overshoot ? playerPos : resolveSquare(playerPos + d);
+      const dispatch = (animatedPos: number) => {
+        const positions: [number, number] = mySeat === 1
+          ? [animatedPos, aiPos]
+          : [aiPos, animatedPos];
+        const iWon = animatedPos >= BOARD_SIZE;
+        onMultiplayerMove?.({
+          boardState: { positions, lastRoll: d },
+          winner: iWon ? mySeat : undefined,
+        });
+      };
+      if (overshoot) {
+        onMessage(`Rolled ${d} — need exact roll to finish!`);
+        dispatch(playerPos);
+        return;
+      }
+      moveToken(playerPos, d, setPlayerPos, 'You', () => dispatch(finalPos));
+      return;
+    }
+
     if (playerPos + d > BOARD_SIZE) {
       onMessage(`Rolled ${d} — need exact roll to finish!`);
       setTurn('ai');
@@ -246,14 +293,28 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
 
   return (
     <div className="h-full flex flex-col items-center p-3">
-      <div className="flex gap-3 mb-2 text-sm">
-        <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: {playerPos}</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: {aiPos}</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
-        {losses > 0 && (
-          <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
-        )}
-      </div>
+      {isOnline ? (
+        <div className="flex gap-2 mb-2 text-xs items-center flex-wrap justify-center">
+          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${turn === 'player' ? 'text-accent' : 'text-text-muted'}`}>
+            🔴 You: {playerPos}
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
+            🔵 {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName}: {aiPos}
+          </span>
+          <span className={`font-bold ${turn === 'player' ? 'text-success animate-pulse' : 'text-text-dim'}`}>
+            {turn === 'player' ? 'Your roll' : 'Waiting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex gap-3 mb-2 text-sm">
+          <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: {playerPos}</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: {aiPos}</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
+          {losses > 0 && (
+            <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
+          )}
+        </div>
+      )}
 
       {/* Board */}
       <div className="grid grid-cols-10 gap-[2px] bg-card-hover p-1 rounded-lg mb-3">
