@@ -14,6 +14,7 @@ const Profile = lazy(() => import('@/screens/profile').then(m => ({ default: m.P
 const Leaderboard = lazy(() => import('@/screens/leaderboard').then(m => ({ default: m.Leaderboard })));
 const InvitePage = lazy(() => import('@/screens/invite').then(m => ({ default: m.InvitePage })));
 const Admin = lazy(() => import('@/screens/admin').then(m => ({ default: m.Admin })));
+const AdminReports = lazy(() => import('@/screens/admin-reports').then(m => ({ default: m.AdminReports })));
 
 function ScreenFallback() {
   return (
@@ -76,6 +77,15 @@ export function AppRouter() {
           <AuthGate>
             <Suspense fallback={<ScreenFallback />}>
               <PlayGame />
+            </Suspense>
+          </AuthGate>
+        } />
+
+        {/* Admin pages */}
+        <Route path="admin/reports" element={
+          <AuthGate>
+            <Suspense fallback={<ScreenFallback />}>
+              <AdminReports />
             </Suspense>
           </AuthGate>
         } />

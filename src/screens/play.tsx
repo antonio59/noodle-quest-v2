@@ -1,12 +1,13 @@
 import { useState, useEffect, createElement, Suspense } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock } from 'lucide-react';
+import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock, Flag } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGameMeta, getGameComponent, getAllGames } from '@/lib/game-registry';
 import { computeBonusTiers, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
+import { ReportIssueModal } from '@/components/ReportIssueModal';
 
 export function PlayGame() {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ export function PlayGame() {
   const [numPlayers, setNumPlayers] = useState<number>(2);
   const [showLobby, setShowLobby] = useState(!initialDifficulty);
   const [showStagePicker, setShowStagePicker] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const saveScore = useMutation(api.games.saveScore);
 
@@ -490,13 +492,23 @@ export function PlayGame() {
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-3 bg-surface border-b border-white/5 flex-shrink-0">
-        <button
-          onClick={goBackToGames}
-          className="flex items-center gap-1.5 text-text-muted hover:text-text bg-card hover:bg-card-hover px-3 py-2 rounded-xl transition-colors active:scale-95"
-        >
-          <ArrowLeft size={18} />
-          <span className="text-sm font-semibold">Quit</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goBackToGames}
+            className="flex items-center gap-1.5 text-text-muted hover:text-text bg-card hover:bg-card-hover px-3 py-2 rounded-xl transition-colors active:scale-95"
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm font-semibold">Quit</span>
+          </button>
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="flex items-center gap-1.5 text-text-muted hover:text-warning bg-card hover:bg-card-hover px-3 py-2 rounded-xl transition-colors active:scale-95"
+            title="Report an issue"
+          >
+            <Flag size={16} />
+            <span className="text-sm font-semibold hidden sm:inline">Report</span>
+          </button>
+        </div>
         <button
           onClick={() => maxUnlocked > 1 && setShowStagePicker(!showStagePicker)}
           className="text-center px-2 py-1 rounded-lg hover:bg-card/40 transition-colors"
@@ -613,6 +625,14 @@ export function PlayGame() {
           })}
         </Suspense>
       </div>
+
+      {showReportModal && gameMeta && (
+        <ReportIssueModal
+          gameId={gameMeta.id}
+          gameName={gameMeta.name}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
     </div>
   );
 }
