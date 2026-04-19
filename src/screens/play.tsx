@@ -63,10 +63,21 @@ export function PlayGame() {
   }, [gameMeta, navigate]);
 
   const createInvite = useMutation(api.multiplayer.createInvite);
+  const startSession = useMutation(api.multiplayer.startSession);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [creatingInvite, setCreatingInvite] = useState(false);
 
+  // Live lobby state — roster of players who've joined so far.
+  const liveSession = useQuery(
+    api.multiplayer.getSession,
+    sessionId ? { sessionId: sessionId as any } : 'skip' as any,
+  );
+
   if (!gameMeta || !gameId || !GameComponent) return null;
+
+  const minPlayers = gameMeta.minPlayers ?? 2;
+  const maxPlayers = gameMeta.maxPlayers ?? 2;
 
   // Multiplayer invite flow
   if (isMultiplayer && !inviteCode && !creatingInvite) {
@@ -74,9 +85,17 @@ export function PlayGame() {
       if (!player) return;
       setCreatingInvite(true);
       try {
-        const result = await createInvite({ gameId, fromId: player.playerId as any });
+        const result = await createInvite({
+          gameId,
+          fromId: player.playerId as any,
+          minPlayers,
+          maxPlayers,
+        });
         if (result && 'inviteCode' in result) {
           setInviteCode(result.inviteCode as string);
+          if ('sessionId' in result && result.sessionId) {
+            setSessionId(result.sessionId as string);
+          }
         }
       } catch {
         // invite creation failed
@@ -88,10 +107,14 @@ export function PlayGame() {
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">{gameMeta.emoji}</div>
         <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
-        <p className="text-text-muted text-sm mb-6">Invite a friend to play!</p>
+        <p className="text-text-muted text-sm mb-2">
+          {maxPlayers > 2
+            ? `Invite up to ${maxPlayers - 1} friends (min ${minPlayers} players total)`
+            : 'Invite a friend to play!'}
+        </p>
         <button
           onClick={handleCreateInvite}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 mb-4"
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 mb-4 mt-4"
         >
           Create Invite Link
         </button>
@@ -118,6 +141,21 @@ export function PlayGame() {
       }
     };
 
+    const roster = liveSession?.players ?? [];
+    const joinedCount = roster.length;
+    const canStart = joinedCount >= minPlayers;
+    const roomFull = joinedCount >= maxPlayers;
+    const isHost = player && liveSession && liveSession.player1Id === (player.playerId as any);
+
+    const handleStart = async () => {
+      if (!sessionId || !player) return;
+      try {
+        await startSession({ sessionId: sessionId as any, playerId: player.playerId as any });
+      } catch {
+        // ignore — next poll will reflect state
+      }
+    };
+
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">{gameMeta.emoji}</div>
@@ -135,7 +173,58 @@ export function PlayGame() {
             Share
           </button>
         </div>
-        <p className="text-text-dim text-xs mb-4 animate-pulse">Waiting for opponent to join...</p>
+
+        {maxPlayers > 2 && (
+          <div className="w-full max-w-xs mb-5">
+            <div className="text-xs font-semibold text-text-dim mb-2">
+              {joinedCount} of {maxPlayers} joined{canStart ? '' : ` · need ${minPlayers}`}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {roster.map(seat => (
+                <div
+                  key={seat.id}
+                  className="flex items-center gap-2 bg-card rounded-lg px-3 py-2 text-left"
+                >
+                  <span className="text-lg">{seat.avatar}</span>
+                  <span className="text-sm font-semibold flex-1">{seat.name}</span>
+                  {seat.seat === 1 && (
+                    <span className="text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full font-bold">
+                      Host
+                    </span>
+                  )}
+                </div>
+              ))}
+              {Array.from({ length: Math.max(0, minPlayers - joinedCount) }).map((_, i) => (
+                <div
+                  key={`empty-${i}`}
+                  className="flex items-center gap-2 bg-card/40 rounded-lg px-3 py-2 text-left border border-dashed border-white/10"
+                >
+                  <span className="text-lg opacity-40">◌</span>
+                  <span className="text-sm text-text-muted italic">Waiting for player...</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {maxPlayers > 2 && isHost ? (
+          <button
+            onClick={handleStart}
+            disabled={!canStart}
+            className={`font-bold px-6 py-2.5 rounded-xl mb-4 transition ${
+              canStart
+                ? 'bg-success text-bg hover:opacity-90 active:scale-95'
+                : 'bg-card text-text-muted cursor-not-allowed'
+            }`}
+          >
+            {canStart ? `Start Game (${joinedCount} players)` : `Need ${minPlayers - joinedCount} more`}
+          </button>
+        ) : (
+          <p className="text-text-dim text-xs mb-4 animate-pulse">
+            {roomFull ? 'Starting...' : 'Waiting for opponent to join...'}
+          </p>
+        )}
+
         <button
           onClick={() => navigate(`/games?tab=board`)}
           className="text-text-muted text-sm hover:text-text transition-colors"

@@ -16,6 +16,8 @@ interface Entry {
   benefits?: string[];
   duration?: string;
   bestFor?: string[];
+  minPlayers?: number;
+  maxPlayers?: number;
 }
 
 function reg(id: string, meta: Entry, loader: () => Promise<{ default: any }>) {
@@ -160,36 +162,42 @@ reg('tic-tac-toe', {
   name: 'Tic-Tac-Toe', emoji: '⭕',
   description: 'Classic X and O — beat the AI!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/tic-tac-toe'));
 
 reg('checkers', {
   name: 'Checkers', emoji: '⬤',
   description: 'Jump and capture your way to victory!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/checkers'));
 
 reg('chess', {
   name: 'Chess', emoji: '♔',
   description: 'The royal game — checkmate the AI king!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/chess'));
 
 reg('connect-four', {
   name: 'Connect Four', emoji: '🟡',
   description: 'Drop discs to connect four in a row!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/connect-four'));
 
 reg('ludo', {
   name: 'Ludo', emoji: '🎲',
   description: 'Roll the dice and race your token home!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/ludo'));
 
 reg('snakes-ladders', {
   name: 'Snakes & Ladders', emoji: '🐍',
   description: 'Classic race game — climb ladders, dodge snakes!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/snakes-ladders'));
 
 reg('crossword', {
@@ -220,18 +228,21 @@ reg('bingo', {
   name: 'Bingo', emoji: '🎱',
   description: 'Match numbers and complete your card!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 8,
 }, () => import('@/games/bingo'));
 
 reg('uno', {
   name: 'UNO', emoji: '🃏',
   description: 'Match colors and numbers — be first to empty your hand!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/uno'));
 
 reg('scrabble', {
   name: 'Scrabble', emoji: '🔤',
   description: 'Build words on the board for maximum points!',
   category: 'board', stages: 10, aiDifficulty: 'medium',
+  minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/scrabble'));
 
 reg('bookworm', {

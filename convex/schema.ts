@@ -98,16 +98,32 @@ export default defineSchema({
 
   multiplayer_sessions: defineTable({
     gameId: v.string(),
+    // Legacy 2-player fields (kept optional for backward compat). The
+    // authoritative roster lives on the `players` array below — new code
+    // should read from there.
     player1Id: v.id("players"),
     player1Name: v.string(),
     player1Avatar: v.string(),
     player2Id: v.optional(v.id("players")),
     player2Name: v.optional(v.string()),
     player2Avatar: v.optional(v.string()),
+    // N-player roster. seat is 1-indexed (matches currentPlayer numbering).
+    players: v.optional(
+      v.array(
+        v.object({
+          id: v.id("players"),
+          name: v.string(),
+          avatar: v.string(),
+          seat: v.number(),
+        }),
+      ),
+    ),
+    minPlayers: v.optional(v.number()),
+    maxPlayers: v.optional(v.number()),
     boardState: v.any(),
-    currentPlayer: v.number(), // 1 or 2
-    status: v.string(), // 'waiting' | 'playing' | 'finished'
-    winner: v.optional(v.number()), // 1, 2, or 0 for draw
+    currentPlayer: v.number(), // 1..N
+    status: v.string(), // 'waiting' | 'lobby' | 'playing' | 'finished'
+    winner: v.optional(v.number()), // seat number, or 0 for draw
     moves: v.array(v.any()),
     createdAt: v.number(),
     updatedAt: v.number(),

@@ -11,6 +11,17 @@ export interface GameDefinition {
   aiDifficulty?: 'easy' | 'medium' | 'hard';
   tabDescription?: string;
   tabBenefits?: string[];
+  /** Minimum human players for an online multiplayer session. Defaults to 2. */
+  minPlayers?: number;
+  /** Maximum human players for an online multiplayer session. Defaults to 2. */
+  maxPlayers?: number;
+}
+
+export interface MultiplayerSeat {
+  id: string;
+  name: string;
+  avatar: string;
+  seat: number;
 }
 
 /** Metadata-only definition used for game hub listing (no component import). */
@@ -35,13 +46,18 @@ export interface GameResult {
 
 export interface MultiplayerState {
   sessionId: string;
-  playerNumber: 1 | 2;
-  currentPlayer: 1 | 2;
+  /** 1-indexed seat number of the current local player. */
+  playerNumber: number;
+  /** 1-indexed seat number whose turn it is. */
+  currentPlayer: number;
   boardState: unknown;
+  /** Kept for backwards compatibility with 2-player games; first non-self seat. */
   opponentName: string;
   opponentAvatar: string;
-  status: 'waiting' | 'playing' | 'finished';
-  winner?: 1 | 2 | 'draw';
+  /** Full roster of humans in this session. Use this for 3+ player games. */
+  players?: MultiplayerSeat[];
+  status: 'waiting' | 'lobby' | 'playing' | 'finished';
+  winner?: number | 'draw';
 }
 
 export type GameCategory =
@@ -112,6 +128,10 @@ interface MultiplayerInvite {
 interface MultiplayerSession {
   _id: string;
   gameId: string;
+  players: MultiplayerSeat[];
+  minPlayers: number;
+  maxPlayers: number;
+  // Legacy mirrors
   player1Id: string;
   player1Name: string;
   player1Avatar: string;
@@ -120,7 +140,7 @@ interface MultiplayerSession {
   player2Avatar?: string;
   boardState: unknown;
   currentPlayer: number;
-  status: 'waiting' | 'playing' | 'finished';
+  status: 'waiting' | 'lobby' | 'playing' | 'finished';
   winner?: number;
   moves: unknown[];
   createdAt: number;
