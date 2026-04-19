@@ -418,9 +418,14 @@ function buildScoreBreakdown(
 
 // ── Component ──────────────────────────────────────────────────────────
 // Seat 0 = local human. Seats 1..N-1 = AI opponents (until online relay is wired).
-function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty = 'medium', numPlayers }: GameProps) {
-  // Clamp to 2..4; default 2.
-  const SEATS = Math.max(2, Math.min(4, numPlayers ?? 2));
+function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty = 'medium', numPlayers, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const isHost = isOnline && multiplayerState.playerNumber === 1;
+  const mySeat = isOnline ? (multiplayerState.playerNumber - 1) : 0;
+  // Clamp to 2..4; default 2. In online mode, seats = roster size (min 2).
+  const SEATS = isOnline
+    ? Math.max(2, Math.min(4, multiplayerState?.players?.length || 2))
+    : Math.max(2, Math.min(4, numPlayers ?? 2));
 
   const [board, setBoard] = useState<(string | null)[][]>(
     () => Array.from({ length: SIZE }, () => Array(SIZE).fill(null))
@@ -463,9 +468,9 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
 
   const maxRounds = 6 + stage * 6; // each seat plays maxRounds turns
   const targetScore = stage * 30;
-  const isHumanTurn = currentSeat === 0;
-  const playerRack = racks[0] ?? [];
-  const playerScore = scores[0] ?? 0;
+  const isHumanTurn = currentSeat === (isOnline ? mySeat : 0);
+  const playerRack = racks[isOnline ? mySeat : 0] ?? [];
+  const playerScore = scores[isOnline ? mySeat : 0] ?? 0;
 
   const schedule = useCallback((fn: () => void, ms: number) => {
     const id = setTimeout(() => {
@@ -482,8 +487,9 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     };
   }, []);
 
-  // Initial deal — one rack per seat.
+  // Initial deal — one rack per seat. Offline only; online host seeds via effect below.
   useEffect(() => {
+    if (isOnline) return;
     const fresh = buildTilePool();
     const dealt: string[][] = [];
     for (let i = 0; i < SEATS; i++) dealt.push(fresh.splice(0, 7));
@@ -497,6 +503,68 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   // intentionally only on mount
 
   }, []);
+
+  // Online: host seeds initial state once.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!isOnline || !onMultiplayerMove || !isHost || seededRef.current) return;
+    const bs = multiplayerState?.boardState as { racks?: unknown } | null | undefined;
+    if (bs && bs.racks) return;
+    seededRef.current = true;
+    const fresh = buildTilePool();
+    const dealt: string[][] = [];
+    for (let i = 0; i < SEATS; i++) dealt.push(fresh.splice(0, 7));
+    const emptyBoard = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+    const emptyScores = Array.from({ length: SEATS }, () => 0);
+    onMultiplayerMove({
+      boardState: {
+        board: emptyBoard,
+        racks: dealt,
+        pool: fresh,
+        scores: emptyScores,
+        currentSeat: 0,
+        isFirstMove: true,
+        lastWord: '',
+      },
+    });
+  }, [isOnline, onMultiplayerMove, isHost, multiplayerState, SEATS]);
+
+  // Online: reconcile from server boardState.
+  useEffect(() => {
+    if (!isOnline || !multiplayerState) return;
+    const bs = multiplayerState.boardState as {
+      board?: (string | null)[][];
+      racks?: string[][];
+      pool?: string[];
+      scores?: number[];
+      currentSeat?: number;
+      isFirstMove?: boolean;
+      lastWord?: string;
+    } | null | undefined;
+    if (!bs || !bs.racks) return;
+    if (bs.board) setBoard(bs.board);
+    if (bs.racks) setRacks(bs.racks);
+    if (bs.pool) setPool(bs.pool);
+    if (bs.scores) setScores(bs.scores);
+    if (typeof bs.currentSeat === 'number') setCurrentSeat(bs.currentSeat);
+    if (typeof bs.isFirstMove === 'boolean') setIsFirstMove(bs.isFirstMove);
+    if (typeof bs.lastWord === 'string') setLastWord(bs.lastWord);
+    // Lock any occupied cells
+    if (bs.board) {
+      const locked = new Set<string>();
+      for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+        if (bs.board[r][c]) locked.add(`${r},${c}`);
+      }
+      setLockedCells(locked);
+    }
+    // Winner check
+    if (multiplayerState.winner && !endedRef.current) {
+      endedRef.current = true;
+      const iWon = multiplayerState.winner === multiplayerState.playerNumber;
+      const myScore = (bs.scores && bs.scores[mySeat]) || 0;
+      onEnd({ score: myScore, stars: iWon ? 3 : 1, summary: iWon ? `You won Scrabble with ${myScore} pts!` : 'Opponent won Scrabble.' });
+    }
+  }, [isOnline, multiplayerState, mySeat, onEnd]);
 
   const placedKeys = useMemo(() => new Set(placedCells.keys()), [placedCells]);
 
@@ -689,7 +757,8 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
       setScoreBreakdown(null);
       return;
     }
-    const newScores = scores.map((s, i) => (i === 0 ? s + result.score : s));
+    const seat = isOnline ? mySeat : 0;
+    const newScores = scores.map((s, i) => (i === seat ? s + result.score : s));
     setScores(newScores);
     onScore(result.score);
     setLastWord(`You played "${result.word}" for ${result.score}`);
@@ -703,14 +772,40 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     setIsFirstMove(false);
 
     const { rack: newRack, pool: newPool } = drawUpTo7(playerRack, pool);
-    setRacks(prev => prev.map((rack, i) => (i === 0 ? newRack : rack)));
+    const newRacks = racks.map((rack, i) => (i === seat ? newRack : rack));
+    setRacks(newRacks);
     setPool(newPool);
+
+    if (isOnline && onMultiplayerMove && multiplayerState) {
+      const nextSeat = (seat + 1) % SEATS;
+      // Endgame: if my score >= targetScore, declare winner
+      const myNewScore = newScores[seat] ?? 0;
+      const iWon = myNewScore >= targetScore && stage >= 0; // simple target check
+      onMultiplayerMove({
+        boardState: {
+          board,
+          racks: newRacks,
+          pool: newPool,
+          scores: newScores,
+          currentSeat: nextSeat,
+          isFirstMove: false,
+          lastWord: `P${multiplayerState.playerNumber} played "${result.word}" for ${result.score}`,
+        },
+        winner: iWon ? multiplayerState.playerNumber : undefined,
+      });
+      if (iWon && !endedRef.current) {
+        endedRef.current = true;
+        onEnd({ score: myNewScore, stars: 3, summary: `You won Scrabble with ${myNewScore} pts!` });
+      }
+      return;
+    }
 
     advanceSeat(newScores);
   };
 
   // AI turn — runs whenever currentSeat points at a non-human seat.
   useEffect(() => {
+    if (isOnline) return; // Online: opponents drive their own turns
     if (isHumanTurn || endedRef.current) return;
     const seat = currentSeat;
     setAiThinking(true);
@@ -801,6 +896,22 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     onMessage('You passed your turn');
     setLastWord('You passed');
     setScoreBreakdown(null);
+    if (isOnline && onMultiplayerMove) {
+      const seat = mySeat;
+      const nextSeat = (seat + 1) % SEATS;
+      onMultiplayerMove({
+        boardState: {
+          board,
+          racks,
+          pool,
+          scores,
+          currentSeat: nextSeat,
+          isFirstMove,
+          lastWord: 'Opponent passed',
+        },
+      });
+      return;
+    }
     advanceSeat(scores);
   };
 
@@ -812,7 +923,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     else livePreview = { valid: true, score: result.score, word: result.word, breakdown: result.breakdown };
   }
 
-  if (!started) {
+  if (!started && !isOnline) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">🅰️</div>
