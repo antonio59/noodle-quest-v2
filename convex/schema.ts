@@ -31,7 +31,8 @@ export default defineSchema({
     playedAt: v.number(),
   })
     .index("by_player", ["playerId"])
-    .index("by_game_score", ["gameId", "score"]),
+    .index("by_game_score", ["gameId", "score"])
+    .index("by_playedAt", ["playedAt"]),
 
   challenges: defineTable({
     fromId: v.id("players"),

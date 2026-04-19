@@ -78,12 +78,13 @@ export const getMonthlyPlayCounts = query({
   handler: async (ctx) => {
     const now = Date.now();
     const windowStart = now - 30 * 24 * 60 * 60 * 1000;
-    const scores = await ctx.db.query("scores").collect();
+    const scores = await ctx.db
+      .query("scores")
+      .withIndex("by_playedAt", q => q.gte("playedAt", windowStart))
+      .collect();
     const counts: Record<string, number> = {};
     for (const s of scores) {
-      if (s.playedAt >= windowStart) {
-        counts[s.gameId] = (counts[s.gameId] ?? 0) + 1;
-      }
+      counts[s.gameId] = (counts[s.gameId] ?? 0) + 1;
     }
     return { counts, windowStart, windowEnd: now };
   },

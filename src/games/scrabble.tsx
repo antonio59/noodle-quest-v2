@@ -361,28 +361,35 @@ function pickAiMove(moves: Placement[], difficulty: 'easy' | 'medium' | 'hard'):
 }
 
 // ── Component ──────────────────────────────────────────────────────────
-function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty = 'medium' }: GameProps) {
+// Seat 0 = local human. Seats 1..N-1 = AI opponents (until online relay is wired).
+function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty = 'medium', numPlayers }: GameProps) {
+  // Clamp to 2..4; default 2.
+  const SEATS = Math.max(2, Math.min(4, numPlayers ?? 2));
+
   const [board, setBoard] = useState<(string | null)[][]>(
     () => Array.from({ length: SIZE }, () => Array(SIZE).fill(null))
   );
-  const [playerRack, setPlayerRack] = useState<string[]>([]);
-  const [aiRack, setAiRack] = useState<string[]>([]);
+  // One rack per seat. Seat 0 is the human's.
+  const [racks, setRacks] = useState<string[][]>(() => Array.from({ length: SEATS }, () => [] as string[]));
   const [pool, setPool] = useState<string[]>([]);
   const [selectedTile, setSelectedTile] = useState<number | null>(null);
   const [placedCells, setPlacedCells] = useState<Map<string, true>>(new Map());
   const [lockedCells, setLockedCells] = useState<Set<string>>(new Set());
-  const [playerScore, setPlayerScore] = useState(0);
-  const [aiScore, setAiScore] = useState(0);
-  const [turn, setTurn] = useState(0); // counts player turns
-  const [currentPlayer, setCurrentPlayer] = useState<'player' | 'ai'>('player');
+  // One score per seat.
+  const [scores, setScores] = useState<number[]>(() => Array.from({ length: SEATS }, () => 0));
+  const [round, setRound] = useState(0); // completed full rounds
+  const [currentSeat, setCurrentSeat] = useState(0);
   const [aiThinking, setAiThinking] = useState(false);
   const [lastWord, setLastWord] = useState('');
   const [isFirstMove, setIsFirstMove] = useState(true);
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  const maxTurns = 8; // each player plays maxTurns
+  const maxRounds = 8; // each seat plays maxRounds turns
   const targetScore = stage * 30;
+  const isHumanTurn = currentSeat === 0;
+  const playerRack = racks[0] ?? [];
+  const playerScore = scores[0] ?? 0;
 
   const schedule = useCallback((fn: () => void, ms: number) => {
     const id = setTimeout(() => {
@@ -399,17 +406,20 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     };
   }, []);
 
-  // Initial deal
+  // Initial deal — one rack per seat.
   useEffect(() => {
     const fresh = buildTilePool();
-    const pRack = fresh.splice(0, 7);
-    const aRack = fresh.splice(0, 7);
-    setPlayerRack(pRack);
-    setAiRack(aRack);
+    const dealt: string[][] = [];
+    for (let i = 0; i < SEATS; i++) dealt.push(fresh.splice(0, 7));
+    setRacks(dealt);
     setPool(fresh);
-    onMessage(`Your turn — place tiles to make a word (target ${targetScore})`);
+    onMessage(
+      SEATS > 2
+        ? `Your turn — ${SEATS - 1} AI opponents (target ${targetScore})`
+        : `Your turn — place tiles to make a word (target ${targetScore})`,
+    );
   // intentionally only on mount
-   
+
   }, []);
 
   const placedKeys = useMemo(() => new Set(placedCells.keys()), [placedCells]);
@@ -421,28 +431,35 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     return { rack: r, pool: p };
   }, []);
 
-  const finishGame = useCallback((finalPlayerScore: number, finalAiScore: number) => {
+  const finishGame = useCallback((finalScores: number[]) => {
     if (endedRef.current) return;
     endedRef.current = true;
-    const margin = finalPlayerScore - finalAiScore;
+    const mine = finalScores[0] ?? 0;
+    const best = Math.max(...finalScores);
+    const winners = finalScores.reduce<number[]>((acc, s, i) => (s === best ? [...acc, i] : acc), []);
+    const iWon = winners.includes(0);
+    const tied = iWon && winners.length > 1;
+
     let stars = 1;
-    if (margin > 0) stars = finalPlayerScore >= targetScore ? 3 : 2;
-    else if (margin === 0) stars = 2;
-    const summary = margin > 0
-      ? `You won ${finalPlayerScore}–${finalAiScore}!`
-      : margin === 0
-        ? `Tied at ${finalPlayerScore}!`
-        : `AI won ${finalAiScore}–${finalPlayerScore}.`;
-    schedule(() => onEnd({ score: finalPlayerScore, stars, summary }), 800);
+    if (iWon && !tied) stars = mine >= targetScore ? 3 : 2;
+    else if (tied) stars = 2;
+
+    const opponentScores = finalScores.slice(1);
+    const summary = iWon && !tied
+      ? `You won with ${mine} vs ${opponentScores.join(', ')}!`
+      : tied
+        ? `Tied at ${mine}!`
+        : `You scored ${mine} · best was ${best}.`;
+    schedule(() => onEnd({ score: mine, stars, summary }), 800);
   }, [targetScore, onEnd, schedule]);
 
   const handleRackClick = (idx: number) => {
-    if (currentPlayer !== 'player') return;
+    if (!isHumanTurn) return;
     setSelectedTile(prev => prev === idx ? null : idx);
   };
 
   const handleBoardClick = (r: number, c: number) => {
-    if (currentPlayer !== 'player') return;
+    if (!isHumanTurn) return;
     const key = `${r},${c}`;
     if (lockedCells.has(key)) return;
 
@@ -453,7 +470,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         const newBoard = board.map(row => [...row]);
         newBoard[r][c] = null;
         setBoard(newBoard);
-        setPlayerRack(prev => [...prev, letter]);
+        setRacks(prev => prev.map((rack, i) => (i === 0 ? [...rack, letter] : rack)));
         const newPlaced = new Map(placedCells);
         newPlaced.delete(key);
         setPlacedCells(newPlaced);
@@ -466,7 +483,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     const newBoard = board.map(row => [...row]);
     newBoard[r][c] = letter;
     setBoard(newBoard);
-    setPlayerRack(playerRack.filter((_, i) => i !== selectedTile));
+    setRacks(prev => prev.map((rack, i) => (i === 0 ? rack.filter((_, j) => j !== selectedTile) : rack)));
     setSelectedTile(null);
     const newPlaced = new Map(placedCells);
     newPlaced.set(key, true);
@@ -540,24 +557,28 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     return { valid: true, word, cells: wordCells, score: mainScore + crossBonus + all7Bonus };
   };
 
-  const advanceAfterMove = useCallback((nextPlayer: 'player' | 'ai', newTurn: number, pScore: number, aScore: number) => {
-    setCurrentPlayer(nextPlayer);
-    onProgress(Math.min(newTurn / maxTurns, 1));
-    if (newTurn >= maxTurns && nextPlayer === 'player') {
-      // Both players finished their last turn
-      finishGame(pScore, aScore);
+  /** Advance to the next seat. Increments the round counter each time we
+   *  wrap back to seat 0. Ends the game once everyone has finished maxRounds. */
+  const advanceSeat = useCallback((finalScores: number[]) => {
+    const next = (currentSeat + 1) % SEATS;
+    const nextRound = next === 0 ? round + 1 : round;
+    setCurrentSeat(next);
+    if (next === 0) setRound(nextRound);
+    onProgress(Math.min((nextRound + next / SEATS) / maxRounds, 1));
+    if (nextRound >= maxRounds && next === 0) {
+      finishGame(finalScores);
     }
-  }, [maxTurns, onProgress, finishGame]);
+  }, [currentSeat, round, SEATS, maxRounds, onProgress, finishGame]);
 
   const handleSubmit = () => {
-    if (currentPlayer !== 'player') return;
+    if (!isHumanTurn) return;
     const result = findPlayerPlay();
     if (!result.valid) {
       onMessage(result.reason || 'Invalid placement');
       return;
     }
-    const newPlayerScore = playerScore + result.score;
-    setPlayerScore(newPlayerScore);
+    const newScores = scores.map((s, i) => (i === 0 ? s + result.score : s));
+    setScores(newScores);
     onScore(result.score);
     setLastWord(`You: ${result.word} = ${result.score}`);
     onMessage(`+${result.score} for "${result.word}"!`);
@@ -569,35 +590,32 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
     setIsFirstMove(false);
 
     const { rack: newRack, pool: newPool } = drawUpTo7(playerRack, pool);
-    setPlayerRack(newRack);
+    setRacks(prev => prev.map((rack, i) => (i === 0 ? newRack : rack)));
     setPool(newPool);
 
-    advanceAfterMove('ai', turn, newPlayerScore, aiScore);
+    advanceSeat(newScores);
   };
 
-  // AI turn — runs when currentPlayer flips to 'ai'
+  // AI turn — runs whenever currentSeat points at a non-human seat.
   useEffect(() => {
-    if (currentPlayer !== 'ai' || endedRef.current) return;
+    if (isHumanTurn || endedRef.current) return;
+    const seat = currentSeat;
     setAiThinking(true);
-    onMessage('AI is thinking...');
+    onMessage(`AI ${seat} is thinking...`);
 
     schedule(() => {
-      // Generate moves on a snapshot
-      const moves = generateAiMoves(board, aiRack, false);
+      const seatRack = racks[seat] ?? [];
+      const moves = generateAiMoves(board, seatRack, isFirstMove);
       const move = pickAiMove(moves, aiDifficulty);
       setAiThinking(false);
 
       if (!move) {
-        // AI passes — exchange (just draw fresh)
-        onMessage('AI passes this turn');
-        setLastWord('AI: pass');
-        const newTurn = turn + 1;
-        setTurn(newTurn);
-        advanceAfterMove('player', newTurn, playerScore, aiScore);
+        onMessage(`AI ${seat} passes this turn`);
+        setLastWord(`AI ${seat}: pass`);
+        advanceSeat(scores);
         return;
       }
 
-      // Apply AI move to board
       const newBoard = board.map(row => [...row]);
       const newLocked = new Set(lockedCells);
       const usedLetters: string[] = [];
@@ -606,33 +624,30 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         newLocked.add(`${nc.r},${nc.c}`);
         usedLetters.push(nc.letter);
       }
-      // Remove used letters from AI rack (one occurrence each)
-      const newAiRack = [...aiRack];
+      const depleted = [...seatRack];
       for (const l of usedLetters) {
-        const idx = newAiRack.indexOf(l);
-        if (idx >= 0) newAiRack.splice(idx, 1);
+        const idx = depleted.indexOf(l);
+        if (idx >= 0) depleted.splice(idx, 1);
       }
-      const { rack: refilled, pool: newPool } = drawUpTo7(newAiRack, pool);
+      const { rack: refilled, pool: newPool } = drawUpTo7(depleted, pool);
+      const newScores = scores.map((s, i) => (i === seat ? s + move.score : s));
 
-      const newAiScore = aiScore + move.score;
       setBoard(newBoard);
       setLockedCells(newLocked);
-      setAiRack(refilled);
+      setRacks(prev => prev.map((rack, i) => (i === seat ? refilled : rack)));
       setPool(newPool);
-      setAiScore(newAiScore);
-      setLastWord(`AI: ${move.word} = ${move.score}`);
-      onMessage(`AI played "${move.word}" for ${move.score}`);
+      setScores(newScores);
+      setLastWord(`AI ${seat}: ${move.word} = ${move.score}`);
+      onMessage(`AI ${seat} played "${move.word}" for ${move.score}`);
       setIsFirstMove(false);
 
-      const newTurn = turn + 1;
-      setTurn(newTurn);
-      advanceAfterMove('player', newTurn, playerScore, newAiScore);
-    }, 900);
-   
-  }, [currentPlayer]);
+      advanceSeat(newScores);
+    }, 700);
+
+  }, [currentSeat]);
 
   const handleClear = () => {
-    if (currentPlayer !== 'player') return;
+    if (!isHumanTurn) return;
     const letters: string[] = [];
     const newBoard = board.map(row => [...row]);
     for (const key of placedKeys) {
@@ -643,37 +658,50 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
       }
     }
     setBoard(newBoard);
-    setPlayerRack([...playerRack, ...letters]);
+    setRacks(prev => prev.map((rack, i) => (i === 0 ? [...rack, ...letters] : rack)));
     setPlacedCells(new Map());
     setSelectedTile(null);
   };
 
   const handleShuffle = () => {
-    if (currentPlayer !== 'player') return;
+    if (!isHumanTurn) return;
     const shuffled = [...playerRack];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    setPlayerRack(shuffled);
+    setRacks(prev => prev.map((rack, i) => (i === 0 ? shuffled : rack)));
   };
 
   const handlePass = () => {
-    if (currentPlayer !== 'player') return;
-    // Return any placed tiles to rack first
+    if (!isHumanTurn) return;
     handleClear();
     onMessage('You passed your turn');
     setLastWord('You: pass');
-    advanceAfterMove('ai', turn, playerScore, aiScore);
+    advanceSeat(scores);
   };
 
   return (
     <div className="h-full w-full flex flex-col items-center px-2 pt-1 pb-2 gap-1.5 overflow-hidden">
       {/* Score bar */}
       <div className="flex gap-1.5 text-[10px] items-center flex-wrap justify-center flex-shrink-0">
-        <span className="bg-accent/20 text-accent rounded-md px-1.5 py-0.5 font-bold">You: {playerScore}</span>
-        <span className="bg-danger/20 text-danger rounded-md px-1.5 py-0.5 font-bold">AI: {aiScore}</span>
-        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Turn {turn + (currentPlayer === 'ai' ? 1 : 1)}/{maxTurns}</span>
+        {scores.map((s, i) => (
+          <span
+            key={i}
+            className={`rounded-md px-1.5 py-0.5 font-bold ${
+              i === 0
+                ? 'bg-accent/20 text-accent'
+                : i === currentSeat
+                  ? 'bg-danger/30 text-danger ring-1 ring-danger/60'
+                  : 'bg-danger/20 text-danger'
+            }`}
+          >
+            {i === 0 ? 'You' : `AI ${i}`}: {s}
+          </span>
+        ))}
+        <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">
+          Round {Math.min(round + 1, maxRounds)}/{maxRounds}
+        </span>
         <span className="bg-card rounded-md px-1.5 py-0.5 text-text-muted">Target: {targetScore}</span>
         <span className="bg-card rounded-md px-1.5 py-0.5 text-text-dim">{pool.length} left</span>
         {lastWord && <span className="text-accent font-medium">{lastWord}</span>}
@@ -705,7 +733,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
               <button
                 key={key}
                 onClick={() => handleBoardClick(r, c)}
-                disabled={currentPlayer !== 'player'}
+                disabled={!isHumanTurn}
                 className={`relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
                   cell
                     ? isPlaced
@@ -714,7 +742,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
                     : bs
                       ? `${bs.bg} ${bs.text}`
                       : 'bg-card hover:bg-card-hover'
-                } ${currentPlayer !== 'player' ? 'opacity-90 cursor-not-allowed' : ''}`}
+                } ${!isHumanTurn ? 'opacity-90 cursor-not-allowed' : ''}`}
               >
                 {cell ? (
                   <>
@@ -742,28 +770,28 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
           <div className="flex gap-1.5">
             <button
               onClick={handleSubmit}
-              disabled={placedKeys.size < 1 || currentPlayer !== 'player'}
+              disabled={placedKeys.size < 1 || !isHumanTurn}
               className="bg-accent text-bg font-bold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
             >
               Submit
             </button>
             <button
               onClick={handleClear}
-              disabled={placedKeys.size === 0 || currentPlayer !== 'player'}
+              disabled={placedKeys.size === 0 || !isHumanTurn}
               className="bg-card text-text font-semibold px-3 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
             >
               Clear
             </button>
             <button
               onClick={handleShuffle}
-              disabled={playerRack.length === 0 || currentPlayer !== 'player'}
+              disabled={playerRack.length === 0 || !isHumanTurn}
               className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
             >
               Shuffle
             </button>
             <button
               onClick={handlePass}
-              disabled={currentPlayer !== 'player'}
+              disabled={!isHumanTurn}
               className="bg-card text-text-muted font-semibold px-2 py-1 rounded-md text-[10px] disabled:opacity-30 active:scale-95 transition-all"
             >
               Pass
@@ -780,12 +808,12 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
             <button
               key={`${tile}-${i}`}
               onClick={() => handleRackClick(i)}
-              disabled={currentPlayer !== 'player'}
+              disabled={!isHumanTurn}
               className={`relative w-10 h-11 rounded-lg font-bold text-base flex flex-col items-center justify-center transition-all shadow-sm ${
                 selectedTile === i
                   ? 'bg-accent text-bg ring-2 ring-accent scale-110 -translate-y-1'
                   : 'bg-amber-200 text-amber-900 hover:bg-amber-300 active:scale-95'
-              } ${currentPlayer !== 'player' ? 'opacity-60' : ''}`}
+              } ${!isHumanTurn ? 'opacity-60' : ''}`}
             >
               <span className="leading-none">{tile}</span>
               <span className={`text-[8px] leading-none mt-0.5 font-semibold ${

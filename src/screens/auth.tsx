@@ -40,6 +40,34 @@ export function Auth() {
     fetchPlayers();
   }, []);
 
+  // Allow physical keyboard / number-pad input on the PIN screen
+  useEffect(() => {
+    if (!selectedProfile || showSignup) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (loading) return;
+
+      const num = e.key;
+      const numpadMap: Record<string, string> = {
+        Numpad0: '0', Numpad1: '1', Numpad2: '2', Numpad3: '3', Numpad4: '4',
+        Numpad5: '5', Numpad6: '6', Numpad7: '7', Numpad8: '8', Numpad9: '9',
+      };
+
+      const digit = numpadMap[e.code] ?? num;
+
+      if (digit >= '0' && digit <= '9') {
+        e.preventDefault();
+        handlePinPress(digit);
+      } else if (num === 'Backspace') {
+        e.preventDefault();
+        handleBackspace();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedProfile, showSignup, loading, pin]);
+
   const fetchPlayers = async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/query`, {
@@ -236,27 +264,27 @@ export function Auth() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-bg via-surface to-bg">
-      <div className="text-center w-full max-w-lg">
-        <h1 className="text-3xl font-bold mb-2 text-text">Who's playing? 🎮</h1>
-        <p className="text-text-muted text-sm mb-8">Pick your profile</p>
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-br from-bg via-surface to-bg overflow-y-auto">
+      <div className="text-center w-full max-w-2xl py-4">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-text">Who's playing? 🎮</h1>
+        <p className="text-text-muted text-sm mb-8">Pick your profile to continue</p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 mb-8">
           {profiles.map((profile) => (
             <button
               key={profile.id}
               onClick={() => setSelectedProfile(profile)}
-              className={`bg-gradient-to-br ${profile.color} p-6 rounded-3xl shadow-xl text-white flex flex-col items-center gap-3 hover:scale-105 transition-transform active:scale-95`}
+              className={`bg-gradient-to-br ${profile.color} p-5 sm:p-6 rounded-3xl shadow-xl text-white flex flex-col items-center justify-center gap-4 hover:scale-105 transition-transform active:scale-95 min-h-[160px] sm:min-h-[180px]`}
             >
-              <span className="text-5xl">{profile.avatar}</span>
-              <span className="text-lg font-bold capitalize">{profile.name}</span>
+              <span className="text-6xl drop-shadow-md">{profile.avatar}</span>
+              <span className="text-base sm:text-lg font-bold capitalize truncate w-full px-1">{profile.name}</span>
             </button>
           ))}
         </div>
 
         <button
           onClick={() => setShowSignup(true)}
-          className="flex items-center justify-center gap-2 w-full max-w-xs mx-auto bg-card hover:bg-card-hover text-text font-bold py-3 px-6 rounded-xl transition-colors"
+          className="inline-flex items-center justify-center gap-2 bg-card hover:bg-card-hover text-text font-bold py-3 px-8 rounded-xl transition-colors border border-white/5"
         >
           <Plus size={18} /> New Player
         </button>

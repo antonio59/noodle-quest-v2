@@ -36,6 +36,9 @@ export interface GameProps {
   multiplayerState?: MultiplayerState;
   onMultiplayerMove?: (move: unknown) => void;
   aiDifficulty?: 'easy' | 'medium' | 'hard';
+  /** Total seats for games that support local N-player hot-seat
+   *  (default 2: one human + one AI). Ignored by single-player games. */
+  numPlayers?: number;
 }
 
 export interface GameResult {
