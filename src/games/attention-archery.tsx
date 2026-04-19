@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -37,11 +37,11 @@ const HIT_FEEDBACKS = ["Bullseye! 🎯", "Sharp shooter! 🏹", "Perfect aim! �
 let targetIdCounter = 0;
 
 function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     spawnRate: -0.15, duration: 0.1, speed: 0.2, decoyChance: 0.1,
   }, {
     spawnRate: 400, duration: 70000, speed: 10, decoyChance: 0.85,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('playing');
   const [targets, setTargets] = useState<ArcheryTarget[]>([]);
   const [score, setScore] = useState(0);

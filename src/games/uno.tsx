@@ -163,8 +163,12 @@ function dealInitial(): { pHand: UnoCard[]; aHand: UnoCard[]; deck: UnoCard[]; d
   };
 }
 
-function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps & { aiDifficulty?: AILevel }) {
+function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps & { aiDifficulty?: AILevel }) {
   const difficulty: AILevel = aiDifficulty || 'medium';
+  const isOnline = !!multiplayerState;
+  const mySeat = isOnline ? multiplayerState.playerNumber : 1;
+  const oppSeat = isOnline ? (mySeat === 1 ? 2 : 1) : 2;
+  const isHost = isOnline && multiplayerState.playerNumber === 1;
 
   const initial = useRef(dealInitial()).current;
 
@@ -206,6 +210,52 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }:
       timeoutsRef.current.forEach(clearTimeout);
     };
   }, []);
+
+  // Online: host seeds initial state once
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!isOnline || !onMultiplayerMove || !isHost || seededRef.current) return;
+    const bs = multiplayerState?.boardState as { hands?: unknown } | null | undefined;
+    if (bs && bs.hands) return;
+    seededRef.current = true;
+    const fresh = dealInitial();
+    onMultiplayerMove({
+      boardState: {
+        hands: { [1]: fresh.pHand, [2]: fresh.aHand },
+        deck: fresh.deck,
+        discard: fresh.discard,
+        color: fresh.color,
+        currentPlayer: 1,
+      },
+    });
+  }, [isOnline, onMultiplayerMove, isHost, multiplayerState]);
+
+  // Online: reconcile from server boardState
+  useEffect(() => {
+    if (!isOnline || !multiplayerState) return;
+    const bs = multiplayerState.boardState as {
+      hands?: Record<string, UnoCard[]>;
+      deck?: UnoCard[];
+      discard?: UnoCard[];
+      color?: UnoColor;
+      currentPlayer?: number;
+    } | null | undefined;
+    if (!bs || !bs.hands) return;
+    const myHand = bs.hands[String(mySeat)] || [];
+    const oppHand = bs.hands[String(oppSeat)] || [];
+    setPlayerHand(myHand);
+    setAiHand(oppHand);
+    if (bs.deck) setDeck(bs.deck);
+    if (bs.discard) setDiscardPile(bs.discard);
+    if (bs.color) setCurrentColor(bs.color);
+    setIsPlayerTurn(bs.currentPlayer === mySeat);
+    // Winner check
+    if (multiplayerState.winner && !endedRef.current) {
+      endedRef.current = true;
+      const iWon = multiplayerState.winner === mySeat;
+      onEnd({ score: iWon ? 200 : 0, stars: iWon ? 3 : 1, summary: iWon ? 'You won UNO!' : 'Opponent won.' });
+    }
+  }, [isOnline, multiplayerState, mySeat, oppSeat, onEnd]);
 
   const finishMatch = useCallback((outcome: 'win' | 'lose') => {
     if (endedRef.current) return;

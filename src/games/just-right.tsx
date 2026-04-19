@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -36,11 +36,11 @@ interface SplatterData {
 }
 
 function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     target: 0.1, time: 0.1, tolerance: 0.05,
   }, {
     target: 50, time: 45, tolerance: 6,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('intro');
   const [splatters, setSplatters] = useState(0);
   const [timeLeft, setTimeLeft] = useState(config.time);

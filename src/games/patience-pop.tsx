@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -35,11 +35,11 @@ const POP_FEEDBACKS = ["Perfect patience! 🌟", "Great timing! ⏰", "You waite
 let bubbleIdCounter = 0;
 
 function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     spawnRate: -0.15, duration: 0.1, waitMin: -0.15, waitMax: -0.15, trapChance: 0.1, sizeMin: -0.1, sizeMax: -0.1,
   }, {
     spawnRate: 400, duration: 70000, waitMin: 200, waitMax: 600, trapChance: 0.8, sizeMin: 20, sizeMax: 45,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [score, setScore] = useState(0);

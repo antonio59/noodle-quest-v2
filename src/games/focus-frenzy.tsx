@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -35,11 +35,11 @@ const FEEDBACKS = ["Nice focus! 🎯", "Great eyes! 👀", "You're on fire! 🔥
 let orbIdCounter = 0;
 
 function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     spawnRate: -0.15, duration: 0.1, distractors: 0.1, fadeTime: 0.1, speed: 0.15,
   }, {
     spawnRate: 300, duration: 70000, distractors: 0.9, fadeTime: 300, speed: 3,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [score, setScore] = useState(0);

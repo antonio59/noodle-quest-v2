@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -25,11 +25,11 @@ const CONFIG: Record<number, { pathWidth: number; obstacles: boolean; checkpoint
 const STAR_FEEDBACKS = ["Star collected! ⭐", "Nice! Keep going! 🌟", "Great control! ✨"];
 
 function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     pathWidth: -0.1, checkpointCount: 0.1,
   }, {
     pathWidth: 12, checkpointCount: 10,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('playing');
   const [score, setScore] = useState(0);
   const [collected, setCollected] = useState(0);

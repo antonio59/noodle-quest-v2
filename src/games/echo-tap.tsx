@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -19,15 +19,21 @@ const ROUNDS_NEEDED = 5;
 
 type Phase = 'listening' | 'tapping' | 'evaluating' | 'done';
 
-function playBeatSound(audioCtx: AudioContext, isTap: boolean) {
+const LISTEN_PITCHES = [523, 659, 784, 1047, 880, 988]; // C5, E5, G5, C6, A5, B5
+const TAP_PITCHES = [659, 784, 988, 1319, 1175, 1397];   // E5, G5, B5, E6, D6, F6
+
+function playBeatSound(audioCtx: AudioContext, isTap: boolean, beatIndex = 0) {
   const now = audioCtx.currentTime;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
+  const pitch = isTap
+    ? TAP_PITCHES[beatIndex % TAP_PITCHES.length]
+    : LISTEN_PITCHES[beatIndex % LISTEN_PITCHES.length];
 
   if (isTap) {
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1000, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+    osc.frequency.setValueAtTime(pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(pitch * 0.6, now + 0.08);
     gain.gain.setValueAtTime(0.25, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
     osc.connect(gain);
@@ -38,7 +44,7 @@ function playBeatSound(audioCtx: AudioContext, isTap: boolean) {
     const click = audioCtx.createOscillator();
     const clickGain = audioCtx.createGain();
     click.type = 'square';
-    click.frequency.value = 1800;
+    click.frequency.value = pitch * 1.8;
     clickGain.gain.setValueAtTime(0.08, now);
     clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
     click.connect(clickGain);
@@ -47,8 +53,8 @@ function playBeatSound(audioCtx: AudioContext, isTap: boolean) {
     click.stop(now + 0.03);
   } else {
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.exponentialRampToValueAtTime(400, now + 0.12);
+    osc.frequency.setValueAtTime(pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(pitch * 0.5, now + 0.12);
     gain.gain.setValueAtTime(0.3, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
     osc.connect(gain);
@@ -59,8 +65,8 @@ function playBeatSound(audioCtx: AudioContext, isTap: boolean) {
     const thump = audioCtx.createOscillator();
     const thumpGain = audioCtx.createGain();
     thump.type = 'sine';
-    thump.frequency.setValueAtTime(150, now);
-    thump.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+    thump.frequency.setValueAtTime(pitch * 0.25, now);
+    thump.frequency.exponentialRampToValueAtTime(pitch * 0.15, now + 0.1);
     thumpGain.gain.setValueAtTime(0.2, now);
     thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
     thump.connect(thumpGain);
@@ -81,11 +87,11 @@ function getIntervals(times: number[]) {
 }
 
 function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     beats: 0.1, tolerance: -0.1, bpm: 0.05,
   }, {
     beats: 12, tolerance: 100, bpm: 160,
-  });
+  }), [stage]);
   const beatInterval = 60000 / config.bpm;
 
   const [phase, setPhase] = useState<Phase>('listening');
@@ -187,7 +193,7 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd 
         return next;
       });
 
-      playBeatSound(getAudioCtx(), false);
+      playBeatSound(getAudioCtx(), false, beatCount);
 
       const thisBeat = beatCount;
       schedule(() => {
@@ -299,9 +305,8 @@ function EchoTapGame({ stage, onScore, onProgress, onMessage: _onMessage, onEnd 
     setTapBtnActive(false);
     setTapBtnActive(true);
 
-    playBeatSound(getAudioCtx(), true);
-
     const currentBeat = tapTimesRef.current.length - 1;
+    playBeatSound(getAudioCtx(), true, currentBeat);
     setBeatDots(prev => {
       const next = [...prev] as ('off' | 'on' | 'tap')[];
       if (currentBeat < next.length) {

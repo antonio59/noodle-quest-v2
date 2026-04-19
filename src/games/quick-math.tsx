@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -54,11 +54,11 @@ function makeChoices(problem: Problem): number[] {
 }
 
 export default function QuickMath({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     problems: 0.1, timeLimit: -0.1, maxNum: 0.1,
   }, {
     problems: 50, timeLimit: 1500, maxNum: 100,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [index, setIndex] = useState(0);
   const [score, setScore] = useState(0);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -48,11 +48,11 @@ function generatePattern(size: number): number[][] {
 type Phase = 'intro' | 'playing' | 'result';
 
 function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     size: 0.08, time: 0.1,
   }, {
     size: 20, time: 120,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('intro');
   const [selectedColor, setSelectedColor] = useState(1);
   const [playerGrid, setPlayerGrid] = useState<number[][]>([]);

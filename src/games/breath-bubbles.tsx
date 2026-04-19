@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -26,11 +26,11 @@ const TIPS = [
 ];
 
 function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     bubbles: 0.1, targetMin: -0.1, targetMax: -0.1, time: 0.15,
   }, {
     bubbles: 15, targetMin: 10, targetMax: 25, time: 90000,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('intro');
   const [currentBubble, setCurrentBubble] = useState(0);
   const [bubbleSize, setBubbleSize] = useState(10);

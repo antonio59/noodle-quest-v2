@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -21,11 +21,11 @@ type Phase = 'memorize' | 'find' | 'done';
 type CellState = 'idle' | 'correct' | 'wrong';
 
 function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     gridSize: 0.08, diffs: 0.12, showTime: -0.1, rounds: 0.1,
   }, {
     gridSize: 7, diffs: 8, showTime: 1200, rounds: 10,
-  });
+  }), [stage]);
 
   const [phase, setPhase] = useState<Phase>('memorize');
   const [roundNum, setRoundNum] = useState(0);

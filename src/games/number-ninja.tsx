@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -18,11 +18,11 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
 type Phase = 'memorize' | 'input' | 'result' | 'done';
 
 function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     minLen: 0.1, maxLen: 0.08, showTime: -0.1, maxRounds: 0.05,
   }, {
     minLen: 12, maxLen: 16, showTime: 1500, maxRounds: 8,
-  });
+  }), [stage]);
 
   const [phase, setPhase] = useState<Phase>('memorize');
   const [round, setRound] = useState(1);

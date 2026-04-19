@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -27,11 +27,11 @@ const CONFIG: Record<number, { rounds: number; timeLimit: number }> = {
 };
 
 export default function StroopChallenge({ stage, onScore, onProgress, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     rounds: 0.1, timeLimit: -0.1,
   }, {
     rounds: 50, timeLimit: 800,
-  });
+  }), [stage]);
   const [phase, setPhase] = useState<Phase>('ready');
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);

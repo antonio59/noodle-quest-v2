@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -36,11 +36,11 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function MemoryMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
-  const config = scaleFromLast(stage, CONFIG, {
+  const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     pairs: 0.1, cols: 0.05, time: 0.1,
   }, {
     pairs: 24, cols: 8, time: 120,
-  });
+  }), [stage]);
 
   const [phase, setPhase] = useState<Phase>('playing');
   const [cards, setCards] = useState<Card[]>([]);
