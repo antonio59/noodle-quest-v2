@@ -61,8 +61,10 @@ function winLabel(stage: number): string {
 
 const MAX_LOSSES = 3;
 
-function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const difficulty = aiDifficulty || 'medium';
+  const isOnline = !!multiplayerState;
+  const isHost = isOnline && multiplayerState.playerNumber === 1;
   const targetWins = Math.max(1, stage + 1);
   const callSpeed = stage <= 3 ? 2500 : stage <= 6 ? 2000 : 1500;
 
@@ -138,8 +140,29 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     startRound();
   }, []);
 
+  // Online: reconcile called[] from server; stop local AI calling loop
+  useEffect(() => {
+    if (!isOnline || !multiplayerState) return;
+    const bs = multiplayerState.boardState as { called?: number[] } | null | undefined;
+    if (bs && Array.isArray(bs.called)) {
+      setCalled(prev => {
+        if (bs.called!.length === prev.length) return prev;
+        return bs.called!;
+      });
+      if (bs.called.length > 0) {
+        setCurrentCall(bs.called[bs.called.length - 1]);
+      }
+    }
+    // Opponent won — end immediately
+    if (multiplayerState.winner && multiplayerState.winner !== multiplayerState.playerNumber && !endedRef.current) {
+      endedRef.current = true;
+      onEnd({ score: 0, stars: 1, summary: 'Opponent got BINGO first.' });
+    }
+  }, [isOnline, multiplayerState, onEnd]);
+
   useEffect(() => {
     if (!calling || gameOverRef.current) return;
+    if (isOnline && !isHost) return; // Non-host observes server call stream
 
     const timer = setTimeout(() => {
       const idx = called.length;
@@ -148,7 +171,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       if (idx >= pool.length) {
         setCalling(false);
         onMessage('All numbers called! New round...');
-        schedule(() => startRound(), 2000);
+        if (!isOnline) schedule(() => startRound(), 2000);
         return;
       }
 
@@ -157,6 +180,11 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       const nextCalled = [...called, num];
       setCalled(nextCalled);
       setTotalCalled(prev => prev + 1);
+
+      if (isOnline && onMultiplayerMove) {
+        onMultiplayerMove({ boardState: { called: nextCalled } });
+        return;
+      }
 
       const chance = difficulty === 'easy' ? 0.7 : difficulty === 'medium' ? 0.85 : 0.95;
       const nextAi = aiMarkedRef.current.map(r => [...r]);
@@ -186,7 +214,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     }, callSpeed);
 
     return () => clearTimeout(timer);
-  }, [calling, called, difficulty, callSpeed, stage, onMessage, startRound]);
+  }, [calling, called, difficulty, callSpeed, stage, onMessage, startRound, isOnline, isHost, onMultiplayerMove]);
 
   const handleCellClick = (row: number, col: number) => {
     if (gameOver) return;
@@ -207,6 +235,15 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
       setCalling(false);
       onScore(50);
       onProgress(newWins / targetWins);
+
+      if (isOnline && onMultiplayerMove && multiplayerState) {
+        onMultiplayerMove({ boardState: { called }, winner: multiplayerState.playerNumber });
+        if (!endedRef.current) {
+          endedRef.current = true;
+          onEnd({ score: 150, stars: 3, summary: 'You got BINGO!' });
+        }
+        return;
+      }
 
       if (newWins >= targetWins) {
         onMessage('BINGO! You won the match!');
@@ -359,7 +396,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
           </svg>
         </div>
 
-        <div className="flex flex-col items-center">
+        {!isOnline && <div className="flex flex-col items-center">
           <span className="text-xs text-text-muted mb-1 font-medium">AI Opponent</span>
           <svg
             width={aiCs * 5}
@@ -451,7 +488,13 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
           <span className="text-[10px] text-text-muted mt-1 opacity-60">
             {countLines(aiMarked)} line{countLines(aiMarked) !== 1 ? 's' : ''}
           </span>
-        </div>
+        </div>}
+        {isOnline && (
+          <div className="flex flex-col items-center justify-center text-xs text-text-muted opacity-70 px-4">
+            <span className="font-medium">{multiplayerState?.opponentName || 'Opponent'}</span>
+            <span className="mt-1">Playing...</span>
+          </div>
+        )}
       </div>
 
       {called.length > 0 && (
