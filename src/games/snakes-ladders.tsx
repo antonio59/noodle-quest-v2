@@ -9,7 +9,6 @@ const DIFFICULTY_LEVELS = {
 };
 
 const BOARD_SIZE = 100;
-const MAX_LOSSES = 3; // lose the match after this many AI wins
 
 // Snakes: head -> tail (go back)
 const SNAKES: Record<number, number> = {
@@ -66,11 +65,8 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
   const [aiPos, setAiPos] = useState(0);
   const [turn, setTurn] = useState<'player' | 'ai'>('player');
   const [die, setDie] = useState<number | null>(null);
-  const [wins, setWins] = useState(0);
-  const [losses, setLosses] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [animating, setAnimating] = useState(false);
-  const targetWins = Math.max(1, stage);
   const difficulty = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
@@ -187,45 +183,21 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
     onMessage('New round! Your turn.');
   }, [onMessage]);
 
-  const finishMatch = (finalWins: number, finalLosses: number, outcome: 'win' | 'lose') => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    const totalRounds = finalWins + finalLosses;
-    const winRate = totalRounds > 0 ? finalWins / totalRounds : 0;
-    const stars = outcome === 'win'
-      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
-      : (winRate >= 0.5 ? 2 : 1);
-    const summary = outcome === 'win'
-      ? `Won ${finalWins} of ${totalRounds} rounds!`
-      : `Lost the match — ${finalWins} wins vs ${finalLosses} losses.`;
-    onEnd({ score: finalWins * 80, stars, summary });
-  };
 
   const handlePlayerWin = () => {
-    const newWins = wins + 1;
-    setWins(newWins);
     setGameOver(true);
     onScore(80);
-    onProgress(newWins / targetWins);
-    if (newWins >= targetWins) {
-      finishMatch(newWins, losses, 'win');
-    } else {
-      onMessage(`Won round ${newWins}/${targetWins}!`);
-      schedule(resetGame, 2000);
-    }
+    onProgress(1);
+    onMessage('You reached 100! You win! 🎉');
+    endedRef.current = true;
+    schedule(() => onEnd({ score: 80, stars: 3, summary: 'You reached square 100 first! Great climb!' }), 1000);
   };
 
   const handleAiWin = () => {
-    const newLosses = losses + 1;
-    setLosses(newLosses);
     setGameOver(true);
-    if (newLosses >= MAX_LOSSES) {
-      onMessage('AI won the match — good try!');
-      finishMatch(wins, newLosses, 'lose');
-    } else {
-      onMessage(`AI won round — ${newLosses}/${MAX_LOSSES} losses.`);
-      schedule(resetGame, 2000);
-    }
+    onMessage('AI reached 100! You lose this round.');
+    endedRef.current = true;
+    schedule(() => onEnd({ score: 10, stars: 1, summary: 'The AI reached square 100 first. Watch out for those snakes!' }), 1000);
   };
 
   const aiTurn = () => {
@@ -326,10 +298,9 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
         <div className="flex gap-3 mb-2 text-sm">
           <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: {playerPos}</span>
           <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: {aiPos}</span>
-          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
-          {losses > 0 && (
-            <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
-          )}
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
+            {turn === 'player' ? 'Your roll' : 'AI rolling...'}
+          </span>
         </div>
       )}
 

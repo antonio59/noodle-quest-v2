@@ -59,7 +59,6 @@ function winLabel(stage: number): string {
   return 'Complete full card!';
 }
 
-const MAX_LOSSES = 3;
 
 function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const difficulty = aiDifficulty || 'medium';
@@ -77,8 +76,6 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const [calling, setCalling] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
-  const [roundWins, setRoundWins] = useState(0);
-  const [losses, setLosses] = useState(0);
   const [, setTotalCalled] = useState(0);
 
   const poolRef = useRef<number[]>(genPool());
@@ -87,8 +84,6 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const aiCardRef = useRef<(number | 'FREE')[][]>(genCard());
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const winsRef = useRef(0);
-  const lossesRef = useRef(0);
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(() => {
@@ -106,19 +101,6 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     };
   }, []);
 
-  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    const finalWins = winsRef.current;
-    const finalLosses = lossesRef.current;
-    const stars = outcome === 'win'
-      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
-      : (finalWins > 0 ? 2 : 1);
-    const summary = outcome === 'win'
-      ? `Won ${finalWins} Bingo round${finalWins > 1 ? 's' : ''}!`
-      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
-    onEnd({ score: finalWins * 150, stars, summary });
-  }, [onEnd]);
 
   useEffect(() => { gameOverRef.current = gameOver; }, [gameOver]);
   useEffect(() => { aiMarkedRef.current = aiMarked; }, [aiMarked]);
@@ -201,16 +183,9 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
       if (checkWin(nextAi, stage)) {
         setGameOver(true);
         setCalling(false);
-        const newLosses = lossesRef.current + 1;
-        lossesRef.current = newLosses;
-        setLosses(newLosses);
-        if (newLosses >= MAX_LOSSES) {
-          onMessage('AI won the match!');
-          schedule(() => finishMatch('lose'), 1500);
-        } else {
-          onMessage(`AI got Bingo! (${newLosses}/${MAX_LOSSES}) New round...`);
-          schedule(() => startRound(), 2500);
-        }
+        onMessage('AI got Bingo!');
+        endedRef.current = true;
+        schedule(() => onEnd({ score: 10, stars: 1, summary: 'The AI got Bingo first. Better luck next time!' }), 1500);
       }
     }, callSpeed);
 
@@ -229,13 +204,10 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     onScore(10);
 
     if (checkWin(next, stage)) {
-      const newWins = winsRef.current + 1;
-      winsRef.current = newWins;
-      setRoundWins(newWins);
       setGameOver(true);
       setCalling(false);
       onScore(50);
-      onProgress(newWins / targetWins);
+      onProgress(1);
 
       if (isOnline && onMultiplayerMove && multiplayerState) {
         onMultiplayerMove({ boardState: { called }, winner: multiplayerState.playerNumber });
@@ -246,13 +218,9 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
         return;
       }
 
-      if (newWins >= targetWins) {
-        onMessage('BINGO! You won the match!');
-        schedule(() => finishMatch('win'), 1000);
-      } else {
-        onMessage(`BINGO! Round ${newWins}/${targetWins} won!`);
-        schedule(() => startRound(), 1500);
-      }
+      onMessage('BINGO! You won!');
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 150, stars: 3, summary: 'You got BINGO! Great listening skills!' }), 1000);
     }
   };
 
@@ -285,7 +253,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     <div className="h-full flex flex-col items-center gap-2 p-2 overflow-auto">
       <div className="flex items-center gap-2 text-sm flex-wrap justify-center">
         <span className="bg-card rounded-lg px-3 py-1.5 text-accent font-bold">
-          Round {roundWins + 1}/{targetWins}
+          {gameOver ? 'Game Over' : calling ? 'Calling...' : 'Tap numbers to mark'}
         </span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted text-xs">
           {winLabel(stage)}

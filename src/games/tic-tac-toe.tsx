@@ -73,8 +73,10 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
   const [winner, setWinner] = useState<Cell | 'draw' | null>(null);
   const [winLine, setWinLine] = useState<WinLine>(null);
   const [wins, setWins] = useState(0);
+  const [losses, setLosses] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const targetWins = stage <= 3 ? stage : 3 + Math.floor(stage / 2);
+  const MAX_LOSSES = 3;
   const endedRef = useRef(false);
   const [started, setStarted] = useState(false);
 
@@ -168,17 +170,22 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       onScore(100);
       onProgress(newWins / targetWins);
       if (newWins >= targetWins) {
-        // 3 stars if no losses, 2 stars if few losses, 1 star otherwise
-        const losses = newGames - newWins; // draws count as non-wins
         const stars = losses === 0 ? 3 : losses <= 1 ? 2 : 1;
         onEnd({ score: newWins * 100, stars, summary: `You won ${newWins} games!` });
       } else {
-        onMessage(`Win ${newWins}/${targetWins}!`);
+        onMessage(`Win ${newWins}/${targetWins}! Tap Play Again to continue.`);
       }
     } else if (result === ai) {
-      onMessage('You lost this round — try again!');
+      const newLosses = losses + 1;
+      setLosses(newLosses);
+      if (newLosses >= MAX_LOSSES) {
+        onMessage('AI won the match!');
+        onEnd({ score: wins * 100, stars: 1, summary: `AI won the match — ${wins} wins vs ${newLosses} losses.` });
+      } else {
+        onMessage(`You lost — ${newLosses}/${MAX_LOSSES} losses. Tap Play Again.`);
+      }
     } else {
-      onMessage("It's a draw!");
+      onMessage("It's a draw! Tap Play Again.");
     }
   };
 

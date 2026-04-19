@@ -97,7 +97,6 @@ function cellType(r: number, c: number): string | null {
   return null;
 }
 
-const MAX_LOSSES = 3;
 
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
@@ -114,11 +113,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   const [aPos, setAPos] = useState(-1);
   const [turn, setTurn] = useState<'p' | 'a'>('p');
   const [dice, setDice] = useState<number | null>(null);
-  const [wins, setWins] = useState(0);
-  const [losses, setLosses] = useState(0);
   const [over, setOver] = useState(false);
   const [started, setStarted] = useState(false);
-  const target = Math.max(1, stage);
   const diff = aiDifficulty || 'medium';
 
   // Blue AI enters at position 26 (its entry square) instead of 0
@@ -127,8 +123,6 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   // Refs to avoid stale closures inside chained setTimeouts
   const pPosRef = useRef(-1);
   const aPosRef = useRef(-1);
-  const winsRef = useRef(0);
-  const lossesRef = useRef(0);
   const overRef = useRef(false);
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -176,33 +170,11 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     }
   }, [isOnline, multiplayerState, mySide, onEnd]);
 
-  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    const fw = winsRef.current;
-    const fl = lossesRef.current;
-    const stars = outcome === 'win'
-      ? (fl === 0 ? 3 : fl === 1 ? 2 : 1)
-      : (fw > 0 ? 2 : 1);
-    const summary = outcome === 'win'
-      ? `Won ${fw} of ${fw + fl} games of Ludo!`
-      : `AI won the match — ${fw} wins vs ${fl} losses.`;
-    onEnd({ score: fw * 100, stars, summary });
-  }, [onEnd]);
 
   const updatePPos = (v: number) => { pPosRef.current = v; setPPos(v); };
   const updateAPos = (v: number) => { aPosRef.current = v; setAPos(v); };
   const updateOver = (v: boolean) => { overRef.current = v; setOver(v); };
 
-  const reset = useCallback(() => {
-    if (endedRef.current) return;
-    updatePPos(-1);
-    updateAPos(-1);
-    setTurn('p');
-    setDice(null);
-    updateOver(false);
-    onMessage('New round! Roll a 6 to enter.');
-  }, [onMessage]);
 
   const advanceAI = (pos: number, steps: number): number => {
     if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
@@ -248,16 +220,9 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       onMessage(`AI rolled ${d} — captured you!`);
     } else if (np >= 58) {
       updateOver(true);
-      const newLosses = lossesRef.current + 1;
-      lossesRef.current = newLosses;
-      setLosses(newLosses);
-      if (newLosses >= MAX_LOSSES) {
-        onMessage('AI won the match!');
-        schedule(() => finishMatch('lose'), 1500);
-      } else {
-        onMessage(`AI reached home — ${newLosses}/${MAX_LOSSES} losses.`);
-        schedule(reset, 1500);
-      }
+      onMessage('AI reached home! 💔');
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 10, stars: 1, summary: 'The AI got home first. Better luck next time!' }), 1500);
       return;
     } else {
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
@@ -333,18 +298,12 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       updateAPos(-1);
       onMessage(`Rolled ${d} — captured AI!`);
     } else if (np >= 58) {
-      const w = winsRef.current + 1;
-      winsRef.current = w;
-      setWins(w);
+      updateOver(true);
+      onMessage('You reached home! 🎉');
       onScore(100);
-      onProgress(w / target);
-      if (w >= target) {
-        updateOver(true);
-        schedule(() => finishMatch('win'), 1000);
-      } else {
-        onMessage('You reached home!');
-        schedule(reset, 1500);
-      }
+      onProgress(1);
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 100, stars: 3, summary: 'You got all your pieces home first! Well done!' }), 1000);
       return;
     } else {
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
@@ -528,10 +487,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
           <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: isOnline ? oppColor : '#3b82f6' }} />
           {isOnline ? (multiplayerState?.opponentName || 'Opponent') : 'AI'}: {posLabel(aPos)}
         </span>
-        {!isOnline && <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{wins}/{target}</span>}
-        {!isOnline && losses > 0 && (
-          <span className="bg-card rounded-lg px-2 py-0.5 text-danger">L: {losses}/{MAX_LOSSES}</span>
-        )}
+        {!isOnline && <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{turn === 'p' ? 'Your turn' : 'AI rolling...'}</span>}
       </div>
 
       {/* Board */}

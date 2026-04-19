@@ -13,7 +13,6 @@ type Board = Cell[][];
 
 const ROWS = 6;
 const COLS = 7;
-const MAX_LOSSES = 3;
 
 function initBoard(): Board {
   return Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null));
@@ -99,16 +98,11 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
   const [board, setBoard] = useState<Board>(initBoard);
   const [turn, setTurn] = useState<'red' | 'yellow'>('red');
   const [winner, setWinner] = useState<string | null>(null);
-  const [wins, setWins] = useState(0);
-  const [losses, setLosses] = useState(0);
-  const targetWins = Math.max(1, stage + 1);
   const [started, setStarted] = useState(false);
   const difficulty = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const winsRef = useRef(0);
-  const lossesRef = useRef(0);
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(() => {
@@ -155,27 +149,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     }
   }, [isOnline, multiplayerState, myColor, onEnd]);
 
-  const resetBoard = useCallback(() => {
-    if (endedRef.current) return;
-    setBoard(initBoard());
-    setTurn('red');
-    setWinner(null);
-    onMessage('Your turn! (Red)');
-  }, [onMessage]);
 
-  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    const finalWins = winsRef.current;
-    const finalLosses = lossesRef.current;
-    const stars = outcome === 'win'
-      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
-      : (finalWins > 0 ? 2 : 1);
-    const summary = outcome === 'win'
-      ? `Won ${finalWins} of ${finalWins + finalLosses} Connect Four games!`
-      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
-    onEnd({ score: finalWins * 120, stars, summary });
-  }, [onEnd]);
 
   const handleDrop = (col: number) => {
     if (endedRef.current || winner || board[0][col]) return;
@@ -206,24 +180,19 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     setBoard(nb);
 
     if (checkWin(nb, row, col, 'red')) {
-      const newWins = winsRef.current + 1;
-      winsRef.current = newWins;
-      setWins(newWins);
       setWinner('red');
       onScore(120);
-      onProgress(newWins / targetWins);
+      onProgress(1);
       onMessage('You connected four!');
-      if (newWins >= targetWins) {
-        schedule(() => finishMatch('win'), 800);
-      } else {
-        schedule(resetBoard, 1500);
-      }
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 120, stars: 3, summary: 'You connected four in a row! Well done!' }), 800);
       return;
     }
     if (isFull(nb)) {
       setWinner('draw');
-      onMessage("It's a draw! New round...");
-      schedule(resetBoard, 1500);
+      onMessage("It's a draw!");
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 40, stars: 2, summary: "It's a draw — the board is full!" }), 800);
       return;
     }
 
@@ -236,23 +205,17 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       const aiR = dropPiece(nb2, aiC, 'yellow');
       setBoard(nb2);
       if (aiR >= 0 && checkWin(nb2, aiR, aiC, 'yellow')) {
-        const newLosses = lossesRef.current + 1;
-        lossesRef.current = newLosses;
-        setLosses(newLosses);
         setWinner('yellow');
-        if (newLosses >= MAX_LOSSES) {
-          onMessage('AI won the match!');
-          schedule(() => finishMatch('lose'), 1000);
-        } else {
-          onMessage(`AI connected four — ${newLosses}/${MAX_LOSSES} losses.`);
-          schedule(resetBoard, 1500);
-        }
+        onMessage('AI connected four!');
+        endedRef.current = true;
+        schedule(() => onEnd({ score: 10, stars: 1, summary: 'The AI connected four first. Try again!' }), 1000);
         return;
       }
       if (isFull(nb2)) {
         setWinner('draw');
-        onMessage("Draw! New round...");
-        schedule(resetBoard, 1500);
+        onMessage("It's a draw!");
+        endedRef.current = true;
+        schedule(() => onEnd({ score: 40, stars: 2, summary: "It's a draw — the board is full!" }), 800);
         return;
       }
       setTurn('red');
@@ -299,10 +262,9 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
         <div className="flex gap-3 mb-3 text-sm">
           <span className="bg-card rounded-lg px-3 py-1.5 text-danger font-bold">You: 🔴</span>
           <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">AI: 🟡</span>
-          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">{wins}/{targetWins}</span>
-          {losses > 0 && (
-            <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
-          )}
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
+            {turn === 'red' ? 'Your turn' : 'AI dropping...'}
+          </span>
         </div>
       )}
 

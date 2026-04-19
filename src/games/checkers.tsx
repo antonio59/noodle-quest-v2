@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
 
-const MAX_LOSSES = 3;
 
 type Piece = { color: 'red' | 'black'; king: boolean };
 type Board = (Piece | null)[][];
@@ -220,17 +219,12 @@ function CheckersGame({
   const [targets, setTargets] = useState<Pos[]>([]);
   const [turn, setTurn] = useState<'red' | 'black'>('red');
   const [multiJumpPos, setMultiJumpPos] = useState<Pos | null>(null);
-  const [wins, setWins] = useState(0);
-  const [losses, setLosses] = useState(0);
   const [started, setStarted] = useState(false);
   const [boardSize, setBoardSize] = useState(320);
-  const targetWins = Math.max(1, stage + 1);
   const diff = aiDifficulty || 'medium';
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const winsRef = useRef(0);
-  const lossesRef = useRef(0);
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(() => {
@@ -287,29 +281,7 @@ function CheckersGame({
     }
   }, [isOnline, multiplayerState, myColor, onEnd]);
 
-  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    const finalWins = winsRef.current;
-    const finalLosses = lossesRef.current;
-    const stars = outcome === 'win'
-      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
-      : (finalWins > 0 ? 2 : 1);
-    const summary = outcome === 'win'
-      ? `Won ${finalWins} of ${finalWins + finalLosses} checkers games!`
-      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
-    onEnd({ score: finalWins * 150, stars, summary });
-  }, [onEnd]);
 
-  const resetBoard = useCallback(() => {
-    if (endedRef.current) return;
-    setBoard(initBoard());
-    setSelected(null);
-    setTargets([]);
-    setTurn('red');
-    setMultiJumpPos(null);
-    onMessage('Your turn! (Red pieces)');
-  }, [onMessage]);
 
   const handleEnd = useCallback(
     (b: Board): boolean => {
@@ -317,36 +289,24 @@ function CheckersGame({
       const bk = countPieces(b, 'black'),
         rd = countPieces(b, 'red');
       if (bk === 0 || allMoves(b, 'black').length === 0) {
-        const w = winsRef.current + 1;
-        winsRef.current = w;
-        setWins(w);
+        endedRef.current = true;
         onScore(150);
-        onProgress(w / targetWins);
-        if (w >= targetWins) {
-          onMessage('You won the match!');
-          schedule(() => finishMatch('win'), 1200);
-        } else {
-          onMessage(`You win! (${w}/${targetWins})`);
-          schedule(resetBoard, 1500);
-        }
+        onProgress(1);
+        onMessage('You win! All black pieces captured.');
+        onEnd({ score: 150, stars: 3, summary: 'You captured all the AI pieces! Great game!' });
         return true;
       }
       if (rd === 0 || allMoves(b, 'red').length === 0) {
-        const l = lossesRef.current + 1;
-        lossesRef.current = l;
-        setLosses(l);
-        if (l >= MAX_LOSSES) {
-          onMessage('AI won the match!');
-          schedule(() => finishMatch('lose'), 1200);
-        } else {
-          onMessage(`You lost — ${l}/${MAX_LOSSES} losses.`);
-          schedule(resetBoard, 1500);
-        }
+        endedRef.current = true;
+        onScore(10);
+        onProgress(0);
+        onMessage('AI wins — no moves left.');
+        onEnd({ score: 10, stars: 1, summary: 'The AI captured all your pieces. Better luck next time!' });
         return true;
       }
       return false;
     },
-    [targetWins, onScore, onProgress, onMessage, resetBoard, schedule, finishMatch],
+    [onScore, onProgress, onMessage, onEnd],
   );
 
   const doAiTurn = useCallback(
@@ -512,13 +472,8 @@ function CheckersGame({
             <span className="text-gray-400 font-bold">AI: {blackCount}</span>
           </span>
           <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
-            {wins}/{targetWins}
+            {turn === 'red' ? 'Your turn (Red)' : 'AI thinking...'}
           </span>
-          {losses > 0 && (
-            <span className="bg-card rounded-lg px-3 py-1.5 text-danger text-xs">
-              L: {losses}/{MAX_LOSSES}
-            </span>
-          )}
         </div>
       )}
 
