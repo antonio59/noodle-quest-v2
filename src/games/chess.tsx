@@ -72,7 +72,11 @@ function getAiMove(game: Chess, difficulty: string): string | null {
 
 const MAX_LOSSES = 3;
 
-function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const myColor: 'w' | 'b' = isOnline ? (multiplayerState.playerNumber === 1 ? 'w' : 'b') : 'w';
+  const otherColor: 'w' | 'b' = myColor === 'w' ? 'b' : 'w';
+
   const [game] = useState(() => new Chess());
   const [, setFen] = useState(game.fen());
   const [selected, setSelected] = useState<Square | null>(null);
@@ -113,6 +117,41 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Online sync: hydrate chess.js from the server FEN each tick.
+  useEffect(() => {
+    if (!isOnline) return;
+    const bs = multiplayerState.boardState as { fen?: string; lastFrom?: string; lastTo?: string } | null | undefined;
+    if (bs && typeof bs.fen === 'string') {
+      try {
+        game.load(bs.fen);
+      } catch {
+        return;
+      }
+      setFen(game.fen());
+      setTurn(game.turn());
+      setSelected(null);
+      setLegalMoves([]);
+      if (bs.lastFrom && bs.lastTo) {
+        setLastMove({ from: bs.lastFrom as Square, to: bs.lastTo as Square });
+      }
+      if (game.isGameOver() && !endedRef.current) {
+        endedRef.current = true;
+        if (game.isCheckmate()) {
+          // Turn whose side is checkmated loses.
+          const loser = game.turn();
+          const won = loser !== myColor;
+          onEnd({
+            score: won ? 200 : 10,
+            stars: won ? 3 : 1,
+            summary: won ? 'Checkmate — you win!' : 'Checkmate — opponent wins.',
+          });
+        } else {
+          onEnd({ score: 50, stars: 2, summary: 'Draw.' });
+        }
+      }
+    }
+  }, [isOnline, multiplayerState, game, myColor, onEnd]);
 
   const finishMatch = useCallback((outcome: 'win' | 'lose') => {
     if (endedRef.current) return;
@@ -175,7 +214,8 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
   }, [game, difficulty, onMessage, resetBoard, schedule, finishMatch]);
 
   const handleSquareClick = useCallback((sq: Square) => {
-    if (turn !== 'w' || game.isGameOver()) return;
+    const activeColor = isOnline ? myColor : 'w';
+    if (turn !== activeColor || game.isGameOver()) return;
 
     if (selected) {
       if (sq === selected) { setSelected(null); setLegalMoves([]); return; }
@@ -186,12 +226,29 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
         if (move) {
           if (move.captured) {
             const capturedType = move.captured;
-            setCaptured(p => ({ ...p, w: [...p.w, capturedType] }));
+            setCaptured(p => ({ ...p, [activeColor]: [...p[activeColor], capturedType] }));
           }
           setLastMove({ from: move.from as Square, to: move.to as Square });
           setFen(game.fen());
           setSelected(null);
           setLegalMoves([]);
+
+          if (isOnline) {
+            let serverWinner: number | undefined;
+            if (game.isGameOver()) {
+              if (game.isCheckmate()) {
+                serverWinner = multiplayerState!.playerNumber;
+              } else {
+                serverWinner = 0; // draw
+              }
+            }
+            onMultiplayerMove?.({
+              boardState: { fen: game.fen(), lastFrom: move.from, lastTo: move.to },
+              winner: serverWinner,
+            });
+            setTurn(otherColor);
+            return;
+          }
 
           if (game.isGameOver()) {
             if (game.isCheckmate()) {
@@ -221,31 +278,47 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
     }
 
     const piece = game.get(sq);
-    if (piece && piece.color === 'w') {
+    if (piece && piece.color === activeColor) {
       setSelected(sq);
       setLegalMoves(game.moves({ square: sq, verbose: true }).map(m => m.to as Square));
     } else {
       setSelected(null);
       setLegalMoves([]);
     }
-  }, [turn, selected, game, targetWins, onScore, onProgress, onMessage, doAiMove, resetBoard, schedule, finishMatch]);
+  }, [turn, selected, game, targetWins, onScore, onProgress, onMessage, doAiMove, resetBoard, schedule, finishMatch, isOnline, myColor, otherColor, multiplayerState, onMultiplayerMove]);
 
   const board = game.board();
   const cs = boardSize / 8;
   const files = 'abcdefgh'.split('');
   const ranks = '87654321'.split('');
+  const activeColor = isOnline ? myColor : 'w';
+  const isMyTurn = turn === activeColor;
 
   return (
     <div className="h-full flex flex-col items-center p-2">
-      <div className="flex gap-3 mb-2 text-sm items-center">
-        <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-          AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('')}
-        </span>
-        <span className="bg-card rounded-lg px-3 py-1 text-accent text-xs font-bold">{wins}/{targetWins}</span>
-        {losses > 0 && (
-          <span className="bg-card rounded-lg px-3 py-1 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
-        )}
-      </div>
+      {isOnline ? (
+        <div className="flex gap-2 mb-2 text-xs items-center flex-wrap justify-center">
+          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
+            You ({myColor === 'w' ? 'White' : 'Black'})
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
+            {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName} ({otherColor === 'w' ? 'White' : 'Black'})
+          </span>
+          <span className={`font-bold ${isMyTurn ? 'text-success animate-pulse' : 'text-text-dim'}`}>
+            {isMyTurn ? (game.isCheck() ? 'Check! Your turn' : 'Your turn') : 'Waiting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex gap-3 mb-2 text-sm items-center">
+          <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
+            AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('')}
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1 text-accent text-xs font-bold">{wins}/{targetWins}</span>
+          {losses > 0 && (
+            <span className="bg-card rounded-lg px-3 py-1 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
+          )}
+        </div>
+      )}
 
       <svg width={boardSize} height={boardSize} viewBox={`0 0 ${boardSize} ${boardSize}`} className="rounded-lg overflow-hidden shadow-lg">
         {board.map((row, r) => row.map((cell, c) => {
@@ -256,7 +329,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
           const isLast = lastMove?.from === sqName || lastMove?.to === sqName;
           const pk = cell ? `${cell.color}${cell.type}` : null;
           return (
-            <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: turn === 'w' ? 'pointer' : 'default' }}>
+            <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: isMyTurn ? 'pointer' : 'default' }}>
               <rect x={c * cs} y={r * cs} width={cs} height={cs}
                 fill={isSel ? '#7b61ff' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
                 opacity={isSel ? 0.8 : 1} />
@@ -286,7 +359,11 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty 
         </span>
       </div>
       <div className="mt-2 text-xs text-text-muted text-center">
-        {turn === 'w' ? 'Your turn — tap a piece then tap a square' : 'AI is thinking...'}
+        {isMyTurn
+          ? 'Your turn — tap a piece then tap a square'
+          : isOnline
+            ? 'Opponent is moving...'
+            : 'AI is thinking...'}
       </div>
     </div>
   );
