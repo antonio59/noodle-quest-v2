@@ -70,7 +70,12 @@ function getAiMove(game: Chess, difficulty: string): string | null {
   return bestMove;
 }
 
-const MAX_LOSSES = 3;
+const PROMOTION_PIECES: { type: 'q' | 'r' | 'b' | 'n'; label: string }[] = [
+  { type: 'q', label: 'Queen' },
+  { type: 'r', label: 'Rook' },
+  { type: 'b', label: 'Bishop' },
+  { type: 'n', label: 'Knight' },
+];
 
 function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
@@ -83,18 +88,18 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const [legalMoves, setLegalMoves] = useState<Square[]>([]);
   const [lastMove, setLastMove] = useState<{ from: Square; to: Square } | null>(null);
   const [turn, setTurn] = useState<'w' | 'b'>('w');
-  const [wins, setWins] = useState(0);
-  const [losses, setLosses] = useState(0);
   const [captured, setCaptured] = useState<{ w: string[]; b: string[] }>({ w: [], b: [] });
-  const targetWins = Math.max(1, stage);
+  const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
+  const [gameOver, setGameOver] = useState(false);
+  const [gameResult, setGameResult] = useState<'win' | 'lose' | 'draw' | null>(null);
   const difficulty = aiDifficulty || 'medium';
   const [boardSize, setBoardSize] = useState(320);
   const [started, setStarted] = useState(false);
+  const historyScrollRef = useRef<HTMLDivElement>(null);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const winsRef = useRef(0);
-  const lossesRef = useRef(0);
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(() => {
@@ -113,11 +118,18 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   }, []);
 
   useEffect(() => {
-    const update = () => setBoardSize(Math.min(window.innerWidth - 24, 400));
+    const update = () => setBoardSize(Math.min(window.innerWidth - 32, 480));
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Scroll move history to bottom on new move
+  useEffect(() => {
+    if (historyScrollRef.current) {
+      historyScrollRef.current.scrollTop = historyScrollRef.current.scrollHeight;
+    }
+  }, [moveHistory]);
 
   // Online sync: hydrate chess.js from the server FEN each tick.
   useEffect(() => {
@@ -133,52 +145,59 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
       setTurn(game.turn());
       setSelected(null);
       setLegalMoves([]);
+      setMoveHistory(game.history());
       if (bs.lastFrom && bs.lastTo) {
         setLastMove({ from: bs.lastFrom as Square, to: bs.lastTo as Square });
       }
       if (game.isGameOver() && !endedRef.current) {
         endedRef.current = true;
+        setGameOver(true);
         if (game.isCheckmate()) {
-          // Turn whose side is checkmated loses.
           const loser = game.turn();
           const won = loser !== myColor;
+          setGameResult(won ? 'win' : 'lose');
           onEnd({
             score: won ? 200 : 10,
             stars: won ? 3 : 1,
             summary: won ? 'Checkmate — you win!' : 'Checkmate — opponent wins.',
           });
         } else {
+          setGameResult('draw');
           onEnd({ score: 50, stars: 2, summary: 'Draw.' });
         }
       }
     }
   }, [isOnline, multiplayerState, game, myColor, onEnd]);
 
-  const finishMatch = useCallback((outcome: 'win' | 'lose') => {
+  const handleGameOver = useCallback((source: 'player' | 'ai') => {
     if (endedRef.current) return;
     endedRef.current = true;
-    const finalWins = winsRef.current;
-    const finalLosses = lossesRef.current;
-    const stars = outcome === 'win'
-      ? (finalLosses === 0 ? 3 : finalLosses === 1 ? 2 : 1)
-      : (finalWins > 0 ? 2 : 1);
-    const summary = outcome === 'win'
-      ? `Won ${finalWins} of ${finalWins + finalLosses} chess games!`
-      : `AI won the match — ${finalWins} wins vs ${finalLosses} losses.`;
-    onEnd({ score: finalWins * 200, stars, summary });
-  }, [onEnd]);
+    setGameOver(true);
 
-  const resetBoard = useCallback(() => {
-    if (endedRef.current) return;
-    game.reset();
-    setFen(game.fen());
-    setSelected(null);
-    setLegalMoves([]);
-    setLastMove(null);
-    setTurn('w');
-    setCaptured({ w: [], b: [] });
-    onMessage('Your turn! (White)');
-  }, [game, onMessage]);
+    if (game.isCheckmate()) {
+      const won = source === 'player';
+      setGameResult(won ? 'win' : 'lose');
+      onScore(won ? 200 : 10);
+      onProgress(1);
+      const summary = won
+        ? 'Checkmate! You win! 🎉'
+        : 'Checkmate — the AI wins. Better luck next time!';
+      onMessage(won ? 'Checkmate! You win!' : 'Checkmate — AI wins.');
+      onEnd({ score: won ? 200 : 10, stars: won ? 3 : 1, summary });
+    } else if (game.isStalemate()) {
+      setGameResult('draw');
+      onScore(50);
+      onProgress(0.5);
+      onMessage('Stalemate — draw!');
+      onEnd({ score: 50, stars: 2, summary: 'Stalemate — the game is a draw.' });
+    } else if (game.isDraw()) {
+      setGameResult('draw');
+      onScore(50);
+      onProgress(0.5);
+      onMessage('Draw — insufficient material or repetition.');
+      onEnd({ score: 50, stars: 2, summary: 'Draw — by insufficient material or threefold repetition.' });
+    }
+  }, [game, onScore, onProgress, onMessage, onEnd]);
 
   const doAiMove = useCallback(() => {
     if (endedRef.current || game.isGameOver()) return;
@@ -187,94 +206,80 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     const move = game.move(moveStr);
     if (!move) return;
     if (move.captured) {
-      const capturedType = move.captured;
-      setCaptured(p => ({ ...p, b: [...p.b, capturedType] }));
+      setCaptured(p => ({ ...p, b: [...p.b, move.captured!] }));
     }
     setLastMove({ from: move.from as Square, to: move.to as Square });
     setFen(game.fen());
+    setMoveHistory(game.history());
+    setTurn(game.turn());
+
     if (game.isGameOver()) {
-      if (game.isCheckmate()) {
-        const newLosses = lossesRef.current + 1;
-        lossesRef.current = newLosses;
-        setLosses(newLosses);
-        onMessage('Checkmate — AI wins!');
-        if (newLosses >= MAX_LOSSES) {
-          schedule(() => finishMatch('lose'), 1500);
-        } else {
-          schedule(resetBoard, 2000);
-        }
-      } else {
-        // draw: neither wins, just reset — doesn't count toward progress
-        onMessage('Draw! New game...');
-        schedule(resetBoard, 2000);
-      }
+      handleGameOver('ai');
       return;
     }
     onMessage(game.isCheck() ? 'Check! Your turn' : 'Your turn!');
-    setTurn('w');
-  }, [game, difficulty, onMessage, resetBoard, schedule, finishMatch]);
+  }, [game, difficulty, onMessage, handleGameOver]);
+
+  const completeMove = useCallback((from: Square, to: Square, promotion?: 'q' | 'r' | 'b' | 'n') => {
+    const activeColor = isOnline ? myColor : 'w';
+    const move = game.move({ from, to, promotion: promotion || 'q' });
+    if (!move) return false;
+
+    if (move.captured) {
+      setCaptured(p => ({ ...p, [activeColor]: [...p[activeColor], move.captured!] }));
+    }
+    setLastMove({ from: move.from as Square, to: move.to as Square });
+    setFen(game.fen());
+    setMoveHistory(game.history());
+    setSelected(null);
+    setLegalMoves([]);
+    setTurn(game.turn());
+    setPendingPromotion(null);
+    onScore(5);
+
+    if (isOnline) {
+      let serverWinner: number | undefined;
+      if (game.isGameOver()) {
+        if (game.isCheckmate()) serverWinner = multiplayerState!.playerNumber;
+        else serverWinner = 0;
+      }
+      onMultiplayerMove?.({
+        boardState: { fen: game.fen(), lastFrom: move.from, lastTo: move.to },
+        winner: serverWinner,
+      });
+      return true;
+    }
+
+    if (game.isGameOver()) {
+      handleGameOver('player');
+      return true;
+    }
+
+    onMessage('AI thinking...');
+    schedule(doAiMove, 600);
+    return true;
+  }, [game, onScore, onMessage, handleGameOver, doAiMove, schedule, isOnline, myColor, multiplayerState, onMultiplayerMove]);
 
   const handleSquareClick = useCallback((sq: Square) => {
+    if (gameOver || endedRef.current) return;
     const activeColor = isOnline ? myColor : 'w';
-    if (turn !== activeColor || game.isGameOver()) return;
+    if (turn !== activeColor) return;
 
     if (selected) {
       if (sq === selected) { setSelected(null); setLegalMoves([]); return; }
       const moves = game.moves({ square: selected, verbose: true });
       const target = moves.find(m => m.to === sq);
       if (target) {
-        const move = game.move({ from: selected, to: sq, promotion: 'q' });
-        if (move) {
-          if (move.captured) {
-            const capturedType = move.captured;
-            setCaptured(p => ({ ...p, [activeColor]: [...p[activeColor], capturedType] }));
-          }
-          setLastMove({ from: move.from as Square, to: move.to as Square });
-          setFen(game.fen());
-          setSelected(null);
-          setLegalMoves([]);
-
-          if (isOnline) {
-            let serverWinner: number | undefined;
-            if (game.isGameOver()) {
-              if (game.isCheckmate()) {
-                serverWinner = multiplayerState!.playerNumber;
-              } else {
-                serverWinner = 0; // draw
-              }
-            }
-            onMultiplayerMove?.({
-              boardState: { fen: game.fen(), lastFrom: move.from, lastTo: move.to },
-              winner: serverWinner,
-            });
-            setTurn(otherColor);
-            return;
-          }
-
-          if (game.isGameOver()) {
-            if (game.isCheckmate()) {
-              const newWins = winsRef.current + 1;
-              winsRef.current = newWins;
-              setWins(newWins);
-              onScore(200);
-              onProgress(newWins / targetWins);
-              onMessage('Checkmate! You win!');
-              if (newWins >= targetWins) {
-                schedule(() => finishMatch('win'), 1500);
-              } else {
-                schedule(resetBoard, 2000);
-              }
-              return;
-            }
-            onMessage('Draw! New game...');
-            schedule(resetBoard, 2000);
-            return;
-          }
-          setTurn('b');
-          onMessage('AI thinking...');
-          schedule(doAiMove, 300);
+        const piece = game.get(selected);
+        const isPromotion = piece?.type === 'p' && (
+          (piece.color === 'w' && sq[1] === '8') || (piece.color === 'b' && sq[1] === '1')
+        );
+        if (isPromotion && !isOnline) {
+          setPendingPromotion({ from: selected, to: sq });
           return;
         }
+        completeMove(selected, sq);
+        return;
       }
     }
 
@@ -286,7 +291,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
       setSelected(null);
       setLegalMoves([]);
     }
-  }, [turn, selected, game, targetWins, onScore, onProgress, onMessage, doAiMove, resetBoard, schedule, finishMatch, isOnline, myColor, otherColor, multiplayerState, onMultiplayerMove]);
+  }, [gameOver, turn, selected, game, isOnline, myColor, completeMove]);
 
   const board = game.board();
   const cs = boardSize / 8;
@@ -294,12 +299,15 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const ranks = '87654321'.split('');
   const activeColor = isOnline ? myColor : 'w';
   const isMyTurn = turn === activeColor;
+
   if (!started) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">♔</div>
         <h2 className="text-2xl font-bold">Chess</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Classic strategy game. Capture the opponent's king to win!</p>
+        <p className="text-text-muted text-sm text-center max-w-xs">
+          Classic strategy game. Checkmate the opponent's king to win!
+        </p>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -310,78 +318,130 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     );
   }
 
-
   return (
-    <div className="h-full flex flex-col items-center p-2">
-      {isOnline ? (
-        <div className="flex gap-2 mb-2 text-xs items-center flex-wrap justify-center">
-          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
-            You ({myColor === 'w' ? 'White' : 'Black'})
-          </span>
-          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
-            {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName} ({otherColor === 'w' ? 'White' : 'Black'})
-          </span>
-          <span className={`font-bold ${isMyTurn ? 'text-success animate-pulse' : 'text-text-dim'}`}>
-            {isMyTurn ? (game.isCheck() ? 'Check! Your turn' : 'Your turn') : 'Waiting...'}
+    <div className="h-full flex flex-col lg:flex-row gap-3 p-2 overflow-hidden">
+      {/* Board area */}
+      <div className="flex-1 flex flex-col items-center min-w-0 overflow-auto">
+        {isOnline ? (
+          <div className="flex gap-2 mb-2 text-xs items-center flex-wrap justify-center">
+            <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
+              You ({myColor === 'w' ? 'White' : 'Black'})
+            </span>
+            <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">
+              {multiplayerState?.opponentAvatar} {multiplayerState?.opponentName} ({otherColor === 'w' ? 'White' : 'Black'})
+            </span>
+            <span className={`font-bold ${isMyTurn ? 'text-success animate-pulse' : 'text-text-dim'}`}>
+              {isMyTurn ? (game.isCheck() ? 'Check! Your turn' : 'Your turn') : 'Waiting...'}
+            </span>
+          </div>
+        ) : (
+          <div className="flex gap-3 mb-2 text-sm items-center">
+            <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
+              AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('') || '—'}
+            </span>
+            <span className={`bg-card rounded-lg px-3 py-1 text-xs font-bold ${game.isCheck() && turn === 'w' ? 'text-danger' : 'text-accent'}`}>
+              {game.isCheck() ? '⚠️ Check!' : isMyTurn ? 'Your turn (White)' : 'AI thinking...'}
+            </span>
+          </div>
+        )}
+
+        <svg width={boardSize} height={boardSize} viewBox={`0 0 ${boardSize} ${boardSize}`} className="rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+          {board.map((row, r) => row.map((cell, c) => {
+            const isLight = (r + c) % 2 === 0;
+            const sqName = `${files[c]}${ranks[r]}` as Square;
+            const isSel = selected === sqName;
+            const isLegal = legalMoves.includes(sqName);
+            const isLast = lastMove?.from === sqName || lastMove?.to === sqName;
+            const pk = cell ? `${cell.color}${cell.type}` : null;
+            return (
+              <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: isMyTurn && !gameOver ? 'pointer' : 'default' }}>
+                <rect x={c * cs} y={r * cs} width={cs} height={cs}
+                  fill={isSel ? '#7b61ff' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
+                  opacity={isSel ? 0.8 : 1} />
+                {isLegal && (cell
+                  ? <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.44} fill="none" stroke="#7b61ff" strokeWidth={3} opacity={0.6} />
+                  : <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.16} fill="#7b61ff" opacity={0.5} />)}
+                {cell && pk && (
+                  <>
+                    <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
+                      fontSize={cs * 0.7} fill={PIECE_STROKE[cell.color]} stroke={PIECE_STROKE[cell.color]} strokeWidth={cell.color === 'w' ? 0.5 : 0}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+                    <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
+                      fontSize={cs * 0.7} fill={PIECE_COLORS[cell.color]}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+                  </>
+                )}
+              </g>
+            );
+          }))}
+          {files.map((f, i) => <text key={`f${f}`} x={i * cs + cs - 3} y={boardSize - 3} fontSize={9} fill={(i + 7) % 2 === 0 ? '#b58863' : '#f0d9b5'} textAnchor="end" style={{ pointerEvents: 'none' }}>{f}</text>)}
+          {ranks.map((r, i) => <text key={`r${r}`} x={3} y={i * cs + 11} fontSize={9} fill={i % 2 === 0 ? '#f0d9b5' : '#b58863'} style={{ pointerEvents: 'none' }}>{r}</text>)}
+        </svg>
+
+        <div className="mt-2 flex gap-3 text-sm items-center">
+          <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
+            You took: {captured.w.map(p => PIECE_UNICODE['w' + p] || p).join('') || '—'}
           </span>
         </div>
-      ) : (
-        <div className="flex gap-3 mb-2 text-sm items-center">
-          <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-            AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('')}
-          </span>
-          <span className="bg-card rounded-lg px-3 py-1 text-accent text-xs font-bold">{wins}/{targetWins}</span>
-          {losses > 0 && (
-            <span className="bg-card rounded-lg px-3 py-1 text-danger text-xs">L: {losses}/{MAX_LOSSES}</span>
+      </div>
+
+      {/* Move history sidebar */}
+      <div className="lg:w-52 flex-shrink-0 bg-card rounded-xl p-3 overflow-hidden flex flex-col">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-text-muted mb-2 flex items-center gap-1">
+          <span>📜</span> Moves
+        </h3>
+        <div ref={historyScrollRef} className="flex-1 overflow-y-auto space-y-1 text-sm min-h-0">
+          {moveHistory.length === 0 && (
+            <p className="text-text-dim text-xs italic">No moves yet. White to move.</p>
           )}
+          {Array.from({ length: Math.ceil(moveHistory.length / 2) }).map((_, i) => {
+            const white = moveHistory[i * 2];
+            const black = moveHistory[i * 2 + 1];
+            const isLast = i * 2 + (black ? 1 : 0) === moveHistory.length - 1;
+            return (
+              <div key={i} className={`flex items-center gap-2 px-2 py-1 rounded ${isLast ? 'bg-accent-soft/50' : ''}`}>
+                <span className="text-text-muted text-xs w-5">{i + 1}.</span>
+                <span className="flex-1 font-mono text-xs">{white}</span>
+                {black && <span className="flex-1 font-mono text-xs">{black}</span>}
+              </div>
+            );
+          })}
+        </div>
+        {gameOver && gameResult && (
+          <div className="mt-2 pt-2 border-t border-white/10">
+            <div className={`text-center text-sm font-bold ${
+              gameResult === 'win' ? 'text-success' : gameResult === 'lose' ? 'text-danger' : 'text-warning'
+            }`}>
+              {gameResult === 'win' ? '🎉 You Won!' : gameResult === 'lose' ? '💔 AI Won' : '🤝 Draw'}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Promotion picker modal */}
+      {pendingPromotion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-card rounded-2xl p-6 max-w-xs w-full shadow-2xl border border-white/10 text-center">
+            <h3 className="text-lg font-bold mb-1">Pawn Promotion</h3>
+            <p className="text-text-muted text-sm mb-4">Choose a piece to promote to:</p>
+            <div className="grid grid-cols-2 gap-3">
+              {PROMOTION_PIECES.map(({ type, label }) => {
+                const pk = `${myColor}${type}`;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => completeMove(pendingPromotion.from, pendingPromotion.to, type)}
+                    className="flex flex-col items-center gap-1 bg-surface hover:bg-card-hover p-3 rounded-xl transition-colors active:scale-95"
+                  >
+                    <span className="text-3xl">{PIECE_UNICODE[pk]}</span>
+                    <span className="text-xs text-text-muted">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
-
-      <svg width={boardSize} height={boardSize} viewBox={`0 0 ${boardSize} ${boardSize}`} className="rounded-lg overflow-hidden shadow-lg">
-        {board.map((row, r) => row.map((cell, c) => {
-          const isLight = (r + c) % 2 === 0;
-          const sqName = `${files[c]}${ranks[r]}` as Square;
-          const isSel = selected === sqName;
-          const isLegal = legalMoves.includes(sqName);
-          const isLast = lastMove?.from === sqName || lastMove?.to === sqName;
-          const pk = cell ? `${cell.color}${cell.type}` : null;
-          return (
-            <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: isMyTurn ? 'pointer' : 'default' }}>
-              <rect x={c * cs} y={r * cs} width={cs} height={cs}
-                fill={isSel ? '#7b61ff' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
-                opacity={isSel ? 0.8 : 1} />
-              {isLegal && (cell
-                ? <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.44} fill="none" stroke="#7b61ff" strokeWidth={3} opacity={0.6} />
-                : <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.16} fill="#7b61ff" opacity={0.5} />)}
-              {cell && pk && (
-                <>
-                  <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
-                    fontSize={cs * 0.7} fill={PIECE_STROKE[cell.color]} stroke={PIECE_STROKE[cell.color]} strokeWidth={cell.color === 'w' ? 0.5 : 0}
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
-                  <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
-                    fontSize={cs * 0.7} fill={PIECE_COLORS[cell.color]}
-                    style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
-                </>
-              )}
-            </g>
-          );
-        }))}
-        {files.map((f, i) => <text key={`f${f}`} x={i * cs + cs - 3} y={boardSize - 3} fontSize={9} fill={(i + 7) % 2 === 0 ? '#b58863' : '#f0d9b5'} textAnchor="end" style={{ pointerEvents: 'none' }}>{f}</text>)}
-        {ranks.map((r, i) => <text key={`r${r}`} x={3} y={i * cs + 11} fontSize={9} fill={i % 2 === 0 ? '#f0d9b5' : '#b58863'} style={{ pointerEvents: 'none' }}>{r}</text>)}
-      </svg>
-
-      <div className="mt-2 flex gap-3 text-sm items-center">
-        <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-          You took: {captured.w.map(p => PIECE_UNICODE['w' + p] || p).join('') || '—'}
-        </span>
-      </div>
-      <div className="mt-2 text-xs text-text-muted text-center">
-        {isMyTurn
-          ? 'Your turn — tap a piece then tap a square'
-          : isOnline
-            ? 'Opponent is moving...'
-            : 'AI is thinking...'}
-      </div>
     </div>
   );
 }
