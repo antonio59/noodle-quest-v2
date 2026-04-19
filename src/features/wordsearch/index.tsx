@@ -4,12 +4,14 @@ import { EN_GB_CORE_WORDS } from '@/data/words/en-gb-core';
 import { WordSearchGrid } from './WordSearchGrid';
 import { useWordSearch } from './use-wordsearch';
 import type { GameProps } from '@/types';
+import { Check, Sparkles } from 'lucide-react';
 
 function makePuzzleId() {
   return `wordsearch_${Date.now()}`;
 }
 
-// Map stage (1-10) to grid size and word count for harder puzzles
+// Stage → grid size and word count. Difficulty ramps via grid size and
+// directional variety (adding reverse, then diagonals).
 const STAGE_CFG: Record<number, { gridSize: number; maxWords: number; directions: ('across' | 'down' | 'reverse' | 'diagonal')[] }> = {
   1: { gridSize: 8, maxWords: 5, directions: ['across', 'down'] },
   2: { gridSize: 9, maxWords: 6, directions: ['across', 'down'] },
@@ -50,20 +52,19 @@ export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }
     extendSelection,
     endSelection,
     cellStateFor,
+    foundOverlays,
+    colorFor,
     remaining,
   } = useWordSearch(puzzle, puzzleId);
 
-  // Report score + progress as words are found; call onEnd when all words found.
+  // Score and progress
   useEffect(() => {
     const totalWords = puzzle.placements.length;
     const foundCount = found.size;
     if (totalWords === 0) return;
 
-    // Award +20 per newly found word
     const delta = foundCount - lastScoreRef.current;
-    if (delta > 0 && onScore) {
-      onScore(delta * 20);
-    }
+    if (delta > 0 && onScore) onScore(delta * 20);
     lastScoreRef.current = foundCount;
 
     if (onProgress) onProgress(foundCount / totalWords);
@@ -71,7 +72,6 @@ export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }
     if (completed && !endedRef.current && onEnd) {
       endedRef.current = true;
       const elapsedSec = Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000));
-      // Stars: 3 if under 30s/word, 2 if under 60s/word, else 1
       const perWord = elapsedSec / totalWords;
       const stars = perWord < 30 ? 3 : perWord < 60 ? 2 : 1;
       onEnd({
@@ -102,33 +102,43 @@ export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }
     }
   };
 
+  const totalWords = puzzle.placements.length;
+  const foundCount = found.size;
+
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-lg font-bold">Word Search</h1>
+    <div className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-violet-50/5 to-transparent">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Sparkles size={16} className="text-accent" />
+          <span className="text-sm font-semibold">
+            {foundCount} / {totalWords} found
+          </span>
+        </div>
         <button
           onClick={handleNewGame}
-          className="bg-card hover:bg-card-hover text-text px-3 py-2 rounded-lg text-sm transition"
+          className="bg-card hover:bg-card-hover text-text px-3 py-1.5 rounded-lg text-xs font-semibold transition"
         >
           New Game
         </button>
       </div>
 
       {completed && (
-        <div className="text-center p-3 bg-success/20 rounded-xl mb-4">
-          <span className="text-2xl">🎉</span>
-          <p className="text-success font-bold mt-1">Word Search Complete!</p>
+        <div className="mx-4 mb-2 text-center p-2 bg-success/20 rounded-lg flex-shrink-0">
+          <span className="text-success font-bold text-sm">🎉 Complete!</span>
         </div>
       )}
 
-      <div className="flex-1 grid gap-4 lg:grid-cols-[1fr_280px] overflow-hidden">
+      {/* Board + word list */}
+      <div className="flex-1 grid gap-3 lg:grid-cols-[1fr_260px] overflow-hidden px-3 pb-3">
         <div className="overflow-auto flex items-start justify-center">
-          <div className="bg-card rounded-xl p-3">
+          <div className="bg-white/95 rounded-2xl p-3 shadow-lg">
             <div ref={gridRef}>
               <WordSearchGrid
                 grid={puzzle.grid}
                 gridSize={puzzle.gridSize}
                 cellStateFor={cellStateFor}
+                foundOverlays={foundOverlays}
                 onMouseDown={startSelection}
                 onMouseEnter={extendSelection}
                 onMouseUp={endSelection}
@@ -141,34 +151,33 @@ export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }
         </div>
 
         <div className="overflow-auto">
-          <div className="bg-card rounded-xl p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted mb-3">
+          <div className="bg-card rounded-xl p-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-2">
               Words to find
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {puzzle.placements.map(p => {
                 const isFound = found.has(p.word);
+                const color = isFound ? colorFor(p.word) : undefined;
                 return (
                   <span
                     key={p.word}
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium border ${
-                      isFound
-                        ? 'bg-card-hover text-text-muted line-through border-transparent'
-                        : 'bg-surface text-text border-card-hover'
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      isFound ? 'text-white' : 'bg-surface text-text border border-card-hover'
                     }`}
+                    style={isFound ? { backgroundColor: color } : undefined}
                   >
-                    {p.word}
+                    {isFound && <Check size={10} strokeWidth={3} />}
+                    <span className={isFound ? '' : ''}>{p.word}</span>
                   </span>
                 );
               })}
             </div>
-            {remaining.length === 0 ? (
-              <p className="mt-3 text-sm text-text-muted">All words found!</p>
-            ) : (
-              <p className="mt-3 text-sm text-text-muted">
-                {remaining.length} word{remaining.length === 1 ? '' : 's'} remaining
-              </p>
-            )}
+            <p className="mt-3 text-xs text-text-muted">
+              {remaining.length === 0
+                ? 'All words found!'
+                : `${remaining.length} to go`}
+            </p>
           </div>
         </div>
       </div>

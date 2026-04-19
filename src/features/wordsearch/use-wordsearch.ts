@@ -1,47 +1,49 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { WordSearchPuzzle, WSPlacement } from '@/lib/puzzle-engine/wordsearch/types';
+import type { WordSearchPuzzle } from '@/lib/puzzle-engine/wordsearch/types';
 import { loadSession, saveSession } from '@/lib/puzzle-engine/persistence/local';
 
 interface WSCellState {
   selected: boolean;
   found: boolean;
-  highlightClass: string;
 }
+
+export interface FoundOverlay {
+  word: string;
+  cells: [number, number][];
+  color: string;
+}
+
+// Vivid palette matching the Word Search Master reference visuals.
+const PILL_COLORS = [
+  '#3b82f6', // blue
+  '#ef4444', // red
+  '#10b981', // green
+  '#f59e0b', // amber
+  '#ec4899', // pink
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#84cc16', // lime
+  '#e11d48', // rose
+  '#14b8a6', // teal
+  '#a855f7', // purple
+];
 
 export function useWordSearch(puzzle: WordSearchPuzzle, puzzleId: string) {
   const [selection, setSelection] = useState<[number, number][]>([]);
   const [found, setFound] = useState<Set<string>>(new Set());
+  const [foundOrder, setFoundOrder] = useState<string[]>([]);
   const [completed, setCompleted] = useState(false);
   const [startTime] = useState(() => Date.now());
   const gridRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
 
-  const highlightClasses = [
-    'bg-emerald-300/70',
-    'bg-sky-300/70',
-    'bg-amber-300/70',
-    'bg-rose-300/70',
-    'bg-violet-300/70',
-    'bg-teal-300/70',
-    'bg-fuchsia-300/70',
-    'bg-lime-300/70',
-  ];
-
-  const [wordHighlights, setWordHighlights] = useState<Record<string, string>>({});
-
-  // Hydrate
+  // Hydrate from session
   useEffect(() => {
     const session = loadSession('wordsearch', puzzleId);
-    if (session?.foundWords) {
-      const next = new Set(session.foundWords);
-      setFound(next);
-      const map: Record<string, string> = {};
-      let i = 0;
-      for (const w of session.foundWords) {
-        map[w] = highlightClasses[i % highlightClasses.length];
-        i++;
-      }
-      setWordHighlights(map);
+    if (session?.foundWords?.length) {
+      setFound(new Set(session.foundWords));
+      setFoundOrder(session.foundWords);
     }
   }, [puzzleId]);
 
@@ -50,10 +52,10 @@ export function useWordSearch(puzzle: WordSearchPuzzle, puzzleId: string) {
     saveSession('wordsearch', {
       puzzleId,
       answers: {},
-      foundWords: Array.from(found),
+      foundWords: foundOrder,
       elapsedMs: Date.now() - startTime,
     });
-  }, [found, puzzleId, startTime]);
+  }, [foundOrder, puzzleId, startTime]);
 
   const allWords = useMemo(() => new Set(puzzle.placements.map(p => p.word)), [puzzle]);
 
@@ -73,9 +75,7 @@ export function useWordSearch(puzzle: WordSearchPuzzle, puzzleId: string) {
     if (selection.length === 0) return;
     const [sr, sc] = selection[0];
     const line = computeLine(sr, sc, r, c);
-    if (line) {
-      setSelection(line);
-    }
+    if (line) setSelection(line);
   };
 
   const endSelection = () => {
@@ -90,29 +90,45 @@ export function useWordSearch(puzzle: WordSearchPuzzle, puzzleId: string) {
          (p.word === reverse && matchesCells(p.cells, [...selection].reverse())))
     );
     if (match) {
-      const next = new Set(found);
-      next.add(match.word);
-      setFound(next);
-      const colour = highlightClasses[found.size % highlightClasses.length];
-      setWordHighlights(prev => ({ ...prev, [match.word]: colour }));
+      setFound(prev => {
+        const next = new Set(prev);
+        next.add(match.word);
+        return next;
+      });
+      setFoundOrder(prev => (prev.includes(match.word) ? prev : [...prev, match.word]));
     }
     setSelection([]);
   };
+
+  const colorFor = (word: string): string => {
+    const idx = foundOrder.indexOf(word);
+    return PILL_COLORS[(idx >= 0 ? idx : foundOrder.length) % PILL_COLORS.length];
+  };
+
+  const foundOverlays: FoundOverlay[] = puzzle.placements
+    .filter(p => found.has(p.word))
+    .map(p => {
+      const idx = foundOrder.indexOf(p.word);
+      const color = PILL_COLORS[(idx >= 0 ? idx : foundOrder.length) % PILL_COLORS.length];
+      return { word: p.word, cells: p.cells, color };
+    });
 
   const cellStateFor = (r: number, c: number): WSCellState => {
     const inSelection = selection.some(([rr, cc]) => rr === r && cc === c);
     for (const p of puzzle.placements) {
       if (!found.has(p.word)) continue;
       if (p.cells.some(([rr, cc]) => rr === r && cc === c)) {
-        return { selected: inSelection, found: true, highlightClass: wordHighlights[p.word] || '' };
+        return { selected: inSelection, found: true };
       }
     }
-    return { selected: inSelection, found: false, highlightClass: '' };
+    return { selected: inSelection, found: false };
   };
 
   return {
     selection,
     found,
+    foundOrder,
+    foundOverlays,
     completed,
     gridRef,
     isDraggingRef,
@@ -121,6 +137,7 @@ export function useWordSearch(puzzle: WordSearchPuzzle, puzzleId: string) {
     endSelection,
     cellStateFor,
     remaining: puzzle.placements.map(p => p.word).filter(w => !found.has(w)),
+    colorFor,
   };
 }
 
@@ -128,7 +145,6 @@ function computeLine(r1: number, c1: number, r2: number, c2: number): [number, n
   const dr = Math.sign(r2 - r1);
   const dc = Math.sign(c2 - c1);
   if (dr === 0 && dc === 0) return [[r1, c1]];
-  // Allow only straight lines
   if (dr !== 0 && dc !== 0 && Math.abs(r2 - r1) !== Math.abs(c2 - c1)) return null;
   const steps = Math.max(Math.abs(r2 - r1), Math.abs(c2 - c1));
   const line: [number, number][] = [];
