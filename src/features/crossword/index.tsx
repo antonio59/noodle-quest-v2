@@ -116,8 +116,8 @@ export default function CrosswordGame({ stage = 1, onScore, onProgress, onEnd }:
       )}
 
       <div className="flex-1 grid gap-4 lg:grid-cols-[1fr_280px] overflow-hidden">
-        <div className="overflow-auto flex items-start justify-center">
-          <div className="bg-card rounded-xl p-3">
+        <div className="overflow-auto flex items-start justify-center p-1">
+          <div className="w-full max-w-full" style={{ maxWidth: `${puzzle.gridSize * 2.5}rem` }}>
             <CrosswordGrid
               puzzle={puzzle}
               grid={grid}

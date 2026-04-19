@@ -41,8 +41,8 @@ export function CrosswordGrid({
 
   return (
     <div
-      className="grid gap-1 border-2 border-card-hover p-1.5 bg-surface rounded-lg"
-      style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, minmax(2.25rem, 3rem))` }}
+      className="grid border border-[#3d3a60] bg-[#3d3a60] rounded-sm"
+      style={{ gridTemplateColumns: `repeat(${puzzle.gridSize}, 1fr)` }}
       role="grid"
       aria-label="Crossword grid"
     >
@@ -58,23 +58,22 @@ export function CrosswordGrid({
             return (
               <div
                 key={`${r}-${c}`}
-                className="aspect-square bg-black/90 rounded-sm"
+                className="aspect-square bg-black"
                 aria-hidden="true"
               />
             );
           }
 
-          const base = 'relative aspect-square rounded-sm border flex items-center justify-center';
-          const theme = highlighted
+          const bg = highlighted
             ? isActive
-              ? 'bg-accent-soft border-accent'
-              : 'bg-primary/15 border-primary/50'
-            : 'bg-[#2a2850] border-[#3d3a60]';
+              ? 'bg-accent-soft'
+              : 'bg-primary/15'
+            : 'bg-[#2a2850]';
 
           return (
-            <div key={`${r}-${c}`} className={`${base} ${theme}`}>
+            <div key={`${r}-${c}`} className={`relative aspect-square ${bg}`}>
               {num ? (
-                <span className="absolute top-0.5 left-0.5 text-[10px] leading-none text-text-muted select-none">
+                <span className="absolute top-[1px] left-[1px] text-[8px] sm:text-[10px] leading-none text-text-muted select-none z-10">
                   {num}
                 </span>
               ) : null}
@@ -87,9 +86,9 @@ export function CrosswordGrid({
                 onClick={() => onCellClick(r, c)}
                 onKeyDown={e => onKeyDown(r, c, e)}
                 onChange={e => onChange(r, c, e.target.value.slice(-1))}
-                className={`w-full h-full text-center font-bold uppercase caret-transparent focus:outline-none bg-transparent ${
+                className={`w-full h-full text-center font-bold uppercase caret-transparent focus:outline-none bg-transparent text-sm sm:text-base ${
                   cell.isError ? 'text-danger' : cell.isRevealed ? 'text-accent' : 'text-text'
-                }`}
+                } ${isActive ? 'ring-1 ring-inset ring-accent' : highlighted ? 'ring-1 ring-inset ring-primary/40' : ''}`}
                 maxLength={1}
               />
             </div>
