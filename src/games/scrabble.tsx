@@ -48,6 +48,20 @@ const BONUS_STYLE: Record<BonusType, { bg: string; text: string; label: string; 
   ST: { bg: 'bg-amber-500/35',  text: 'text-amber-200',  label: '★',  chip: 'bg-amber-500 text-amber-50' },
 };
 
+// ── SVG board dimensions ──────────────────────────────────────────────
+const BCS = 28;   // cell size in SVG user-units
+const BLABEL = 13; // space reserved for A–O / 1–15 coordinate labels
+const SVG_BOARD = BLABEL + 15 * BCS; // total SVG width & height (= 433)
+const COL_LETTERS_BOARD = 'ABCDEFGHIJKLMNO'.split('');
+// Solid bonus-square fills (no transparency — much easier to read on a small board)
+const BONUS_FILL: Record<BonusType, string> = {
+  TW: '#991b1b', // deep red
+  DW: '#9f1239', // deep rose
+  TL: '#1e3a8a', // deep blue
+  DL: '#075985', // ocean blue
+  ST: '#78350f', // amber/brown
+};
+
 // ── Word list ─────────────────────────────────────────────────────────
 // Embedded fallback list + full SOWPODS dictionary loaded at runtime.
 const VALID_WORDS = new Set([
@@ -1057,77 +1071,190 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         </div>
       </div>
 
-      {/* ── Board ── */}
-      <div
-        className="flex-1 min-h-0 w-full overflow-hidden"
-        style={{ display: 'grid', placeItems: 'center' }}
-      >
-        <div
-          className="grid gap-[0.5px] bg-black/20 rounded-md overflow-hidden"
-          style={{
-            gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${SIZE}, minmax(0, 1fr))`,
-            aspectRatio: '1 / 1',
-            maxWidth: '100%',
-            maxHeight: '100%',
-          }}
+      {/* ── SVG Board ── */}
+      <div className="flex-1 min-h-0 w-full overflow-hidden flex items-center justify-center p-1">
+        <svg
+          viewBox={`0 0 ${SVG_BOARD} ${SVG_BOARD}`}
+          style={{ maxWidth: '100%', maxHeight: '100%' }}
+          className="rounded-lg"
         >
+          {/* Outer background */}
+          <rect width={SVG_BOARD} height={SVG_BOARD} fill="#0a0818" rx={4} />
+
+          {/* Column labels A–O */}
+          {COL_LETTERS_BOARD.map((l, c) => (
+            <text
+              key={`cl-${c}`}
+              x={BLABEL + c * BCS + BCS / 2}
+              y={BLABEL / 2}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#818cf8"
+              fontSize={7}
+              fontWeight="bold"
+              fontFamily="system-ui"
+            >{l}</text>
+          ))}
+
+          {/* Row labels 1–15 */}
+          {Array.from({ length: 15 }, (_, r) => (
+            <text
+              key={`rl-${r}`}
+              x={BLABEL / 2}
+              y={BLABEL + r * BCS + BCS / 2}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#818cf8"
+              fontSize={7}
+              fontWeight="bold"
+              fontFamily="system-ui"
+            >{r + 1}</text>
+          ))}
+
+          {/* Board cells */}
           {board.map((row, r) => row.map((_cell, c) => {
             const key = `${r},${c}`;
             const cell = board[r][c];
             const bonus = BONUS_MAP.get(key);
             const isPlaced = placedKeys.has(key);
-            const bs = bonus ? BONUS_STYLE[bonus] : null;
-            const bonusTitle = bonus === 'TW' ? 'Triple Word Score'
-              : bonus === 'DW' ? 'Double Word Score'
-              : bonus === 'TL' ? 'Triple Letter Score'
-              : bonus === 'DL' ? 'Double Letter Score'
-              : bonus === 'ST' ? 'Star — Center' : '';
+            const isLocked = !isPlaced && !!cell;
+            const x = BLABEL + c * BCS;
+            const y = BLABEL + r * BCS;
+
+            const cellFill = cell
+              ? isPlaced ? '#f59e0b' : '#c8a97e'
+              : bonus
+                ? BONUS_FILL[bonus]
+                : '#1e1a4a';
 
             return (
-              <button
+              <g
                 key={key}
-                onClick={() => handleBoardClick(r, c)}
-                disabled={!isHumanTurn}
-                title={cell ? `${cell} (${TILE_SCORES[cell]} pts)${bonusTitle ? ` · on ${bonusTitle}` : ''}` : bonusTitle || undefined}
-                className={`group relative flex items-center justify-center transition-all text-[7px] sm:text-[9px] font-bold leading-none ${
-                  cell
-                    ? isPlaced
-                      ? 'bg-amber-300 text-amber-950 ring-2 ring-accent shadow-md'
-                      : 'bg-[#eaddcf] text-[#5c4d3c] border border-[#c9b8a3] shadow-inner'
-                    : bs
-                      ? `${bs.bg} ${bs.text}`
-                      : 'bg-card hover:bg-card-hover'
-                } ${!isHumanTurn ? 'opacity-90 cursor-not-allowed' : ''}`}
+                onClick={() => isHumanTurn && handleBoardClick(r, c)}
+                style={{ cursor: isHumanTurn ? 'pointer' : 'default' }}
               >
-                {cell ? (
+                {/* Cell background */}
+                <rect
+                  x={x + 0.5}
+                  y={y + 0.5}
+                  width={BCS - 1}
+                  height={BCS - 1}
+                  rx={1.5}
+                  fill={cellFill}
+                />
+
+                {/* Bonus label when empty */}
+                {!cell && bonus && (
+                  <text
+                    x={x + BCS / 2}
+                    y={y + BCS / 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fill="rgba(255,255,255,0.92)"
+                    fontSize={bonus === 'ST' ? 12 : 5.5}
+                    fontWeight="bold"
+                    fontFamily="system-ui"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    {bonus === 'ST' ? '★' : bonus}
+                  </text>
+                )}
+
+                {/* Tile rendering */}
+                {cell && (
                   <>
-                    <span className="text-[10px] sm:text-sm font-extrabold tracking-tight">{cell}</span>
-                    <span className="absolute bottom-0 right-0.5 text-[7px] sm:text-[10px] leading-none font-extrabold text-amber-950">
-                      {TILE_SCORES[cell]}
-                    </span>
-                    {/* Premium badge — visible on ALL tiles placed on premium squares */}
-                    {bonus && (
-                      <span
-                        className={`absolute top-0 left-0 text-[5px] sm:text-[7px] font-bold px-0.5 py-[1px] leading-[1] rounded-br-sm ${bs?.chip}`}
-                      >
-                        {bonus === 'ST' ? '★' : bonus}
-                      </span>
+                    {/* Shadow layer */}
+                    <rect
+                      x={x + 2}
+                      y={y + 2.5}
+                      width={BCS - 3}
+                      height={BCS - 3}
+                      rx={2}
+                      fill={isPlaced ? '#b45309' : '#8a6640'}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    {/* Tile face */}
+                    <rect
+                      x={x + 1.5}
+                      y={y + 1.5}
+                      width={BCS - 3}
+                      height={BCS - 3.5}
+                      rx={2}
+                      fill={isPlaced ? '#fbbf24' : '#dfc09a'}
+                      style={{ pointerEvents: 'none' }}
+                    />
+                    {/* Letter */}
+                    <text
+                      x={x + BCS / 2 - 0.5}
+                      y={y + BCS / 2 - 0.5}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill={isLocked ? '#3b2204' : '#1a1100'}
+                      fontSize={BCS * 0.46}
+                      fontWeight="900"
+                      fontFamily="system-ui"
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >{cell}</text>
+                    {/* Score subscript */}
+                    <text
+                      x={x + BCS - 3}
+                      y={y + BCS - 2.5}
+                      textAnchor="end"
+                      dominantBaseline="auto"
+                      fill={isLocked ? '#5c3d1a' : '#3b2800'}
+                      fontSize={BCS * 0.22}
+                      fontWeight="bold"
+                      fontFamily="system-ui"
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >{TILE_SCORES[cell]}</text>
+                    {/* Placed-this-turn accent ring */}
+                    {isPlaced && (
+                      <rect
+                        x={x + 0.5}
+                        y={y + 0.5}
+                        width={BCS - 1}
+                        height={BCS - 1}
+                        rx={1.5}
+                        fill="none"
+                        stroke="#a78bfa"
+                        strokeWidth={1.5}
+                        style={{ pointerEvents: 'none' }}
+                      />
                     )}
                   </>
-                ) : bs ? (
-                  <span className={`font-semibold leading-none select-none ${
-                    bonus === 'ST'
-                      ? 'text-[9px] sm:text-sm text-amber-500'
-                      : 'text-[6px] sm:text-[8px] opacity-80'
-                  }`}>
-                    {bs.label}
-                  </span>
-                ) : null}
-              </button>
+                )}
+              </g>
             );
           }))}
-        </div>
+
+          {/* Grid lines */}
+          {Array.from({ length: 16 }, (_, i) => (
+            <line
+              key={`vl${i}`}
+              x1={BLABEL + i * BCS} y1={BLABEL}
+              x2={BLABEL + i * BCS} y2={BLABEL + 15 * BCS}
+              stroke="rgba(0,0,0,0.4)" strokeWidth={0.5}
+              style={{ pointerEvents: 'none' }}
+            />
+          ))}
+          {Array.from({ length: 16 }, (_, i) => (
+            <line
+              key={`hl${i}`}
+              x1={BLABEL} y1={BLABEL + i * BCS}
+              x2={BLABEL + 15 * BCS} y2={BLABEL + i * BCS}
+              stroke="rgba(0,0,0,0.4)" strokeWidth={0.5}
+              style={{ pointerEvents: 'none' }}
+            />
+          ))}
+
+          {/* Board border */}
+          <rect
+            x={BLABEL} y={BLABEL}
+            width={15 * BCS} height={15 * BCS}
+            fill="none" stroke="#4338ca" strokeWidth={1.5}
+            style={{ pointerEvents: 'none' }}
+          />
+        </svg>
       </div>
 
       {/* ── Score preview / breakdown ── */}
