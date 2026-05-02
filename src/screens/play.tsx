@@ -1,4 +1,5 @@
-import { useState, useEffect, createElement, Suspense } from 'react';
+import { useState, useEffect, createElement, Suspense, useRef } from 'react';
+import { usePageVisibility } from '@/hooks/usePageVisibility';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock, Flag, Loader2, Copy, Check } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
@@ -32,6 +33,23 @@ export function PlayGame() {
   const [showStagePicker, setShowStagePicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
+
+  // Page-visibility pause (tab switch, lock screen, incoming call)
+  const isPageHidden = usePageVisibility();
+  const [needsResume, setNeedsResume] = useState(false);
+  const wasHiddenRef = useRef(false);
+  useEffect(() => {
+    if (isPageHidden) {
+      wasHiddenRef.current = true;
+    } else if (wasHiddenRef.current) {
+      wasHiddenRef.current = false;
+      // Only show resume screen for active single-player games (not end screen, not multiplayer)
+      if (!ended && !isMultiplayer) setNeedsResume(true);
+    }
+  }, [isPageHidden, ended, isMultiplayer]);
+  // Clear the resume screen whenever the game ends or user navigates
+  useEffect(() => { if (ended) setNeedsResume(false); }, [ended]);
+  const gamePaused = (isPageHidden || needsResume) && !isMultiplayer;
 
   const saveScore = useMutation(api.games.saveScore);
 
@@ -614,7 +632,7 @@ export function PlayGame() {
         <div className="text-center text-text-dim text-sm py-2 px-4">{message}</div>
       )}
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden relative">
         <Suspense fallback={
           <div className="h-full flex items-center justify-center">
             <div className="text-4xl animate-pulse">{gameMeta.emoji}</div>
@@ -627,6 +645,7 @@ export function PlayGame() {
             onProgress: setProgress,
             onMessage: setMessage,
             onEnd: handleEnd,
+            paused: gamePaused,
             multiplayerState: isLivePlaying && liveSession && mySeat
               ? {
                   sessionId: sessionId ?? '',
@@ -652,6 +671,27 @@ export function PlayGame() {
             numPlayers,
           })}
         </Suspense>
+
+        {/* Pause overlay — shown when tab is hidden or user returns after switching away */}
+        {gamePaused && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-bg/90 backdrop-blur-lg">
+            <div className="text-6xl">{isPageHidden ? '🌙' : '⏸️'}</div>
+            <div className="text-center">
+              <p className="text-xl font-black text-text">Game Paused</p>
+              <p className="text-sm text-text-muted mt-1">
+                {isPageHidden ? 'Come back to resume' : 'You switched away — ready to continue?'}
+              </p>
+            </div>
+            {!isPageHidden && (
+              <button
+                onClick={() => setNeedsResume(false)}
+                className="bg-accent text-bg font-bold px-10 py-3.5 rounded-2xl text-lg active:scale-95 transition-all hover:opacity-90"
+              >
+                ▶ Resume
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {showReportModal && gameMeta && (

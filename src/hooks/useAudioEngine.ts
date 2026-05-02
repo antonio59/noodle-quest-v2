@@ -288,6 +288,20 @@ export function useAudioEngine() {
     }
   }, [isPlaying, currentTrack, stopAll, play]);
 
+  // Suspend/resume AudioContext automatically when tab is hidden/visible
+  useEffect(() => {
+    const handler = () => {
+      if (!ctxRef.current) return;
+      if (document.hidden) {
+        ctxRef.current.suspend().catch(() => {});
+      } else {
+        ctxRef.current.resume().catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => () => stopAll(), [stopAll]);
 

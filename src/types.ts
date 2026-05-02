@@ -40,6 +40,9 @@ export interface GameProps {
   /** Total seats for games that support local N-player hot-seat
    *  (default 2: one human + one AI). Ignored by single-player games. */
   numPlayers?: number;
+  /** True when the page is hidden (tab switched, screen locked, incoming call).
+   *  Games that run internal timers should freeze them while paused. */
+  paused?: boolean;
 }
 
 export interface GameResult {
