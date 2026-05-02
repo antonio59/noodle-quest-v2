@@ -122,11 +122,13 @@ function EchoTapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);
-      if (beatTimerRef.current) clearInterval(beatTimerRef.current);
-      if (audioCtxRef.current) audioCtxRef.current.close();
+      timeoutsRef.current = [];
+      if (beatTimerRef.current) { clearInterval(beatTimerRef.current); beatTimerRef.current = null; }
+      if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
     };
   }, []);
 
