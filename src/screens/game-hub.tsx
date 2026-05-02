@@ -38,61 +38,49 @@ const CATEGORY_STYLES: Record<string, { label: string; badge: string; glow: stri
 };
 
 const TABS = [
-  { 
-    id: 'brain', 
-    label: '🧠 Brain', 
+  {
+    id: 'brain',
+    label: '🧠 Brain',
     emoji: '🧠',
-    description: 'Brain games across 6 categories to train focus, memory, motor skills, flexibility, social awareness, and sequencing.',
-    benefits: [
-      'Improves concentration and attention span',
-      'Strengthens working memory',
-      'Enhances problem-solving abilities',
-      'Builds cognitive flexibility',
-      'Develops social-emotional skills',
-      'Boosts processing speed'
-    ]
+    tagline: 'Train your mind every day',
+    description: 'Over 30 games across 6 cognitive areas. Difficulty adapts as you level up — so it always feels just challenging enough.',
+    color: 'text-violet-400',
+    pillBg: 'bg-violet-500/15 text-violet-300',
+    iconBg: 'bg-violet-500/15',
+    benefits: ['Sharp focus', 'Better memory', 'Faster thinking', 'Problem solving', 'Emotional skills', 'Mental agility'],
   },
-  { 
-    id: 'board', 
-    label: '🎲 Board', 
+  {
+    id: 'board',
+    label: '🎲 Board',
     emoji: '🎲',
-    description: 'board games to play solo against AI or with friends — Tic-Tac-Toe, Checkers, Chess, Connect Four, Ludo, Snakes & Ladders, Crossword, Word Search, Bingo, UNO, and Scrabble.',
-    benefits: [
-      'Develops strategic thinking and planning',
-      'Improves decision-making under pressure',
-      'Builds patience and perseverance',
-      'Enhances pattern recognition',
-      'Teaches turn-taking and sportsmanship',
-      'Provides relaxing mental challenge'
-    ]
+    tagline: 'Play solo or invite a friend',
+    description: 'Classic board games with adaptive AI — or send a link and play with friends and family in real time. Chess, Ludo, Scrabble, UNO, and more.',
+    color: 'text-amber-400',
+    pillBg: 'bg-amber-500/15 text-amber-300',
+    iconBg: 'bg-amber-500/15',
+    benefits: ['Strategic thinking', 'Pattern recognition', 'Patience', 'Multiplayer fun', 'Decision making', 'Healthy competition'],
   },
-  { 
-    id: 'breathe', 
-    label: '🌬️ Breathe', 
+  {
+    id: 'breathe',
+    label: '🌬️ Breathe',
     emoji: '🌬️',
-    description: '4 scientifically-backed breathing exercises to reduce stress, improve focus, and enhance emotional regulation.',
-    benefits: [
-      'Lowers heart rate and blood pressure',
-      'Reduces anxiety and stress hormones',
-      'Improves oxygen flow to the brain',
-      'Enhances mindfulness and presence',
-      'Supports better sleep quality',
-      'Increases energy and mental clarity'
-    ]
+    tagline: 'Calm down in under 5 minutes',
+    description: 'Four science-backed breathing techniques — guided, timed, and visualised. Reduce stress, lower your heart rate, and clear your head.',
+    color: 'text-emerald-400',
+    pillBg: 'bg-emerald-500/15 text-emerald-300',
+    iconBg: 'bg-emerald-500/15',
+    benefits: ['Reduces stress', 'Lowers heart rate', 'Aids sleep', 'Clears the mind', 'Eases anxiety', 'Restores focus'],
   },
-  { 
-    id: 'tracks', 
-    label: '🎵 Tracks', 
+  {
+    id: 'tracks',
+    label: '🎵 Tracks',
     emoji: '🎵',
-    description: '8 curated audio tracks designed to support different mental states — lo-fi beats, focus music, nature sounds, and meditation tones.',
-    benefits: [
-      'Blocks distracting background noise',
-      'Promotes deep focus and flow state',
-      'Creates calming atmosphere for relaxation',
-      'Supports creative thinking and brainstorming',
-      'Aids in mindfulness and meditation practice',
-      'Provides consistent audio environment'
-    ]
+    tagline: 'Set the mood. Stay in flow.',
+    description: '8 ambient tracks for any mental state — lo-fi beats, deep focus tones, rain sounds, and meditation. Keeps playing while you game.',
+    color: 'text-sky-400',
+    pillBg: 'bg-sky-500/15 text-sky-300',
+    iconBg: 'bg-sky-500/15',
+    benefits: ['Blocks noise', 'Deep focus', 'Relaxation', 'Creative flow', 'Mindfulness', 'Consistent environment'],
   },
 ];
 
@@ -203,21 +191,24 @@ export function GameHub() {
         ))}
       </div>
 
-      {/* Tab description and benefits */}
-      <div className="px-4 py-3 border-b border-white/5 flex-shrink-0">
-        <h2 className="text-base font-bold mb-1 flex items-center gap-2">
-          {currentTab.emoji} {currentTab.label}
-        </h2>
-        <p className="text-text-muted text-xs mb-2 line-clamp-1">
-          {tab === 'brain' && `${brainGames.length} `}
-          {tab === 'board' && `${allGames.filter(g => g.category === 'board').length} `}
-          {tab === 'breathe' && `${allGames.filter(g => g.category === 'breathe').length} `}
-          {currentTab.description}
-        </p>
-        <div className="flex gap-2 overflow-x-auto scrollbar-none">
+      {/* Tab header — tagline, description, benefit chips */}
+      <div className="px-4 pt-3 pb-2.5 border-b border-white/5 flex-shrink-0">
+        <div className="flex items-start gap-3 mb-2.5">
+          <div className="flex-1 min-w-0">
+            <p className={`text-[11px] font-bold uppercase tracking-widest mb-0.5 ${currentTab.color}`}>
+              {currentTab.tagline}
+            </p>
+            <p className="text-text-muted text-xs leading-relaxed line-clamp-2">
+              {currentTab.description}
+            </p>
+          </div>
+          <div className={`w-10 h-10 rounded-xl ${currentTab.iconBg} flex items-center justify-center text-xl flex-shrink-0`}>
+            {currentTab.emoji}
+          </div>
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
           {currentTab.benefits.map((benefit, i) => (
-            <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-card text-[10px] text-text-muted whitespace-nowrap">
-              <span className="text-accent">•</span>
+            <span key={i} className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${currentTab.pillBg}`}>
               {benefit}
             </span>
           ))}

@@ -3,7 +3,7 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames, getGame } from '@/lib/game-registry';
-import { Trophy, Star, ChevronDown, Crown } from 'lucide-react';
+import { Trophy, Star, ChevronDown, Crown, Gamepad2 } from 'lucide-react';
 
 interface LeaderboardEntry {
   playerId: string;
@@ -15,24 +15,32 @@ interface LeaderboardEntry {
   topGames: { gameId: string; stars: number; score: number }[];
 }
 
-const RANK_COLORS = [
-  { bg: 'bg-warning/20', border: 'border-warning/50', text: 'text-warning', medal: '🥇' },
-  { bg: 'bg-text-muted/20', border: 'border-text-muted/50', text: 'text-text-muted', medal: '🥈' },
-  { bg: 'bg-orange-400/20', border: 'border-orange-400/50', text: 'text-orange-400', medal: '🥉' },
+const RANK_TIERS = [
+  { min: 300, label: 'Diamond', emoji: '💎', color: 'text-cyan-300',   bg: 'bg-cyan-500/15',   border: 'border-cyan-500/30' },
+  { min: 150, label: 'Gold',    emoji: '🥇', color: 'text-yellow-300', bg: 'bg-yellow-500/15', border: 'border-yellow-500/30' },
+  { min: 50,  label: 'Silver',  emoji: '🥈', color: 'text-slate-300',  bg: 'bg-slate-500/15',  border: 'border-slate-500/30' },
+  { min: 10,  label: 'Bronze',  emoji: '🥉', color: 'text-orange-300', bg: 'bg-orange-500/15', border: 'border-orange-500/30' },
+  { min: 0,   label: 'Starter', emoji: '🌱', color: 'text-green-400',  bg: 'bg-green-500/15',  border: 'border-green-500/30' },
 ];
 
-function StarBar({ count, max }: { count: number; max: number }) {
-  const pct = max > 0 ? (count / max) * 100 : 0;
+function getRankTier(stars: number) {
+  return RANK_TIERS.find(t => stars >= t.min) ?? RANK_TIERS[RANK_TIERS.length - 1];
+}
+
+const TOP3 = [
+  { medal: '🥇', border: 'border-yellow-400/50', bg: 'bg-yellow-400/10', text: 'text-yellow-400', glow: 'shadow-[0_0_24px_rgba(251,191,36,0.18)]' },
+  { medal: '🥈', border: 'border-slate-400/50',  bg: 'bg-slate-400/10',  text: 'text-slate-300',  glow: 'shadow-[0_0_16px_rgba(148,163,184,0.12)]' },
+  { medal: '🥉', border: 'border-orange-400/50', bg: 'bg-orange-400/10', text: 'text-orange-400', glow: '' },
+];
+
+function RankTierBadge({ stars, size = 'sm' }: { stars: number; size?: 'sm' | 'xs' }) {
+  const tier = getRankTier(stars);
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-card-hover rounded-full overflow-hidden">
-        <div
-          className="h-full bg-accent rounded-full transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      <span className="text-xs font-bold text-accent w-8 text-right">{count}</span>
-    </div>
+    <span className={`inline-flex items-center gap-1 font-bold rounded-full border ${tier.bg} ${tier.border} ${tier.color} ${
+      size === 'xs' ? 'text-[9px] px-1.5 py-0.5' : 'text-[10px] px-2 py-0.5'
+    }`}>
+      {tier.emoji} {tier.label}
+    </span>
   );
 }
 
@@ -56,33 +64,20 @@ export function Leaderboard() {
       .sort((a, b) => b.totalStars - a.totalStars);
   }, [rawEntries]);
 
-  const maxStars = useMemo(() => {
-    return entries.length > 0 ? entries[0].totalStars : 1;
-  }, [entries]);
+  const maxStars = useMemo(() => entries.length > 0 ? entries[0].totalStars : 1, [entries]);
 
-  const currentPlayerIndex = useMemo(() => {
-    return entries.findIndex(e => e.playerName === player?.name);
-  }, [entries, player]);
-
+  const currentPlayerIndex = useMemo(() => entries.findIndex(e => e.playerName === player?.name), [entries, player]);
   const currentPlayerEntry = currentPlayerIndex >= 0 ? entries[currentPlayerIndex] : null;
 
-  // Show sticky footer when current player is scrolled out of view
   useEffect(() => {
     const el = listRef.current;
-    if (!el || currentPlayerIndex < 3) {
-      setShowSticky(false);
-      return;
-    }
+    if (!el || currentPlayerIndex < 3) { setShowSticky(false); return; }
     const onScroll = () => {
       const playerEl = el.querySelector(`[data-player="${player?.name}"]`) as HTMLElement;
-      if (!playerEl) {
-        setShowSticky(false);
-        return;
-      }
+      if (!playerEl) { setShowSticky(false); return; }
       const rect = playerEl.getBoundingClientRect();
       const containerRect = el.getBoundingClientRect();
-      const isVisible = rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
-      setShowSticky(!isVisible);
+      setShowSticky(!(rect.top >= containerRect.top && rect.bottom <= containerRect.bottom));
     };
     el.addEventListener('scroll', onScroll);
     onScroll();
@@ -94,34 +89,41 @@ export function Leaderboard() {
     return game ? `${game.emoji} ${game.name}` : gameId;
   };
 
-  const filterLabel = selectedGame
-    ? getGameName(selectedGame)
-    : 'All Games';
+  const filterLabel = selectedGame ? getGameName(selectedGame) : 'All Games';
+  const myRank = currentPlayerIndex >= 0 ? currentPlayerIndex + 1 : null;
+  const myTier = currentPlayerEntry ? getRankTier(currentPlayerEntry.totalStars) : null;
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 bg-surface border-b border-white/5 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold flex items-center gap-2">
-            <Trophy size={20} className="text-warning" />
-            Rankings
-          </h1>
-          <div className="relative">
+      <div className="p-4 bg-surface border-b border-white/5 flex-shrink-0 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-bold flex items-center gap-2">
+              <Trophy size={20} className="text-yellow-400" />
+              Rankings
+            </h1>
+            <p className="text-text-muted text-xs mt-0.5">
+              {entries.length} player{entries.length !== 1 ? 's' : ''} · sorted by stars earned
+            </p>
+          </div>
+          {/* Filter dropdown */}
+          <div className="relative flex-shrink-0">
             <button
               onClick={() => setFilterOpen(!filterOpen)}
-              className="flex items-center gap-1.5 text-xs font-semibold bg-card hover:bg-card-hover px-3 py-1.5 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold bg-card hover:bg-card-hover border border-white/10 px-3 py-2 rounded-xl transition-colors"
             >
-              {filterLabel}
-              <ChevronDown size={14} className={`transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
+              <Gamepad2 size={13} className="text-text-muted" />
+              <span className="max-w-[100px] truncate">{filterLabel}</span>
+              <ChevronDown size={13} className={`text-text-muted transition-transform flex-shrink-0 ${filterOpen ? 'rotate-180' : ''}`} />
             </button>
             {filterOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
-                <div className="absolute right-0 top-full mt-1 w-56 bg-card rounded-xl shadow-xl border border-white/5 z-50 py-1 max-h-64 overflow-y-auto">
+                <div className="absolute right-0 top-full mt-1.5 w-60 bg-card rounded-2xl shadow-2xl border border-white/8 z-50 py-1.5 max-h-72 overflow-y-auto">
                   <button
                     onClick={() => { setSelectedGame(''); setFilterOpen(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-card-hover transition-colors ${!selectedGame ? 'text-accent font-bold' : 'text-text'}`}
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-card-hover transition-colors ${!selectedGame ? 'text-accent font-bold' : 'text-text'}`}
                   >
                     🎮 All Games
                   </button>
@@ -129,7 +131,7 @@ export function Leaderboard() {
                     <button
                       key={g.id}
                       onClick={() => { setSelectedGame(g.id); setFilterOpen(false); }}
-                      className={`w-full text-left px-3 py-2 text-sm hover:bg-card-hover transition-colors ${selectedGame === g.id ? 'text-accent font-bold' : 'text-text'}`}
+                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-card-hover transition-colors ${selectedGame === g.id ? 'text-accent font-bold' : 'text-text'}`}
                     >
                       {g.emoji} {g.name}
                     </button>
@@ -139,12 +141,26 @@ export function Leaderboard() {
             )}
           </div>
         </div>
-        <p className="text-text-muted text-xs mt-1">
-          {entries.length} player{entries.length !== 1 ? 's' : ''} ranked by total stars
-        </p>
+
+        {/* Your rank summary */}
+        {currentPlayerEntry && myTier && (
+          <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${myTier.border} ${myTier.bg}`}>
+            <span className="text-2xl">{currentPlayerEntry.avatar || '🎮'}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-text truncate">You</span>
+                <RankTierBadge stars={currentPlayerEntry.totalStars} size="xs" />
+              </div>
+              <p className={`text-xs font-semibold ${myTier.color}`}>
+                Rank #{myRank} · {currentPlayerEntry.totalStars} ⭐ · {currentPlayerEntry.gamesPlayed} games played
+              </p>
+            </div>
+            {myRank === 1 && <Crown size={18} className="text-yellow-400 flex-shrink-0" />}
+          </div>
+        )}
       </div>
 
-      {/* Leaderboard List */}
+      {/* List */}
       <div ref={listRef} className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -154,45 +170,58 @@ export function Leaderboard() {
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             <Star size={40} className="mb-3 text-card-hover" />
-            <p className="text-sm">No scores yet</p>
-            <p className="text-xs mt-1">Play games to earn stars and climb the ranks!</p>
+            <p className="text-sm font-semibold">No scores yet</p>
+            <p className="text-xs mt-1 text-center px-8">Play games to earn stars and climb the ranks!</p>
           </div>
         ) : (
           <div className="p-3 space-y-2">
-            {/* Top 3 - special cards */}
+
+            {/* Top 3 podium */}
             {entries.slice(0, 3).map((entry, idx) => {
-              const style = RANK_COLORS[idx] || RANK_COLORS[2];
+              const s = TOP3[idx];
               const isMe = entry.playerName === player?.name;
+              const tier = getRankTier(entry.totalStars);
+              const barPct = maxStars > 0 ? (entry.totalStars / maxStars) * 100 : 0;
               return (
                 <div
                   key={entry.playerId}
                   data-player={entry.playerName}
-                  className={`relative rounded-2xl p-4 border ${style.border} ${style.bg} ${
-                    isMe ? 'ring-2 ring-accent' : ''
-                  }`}
+                  className={`relative rounded-2xl p-4 border ${s.border} ${s.bg} ${s.glow} ${isMe ? 'ring-2 ring-accent' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center">
-                      <span className="text-2xl">{style.medal}</span>
-                      <span className={`text-xs font-bold ${style.text}`}>#{idx + 1}</span>
+                    {/* Medal + rank */}
+                    <div className="flex flex-col items-center w-9 flex-shrink-0">
+                      <span className="text-2xl leading-none">{s.medal}</span>
+                      <span className={`text-[10px] font-black mt-0.5 ${s.text}`}>#{idx + 1}</span>
                     </div>
-                    <span className="text-4xl">{entry.avatar || '🎮'}</span>
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      <span className="text-4xl">{entry.avatar || '🎮'}</span>
+                      {idx === 0 && (
+                        <Crown size={14} className="text-yellow-400 absolute -top-2 -right-1" />
+                      )}
+                    </div>
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-sm truncate">{entry.playerName}</span>
-                        {isMe && <span className="text-[10px] bg-accent text-bg font-bold px-1.5 py-0.5 rounded">YOU</span>}
-                        {idx === 0 && <Crown size={14} className="text-warning" />}
+                      <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                        <span className="font-bold text-sm text-text truncate">{entry.playerName}</span>
+                        {isMe && <span className="text-[10px] bg-accent text-bg font-bold px-1.5 py-0.5 rounded-full">YOU</span>}
+                        <RankTierBadge stars={entry.totalStars} size="xs" />
                       </div>
-                      <div className="mt-1.5">
-                        <StarBar count={entry.totalStars} max={maxStars} />
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-black/20 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${idx === 0 ? 'bg-yellow-400' : idx === 1 ? 'bg-slate-300' : 'bg-orange-400'}`} style={{ width: `${barPct}%` }} />
+                        </div>
                       </div>
+                      <p className="text-[10px] text-text-muted mt-1">{entry.gamesPlayed} games played</p>
                     </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-0.5 text-warning">
-                        <Star size={14} fill="currentColor" />
-                        <span className="font-bold text-lg">{entry.totalStars}</span>
+                    {/* Star count */}
+                    <div className="text-right flex-shrink-0">
+                      <div className={`flex items-center gap-0.5 ${s.text} font-black text-xl`}>
+                        <Star size={15} fill="currentColor" />
+                        {entry.totalStars}
                       </div>
-                      <div className="text-text-muted text-[10px]">{entry.gamesPlayed} games</div>
+                      <p className="text-[10px] text-text-muted">{entry.totalScore.toLocaleString()} pts</p>
                     </div>
                   </div>
                 </div>
@@ -203,66 +232,65 @@ export function Leaderboard() {
             {entries.length > 3 && (
               <div className="flex items-center gap-3 py-1">
                 <div className="flex-1 h-px bg-white/5" />
-                <span className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">Rest of the pack</span>
+                <span className="text-[10px] text-text-muted uppercase tracking-widest font-semibold">Everyone else</span>
                 <div className="flex-1 h-px bg-white/5" />
               </div>
             )}
 
-            {/* Everyone else */}
+            {/* Positions 4+ */}
             {entries.slice(3).map((entry, idx) => {
               const rank = idx + 4;
               const isMe = entry.playerName === player?.name;
+              const tier = getRankTier(entry.totalStars);
               return (
                 <div
                   key={entry.playerId}
                   data-player={entry.playerName}
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                  className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors border ${
                     isMe
-                      ? 'bg-accent/10 ring-1 ring-accent/40'
-                      : 'bg-card hover:bg-card-hover'
+                      ? 'bg-accent/10 border-accent/30 ring-1 ring-accent/20'
+                      : 'bg-card border-white/5 hover:bg-card-hover'
                   }`}
                 >
-                  <span className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold ${
-                    rank <= 10 ? 'bg-card-hover text-text' : 'text-text-muted'
-                  }`}>
+                  <span className={`w-7 text-center text-xs font-bold flex-shrink-0 ${rank <= 10 ? 'text-text' : 'text-text-muted'}`}>
                     {rank}
                   </span>
-                  <span className="text-2xl">{entry.avatar || '🎮'}</span>
+                  <span className="text-2xl flex-shrink-0">{entry.avatar || '🎮'}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-sm truncate">{entry.playerName}</span>
-                      {isMe && <span className="text-[10px] bg-accent text-bg font-bold px-1.5 py-0.5 rounded">YOU</span>}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold text-sm text-text truncate">{entry.playerName}</span>
+                      {isMe && <span className="text-[10px] bg-accent text-bg font-bold px-1.5 py-0.5 rounded-full">YOU</span>}
                     </div>
-                    <div className="mt-1">
-                      <StarBar count={entry.totalStars} max={maxStars} />
+                    <div className="flex items-center gap-2 mt-1">
+                      <RankTierBadge stars={entry.totalStars} size="xs" />
+                      <span className="text-[10px] text-text-muted">{entry.gamesPlayed} games</span>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <div className="flex items-center gap-0.5 text-warning">
                       <Star size={12} fill="currentColor" />
                       <span className="font-bold text-sm">{entry.totalStars}</span>
                     </div>
-                    <div className="text-text-muted text-[10px]">{entry.gamesPlayed} games</div>
+                    <p className="text-[10px] text-text-muted">{entry.totalScore.toLocaleString()} pts</p>
                   </div>
                 </div>
               );
             })}
 
-            {/* Bottom padding for sticky */}
-            <div className="h-16" />
+            <div className="h-4" />
           </div>
         )}
       </div>
 
-      {/* Sticky "Your Rank" footer */}
-      {showSticky && currentPlayerEntry && (
-        <div className="flex-shrink-0 p-3 bg-surface border-t border-white/5">
-          <div className="bg-accent/10 ring-1 ring-accent/40 rounded-xl p-3 flex items-center gap-3">
-            <span className="text-xs font-bold text-accent">#{currentPlayerIndex + 1}</span>
-            <span className="text-2xl">{currentPlayerEntry.avatar || '🎮'}</span>
+      {/* Sticky "Your Rank" footer when scrolled away */}
+      {showSticky && currentPlayerEntry && myTier && (
+        <div className="flex-shrink-0 px-3 pb-3 pt-2 bg-surface/90 backdrop-blur border-t border-white/5">
+          <div className={`rounded-xl px-3 py-2.5 flex items-center gap-3 border ${myTier.border} ${myTier.bg}`}>
+            <span className={`text-xs font-black ${myTier.color}`}>#{myRank}</span>
+            <span className="text-xl">{currentPlayerEntry.avatar || '🎮'}</span>
             <div className="flex-1 min-w-0">
-              <span className="font-bold text-sm">{currentPlayerEntry.playerName}</span>
-              <StarBar count={currentPlayerEntry.totalStars} max={maxStars} />
+              <span className="font-bold text-sm text-text truncate block">{currentPlayerEntry.playerName}</span>
+              <RankTierBadge stars={currentPlayerEntry.totalStars} size="xs" />
             </div>
             <div className="flex items-center gap-0.5 text-warning">
               <Star size={14} fill="currentColor" />
