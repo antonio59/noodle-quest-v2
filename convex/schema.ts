@@ -133,6 +133,15 @@ export default defineSchema({
     .index("by_player2", ["player2Id", "status"])
     .index("by_status", ["status"]),
 
+  // Game requests from players
+  game_requests: defineTable({
+    gameName: v.string(),
+    description: v.string(),
+    playerId: v.optional(v.id("players")),
+    playerName: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_created", ["createdAt"]),
+
   // Error reports and bot integration
   reports: defineTable({
     errorId: v.string(), // unique error identifier

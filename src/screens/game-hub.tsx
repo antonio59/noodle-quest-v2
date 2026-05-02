@@ -5,7 +5,8 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap, Star } from 'lucide-react';
+import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap, Star, Sparkles } from 'lucide-react';
+import { RequestGameModal } from '@/components/RequestGameModal';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
@@ -111,6 +112,7 @@ export function GameHub() {
       return new Set(JSON.parse(localStorage.getItem('nq_favorites') || '[]'));
     } catch { return new Set(); }
   });
+  const [showRequestGame, setShowRequestGame] = useState(false);
 
   const allGames = getAllGames();
   const brainGames = allGames.filter(g => g.category !== 'board' && g.category !== 'breathe');
@@ -333,6 +335,25 @@ export function GameHub() {
               );
             })}
           </div>
+
+          {/* Request a Game card */}
+          <div className="px-4 pb-6">
+            <button
+              onClick={() => setShowRequestGame(true)}
+              className="w-full flex items-center gap-4 bg-card hover:bg-card-hover border border-white/8 rounded-2xl px-5 py-4 transition-all active:scale-[0.98] group"
+            >
+              <div className="w-11 h-11 rounded-xl bg-accent/15 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/25 transition-colors">
+                <Sparkles size={20} className="text-accent" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-semibold text-sm text-text">Don't see your game?</p>
+                <p className="text-xs text-text-muted mt-0.5">Request a game and we'll try to build it</p>
+              </div>
+              <div className="text-text-muted text-xs font-semibold px-2.5 py-1 bg-surface rounded-full group-hover:text-accent transition-colors">
+                Request
+              </div>
+            </button>
+          </div>
         </div>
       )}
 
@@ -461,6 +482,10 @@ export function GameHub() {
 
       {tab === 'tracks' && (
         <TracksPanel audio={audio} />
+      )}
+
+      {showRequestGame && (
+        <RequestGameModal onClose={() => setShowRequestGame(false)} />
       )}
     </div>
   );

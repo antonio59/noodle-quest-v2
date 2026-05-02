@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, useLayoutEffect } from 'react';
 import type { GameProps } from '@/types';
 
 // Puzzle format: 81-char string, '0' = empty. [puzzle, solution]
@@ -165,6 +165,21 @@ export default function SudokuGame({ stage, onScore, onProgress, onEnd, onMessag
 
   const difficultyLabel = stage <= 3 ? 'Easy' : stage <= 7 ? 'Medium' : 'Hard';
 
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [cellSize, setCellSize] = useState(36);
+  useLayoutEffect(() => {
+    const update = () => {
+      if (gridContainerRef.current) {
+        const w = gridContainerRef.current.clientWidth;
+        setCellSize(Math.min(36, Math.floor(w / 9)));
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (gridContainerRef.current) ro.observe(gridContainerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div className="h-full flex flex-col items-center p-3 gap-2 select-none">
       <div className="flex justify-between items-center w-full max-w-sm">
@@ -176,9 +191,10 @@ export default function SudokuGame({ stage, onScore, onProgress, onEnd, onMessag
         </button>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-9 border-2 border-white/20 rounded-xl overflow-hidden"
-        style={{ gap: 0 }}>
+      {/* Grid — responsive: measure container, cap cell at 36px */}
+      <div ref={gridContainerRef} className="w-full max-w-sm">
+      <div className="grid grid-cols-9 border-2 border-white/20 rounded-xl overflow-hidden mx-auto"
+        style={{ gap: 0, width: cellSize * 9 }}>
         {grid.map((row, r) =>
           row.map((val, c) => {
             const isSelected = selected?.[0] === r && selected?.[1] === c;
@@ -197,8 +213,8 @@ export default function SudokuGame({ stage, onScore, onProgress, onEnd, onMessag
               <div key={`${r}-${c}`} onClick={() => handleCellClick(r, c)}
                 className="flex items-center justify-center cursor-pointer transition-all duration-75"
                 style={{
-                  width: 36, height: 36,
-                  fontSize: '1rem',
+                  width: cellSize, height: cellSize,
+                  fontSize: `${Math.max(0.6, cellSize / 36)}rem`,
                   fontWeight: fixed ? '700' : '500',
                   borderRight: borderR,
                   borderBottom: borderB,
@@ -210,6 +226,7 @@ export default function SudokuGame({ stage, onScore, onProgress, onEnd, onMessag
             );
           })
         )}
+      </div>
       </div>
 
       {/* Number pad */}

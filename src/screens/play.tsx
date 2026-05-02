@@ -9,6 +9,7 @@ import { getGameMeta, getGameComponent, getAllGames } from '@/lib/game-registry'
 import { computeBonusTiers, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
 import { ReportIssueModal } from '@/components/ReportIssueModal';
+import { GameErrorBoundary } from '@/components/GameErrorBoundary';
 
 export function PlayGame() {
   const navigate = useNavigate();
@@ -633,6 +634,16 @@ export function PlayGame() {
       )}
 
       <div className="flex-1 overflow-hidden relative">
+        <GameErrorBoundary
+          gameId={gameId}
+          gameName={gameMeta.name}
+          onReset={() => {
+            setScore(0);
+            setProgress(0);
+            setMessage('');
+            setEnded(null);
+          }}
+        >
         <Suspense fallback={
           <div className="h-full flex items-center justify-center">
             <div className="text-4xl animate-pulse">{gameMeta.emoji}</div>
@@ -671,6 +682,7 @@ export function PlayGame() {
             numPlayers,
           })}
         </Suspense>
+        </GameErrorBoundary>
 
         {/* Pause overlay — shown when tab is hidden or user returns after switching away */}
         {gamePaused && (

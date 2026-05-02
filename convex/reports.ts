@@ -1,6 +1,25 @@
 import { mutation, internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+// Submit a game request from a player
+export const createGameRequest = mutation({
+  args: {
+    gameName: v.string(),
+    description: v.string(),
+    playerId: v.optional(v.id("players")),
+    playerName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("game_requests", {
+      gameName: args.gameName,
+      description: args.description,
+      playerId: args.playerId,
+      playerName: args.playerName,
+      createdAt: Date.now(),
+    });
+  },
+});
+
 // Create a new error report
 export const createReport = mutation({
   args: {

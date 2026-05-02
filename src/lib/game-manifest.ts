@@ -122,7 +122,7 @@ reg('go-no-go', {
 reg('grounding', {
   name: 'Grounding Garden', emoji: '🌸',
   description: '5-4-3-2-1: Name things you can see, hear, feel, smell and taste to anchor yourself.',
-  category: 'breathe', stages: 99,
+  category: 'focus', stages: 99,
 }, () => import('@/games/grounding'));
 
 reg('just-right', {
