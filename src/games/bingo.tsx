@@ -232,12 +232,18 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const aiScale = 0.72;
   const aiCs = cs * aiScale;
   const aiHdrH = hdrH * aiScale;
+  const playerLines = countLines(playerMarked);
+  const playerMarkedCount = playerMarked.flat().filter(Boolean).length;
   if (!started) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">🔢</div>
         <h2 className="text-2xl font-bold">Bingo</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Mark numbers as they are called. Complete a line to win!</p>
+        <div className="bg-card rounded-xl p-4 max-w-xs w-full space-y-2 text-sm">
+          <div className="flex items-center gap-2"><span>📢</span><span className="text-text-muted">Numbers will be called automatically</span></div>
+          <div className="flex items-center gap-2"><span>✅</span><span className="text-text-muted">Tap called numbers on your card to mark them</span></div>
+          <div className="flex items-center gap-2"><span>🎯</span><span className="text-text-muted">Goal: <span className="text-accent">{winLabel(stage)}</span></span></div>
+        </div>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -252,32 +258,46 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   return (
     <div className="h-full flex flex-col items-center gap-2 p-2 overflow-auto">
       <div className="flex items-center gap-2 text-sm flex-wrap justify-center">
-        <span className="bg-card rounded-lg px-3 py-1.5 text-accent font-bold">
-          {gameOver ? 'Game Over' : calling ? 'Calling...' : 'Tap numbers to mark'}
+        <span className={`rounded-lg px-3 py-1.5 font-bold text-xs ${gameOver ? 'bg-card text-text-muted' : calling ? 'bg-accent/20 text-accent animate-pulse' : 'bg-card text-text-muted'}`}>
+          {gameOver ? 'Game Over' : calling ? '📢 Calling...' : 'Tap numbers to mark'}
         </span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted text-xs">
           {winLabel(stage)}
         </span>
+        {playerLines > 0 && (
+          <span className="bg-green-900/40 text-green-400 rounded-lg px-3 py-1.5 text-xs font-bold">
+            {playerLines} line{playerLines !== 1 ? 's' : ''}!
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-1 min-h-[32px] max-w-full">
-        {called.length === 0 && (
-          <span className="text-text-muted text-sm">Numbers starting soon...</span>
-        )}
-        {lastCalled.map((num, i) => {
-          const ci = COL_RANGES.findIndex(([lo, hi]) => num >= lo && num <= hi);
-          return (
-            <span
-              key={num}
-              className={`rounded-full px-2 py-0.5 text-xs font-bold transition-all ${
-                i === 0 ? 'bg-accent text-bg scale-110' : 'bg-card text-text-muted'
-              }`}
-            >
-              {COL_LABELS[ci]}{num}
+      {/* Current call — big highlighted display */}
+      {currentCall !== null && (
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center bg-accent rounded-2xl px-5 py-2 shadow-lg shadow-accent/30">
+            <span className="text-bg text-xs font-bold uppercase tracking-wider">
+              {COL_LABELS[COL_RANGES.findIndex(([lo, hi]) => (currentCall as number) >= lo && (currentCall as number) <= hi)]}
             </span>
-          );
-        })}
-      </div>
+            <span className="text-bg text-3xl font-black leading-none">{currentCall}</span>
+          </div>
+          <div className="flex flex-wrap gap-1 max-w-[160px]">
+            {lastCalled.slice(1, 6).map((num) => {
+              const ci = COL_RANGES.findIndex(([lo, hi]) => num >= lo && num <= hi);
+              return (
+                <span key={num} className="rounded-full px-2 py-0.5 text-xs font-bold bg-card text-text-muted">
+                  {COL_LABELS[ci]}{num}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {currentCall === null && (
+        <div className="flex items-center justify-center gap-2 text-text-muted text-sm">
+          <span className="text-xl">🔢</span>
+          <span>Numbers starting soon...</span>
+        </div>
+      )}
 
       <div className="flex gap-4 items-start justify-center flex-wrap">
         <div className="flex flex-col items-center">

@@ -430,6 +430,8 @@ function CheckersGame({
   const cs = boardSize / SIZE;
   const redCount = countPieces(board, 'red');
   const blackCount = countPieces(board, 'black');
+  const redCaptured = 12 - blackCount; // started with 12
+  const blackCaptured = 12 - redCount;
   const activeColor: 'red' | 'black' = isOnline ? myColor : 'red';
   const isMyTurn = turn === activeColor;
   if (!started) {
@@ -437,7 +439,11 @@ function CheckersGame({
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">♟</div>
         <h2 className="text-2xl font-bold">Checkers</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Jump over and capture all opponent pieces. Diagonal moves only!</p>
+        <div className="bg-card rounded-xl p-4 max-w-xs w-full space-y-2 text-sm">
+          <div className="flex items-center gap-2"><span>🔴</span><span className="text-text-muted">You are Red — move diagonally forward</span></div>
+          <div className="flex items-center gap-2"><span>⬆️</span><span className="text-text-muted">Jump over opponent pieces to capture them</span></div>
+          <div className="flex items-center gap-2"><span>👑</span><span className="text-text-muted">Reach the far end to become a King</span></div>
+        </div>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -464,14 +470,16 @@ function CheckersGame({
           </span>
         </div>
       ) : (
-        <div className="flex gap-3 mb-2 text-sm">
-          <span className="bg-card rounded-lg px-3 py-1.5">
+        <div className="flex gap-3 mb-2 text-sm items-center flex-wrap justify-center">
+          <div className="bg-card rounded-lg px-3 py-1.5 flex items-center gap-2">
             <span className="text-red-500 font-bold">You: {redCount}</span>
-          </span>
-          <span className="bg-card rounded-lg px-3 py-1.5">
+            {redCaptured > 0 && <span className="text-xs text-green-400">+{redCaptured} captured</span>}
+          </div>
+          <div className="bg-card rounded-lg px-3 py-1.5 flex items-center gap-2">
             <span className="text-gray-400 font-bold">AI: {blackCount}</span>
-          </span>
-          <span className="bg-card rounded-lg px-3 py-1.5 text-accent text-xs">
+            {blackCaptured > 0 && <span className="text-xs text-red-400">+{blackCaptured} captured</span>}
+          </div>
+          <span className={`bg-card rounded-lg px-3 py-1.5 text-xs font-bold ${turn === 'red' ? 'text-accent animate-pulse' : 'text-text-muted'}`}>
             {turn === 'red' ? 'Your turn (Red)' : 'AI thinking...'}
           </span>
         </div>

@@ -333,10 +333,28 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
         })}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 bg-card rounded-xl flex items-center justify-center text-3xl font-bold">
-          {die ?? '🎲'}
+      {/* Progress bars */}
+      <div className="w-full max-w-[320px] flex flex-col gap-1">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-red-400 font-bold w-6">You</span>
+          <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
+            <div className="h-full bg-red-500 rounded-full transition-all duration-300"
+              style={{ width: `${Math.round((playerPos / BOARD_SIZE) * 100)}%` }} />
+          </div>
+          <span className="text-text-muted w-8 text-right">{playerPos}</span>
         </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-blue-400 font-bold w-6">AI</span>
+          <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500 rounded-full transition-all duration-300"
+              style={{ width: `${Math.round((aiPos / BOARD_SIZE) * 100)}%` }} />
+          </div>
+          <span className="text-text-muted w-8 text-right">{aiPos}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <SnakeDiceFace value={die} />
         <button
           onClick={handleRoll}
           disabled={gameOver || turn !== 'player' || animating}
@@ -346,9 +364,34 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
         </button>
       </div>
 
-      <div className="mt-2 text-xs text-text-muted text-center">
-        Roll to move. 🪜 ladders up, 🐍 snakes down. Exact roll to finish!
+      <div className="mt-1 text-xs text-text-muted text-center">
+        🪜 ladders go up · 🐍 snakes go down · reach 100 to win!
       </div>
+    </div>
+  );
+}
+
+function SnakeDiceFace({ value }: { value: number | null }) {
+  const pipLayouts: Record<number, [number, number][]> = {
+    1: [[50, 50]],
+    2: [[25, 25], [75, 75]],
+    3: [[25, 25], [50, 50], [75, 75]],
+    4: [[25, 25], [75, 25], [25, 75], [75, 75]],
+    5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+    6: [[25, 20], [75, 20], [25, 50], [75, 50], [25, 80], [75, 80]],
+  };
+  const pips = value !== null ? (pipLayouts[value] || []) : [];
+  return (
+    <div className="w-14 h-14 bg-card rounded-xl flex items-center justify-center select-none border-2 border-white/10">
+      {value === null ? (
+        <span className="text-2xl">🎲</span>
+      ) : (
+        <svg width="48" height="48" viewBox="0 0 100 100">
+          {pips.map(([cx, cy], i) => (
+            <circle key={i} cx={cx} cy={cy} r={10} fill="#e2e8f0" />
+          ))}
+        </svg>
+      )}
     </div>
   );
 }

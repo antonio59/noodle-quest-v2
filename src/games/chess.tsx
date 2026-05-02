@@ -299,15 +299,29 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   const ranks = '87654321'.split('');
   const activeColor = isOnline ? myColor : 'w';
   const isMyTurn = turn === activeColor;
+  const isInCheck = game.isCheck();
+
+  // Find king positions for check highlight
+  const kingSquares: Record<string, Square | null> = { w: null, b: null };
+  board.forEach((row, r) => row.forEach((cell, c) => {
+    if (cell?.type === 'k') kingSquares[cell.color] = `${files[c]}${ranks[r]}` as Square;
+  }));
+
+  // Material advantage
+  const matW = captured.w.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
+  const matB = captured.b.reduce((s, p) => s + (PIECE_VALUES[p] || 0), 0);
+  const matAdv = matW - matB;
 
   if (!started) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">♔</div>
         <h2 className="text-2xl font-bold">Chess</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">
-          Classic strategy game. Checkmate the opponent's king to win!
-        </p>
+        <div className="bg-card rounded-xl p-4 max-w-xs w-full space-y-2 text-sm">
+          <div className="flex items-center gap-2"><span>⚔️</span><span className="text-text-muted">You play White — make the first move</span></div>
+          <div className="flex items-center gap-2"><span>♟</span><span className="text-text-muted">Capture the king to win (Checkmate)</span></div>
+          <div className="flex items-center gap-2"><span>🤖</span><span className="text-text-muted capitalize">AI difficulty: <span className="text-accent">{difficulty}</span></span></div>
+        </div>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -352,12 +366,18 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
             const isSel = selected === sqName;
             const isLegal = legalMoves.includes(sqName);
             const isLast = lastMove?.from === sqName || lastMove?.to === sqName;
+            const isKingInCheck = isInCheck && cell?.type === 'k' && cell.color === turn && sqName === kingSquares[turn];
             const pk = cell ? `${cell.color}${cell.type}` : null;
             return (
               <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: isMyTurn && !gameOver ? 'pointer' : 'default' }}>
                 <rect x={c * cs} y={r * cs} width={cs} height={cs}
-                  fill={isSel ? '#7b61ff' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
-                  opacity={isSel ? 0.8 : 1} />
+                  fill={isSel ? '#7b61ff' : isKingInCheck ? '#ff4444' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
+                  opacity={isSel ? 0.8 : isKingInCheck ? 0.85 : 1} />
+                {isKingInCheck && (
+                  <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.46} fill="none" stroke="#ff0000" strokeWidth={2.5} opacity={0.7}>
+                    <animate attributeName="opacity" values="0.3;0.9;0.3" dur="0.8s" repeatCount="indefinite" />
+                  </circle>
+                )}
                 {isLegal && (cell
                   ? <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.44} fill="none" stroke="#7b61ff" strokeWidth={3} opacity={0.6} />
                   : <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.16} fill="#7b61ff" opacity={0.5} />)}
@@ -378,10 +398,15 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
           {ranks.map((r, i) => <text key={`r${r}`} x={3} y={i * cs + 11} fontSize={9} fill={i % 2 === 0 ? '#f0d9b5' : '#b58863'} style={{ pointerEvents: 'none' }}>{r}</text>)}
         </svg>
 
-        <div className="mt-2 flex gap-3 text-sm items-center">
+        <div className="mt-2 flex gap-3 text-sm items-center flex-wrap justify-center">
           <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-            You took: {captured.w.map(p => PIECE_UNICODE['w' + p] || p).join('') || '—'}
+            You took: {captured.w.map(p => PIECE_UNICODE['b' + p] || p).join('') || '—'}
           </span>
+          {matAdv !== 0 && (
+            <span className={`rounded-lg px-2 py-1 text-xs font-bold ${matAdv > 0 ? 'text-green-400 bg-green-900/30' : 'text-red-400 bg-red-900/30'}`}>
+              {matAdv > 0 ? `+${matAdv}` : matAdv} material
+            </span>
+          )}
         </div>
       </div>
 

@@ -500,13 +500,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
 
       {/* Dice + Roll */}
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-card rounded-xl flex items-center justify-center text-2xl font-bold select-none">
-          {dice !== null ? (
-            <span className={dice === 6 ? 'text-accent' : 'text-text'}>{dice}</span>
-          ) : (
-            <span>🎲</span>
-          )}
-        </div>
+        <DiceFace value={dice} highlight={dice === 6} />
         <button
           onClick={handleRoll}
           disabled={over || turn !== 'p'}
@@ -516,9 +510,59 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
         </button>
       </div>
 
+      {/* Progress bars */}
+      {!isOnline && (
+        <div className="w-full max-w-[380px] flex flex-col gap-1 px-1">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-red-400 font-bold w-6">You</span>
+            <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
+              <div className="h-full bg-red-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(0, pPos < 0 ? 0 : pPos >= 58 ? 100 : Math.round((pPos / 58) * 100))}%` }} />
+            </div>
+            <span className="text-text-muted w-8 text-right">{pPos < 0 ? 'Base' : pPos >= 58 ? 'HOME' : `${Math.round((pPos / 58) * 100)}%`}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-blue-400 font-bold w-6">AI</span>
+            <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(0, aPos < 0 ? 0 : aPos >= 58 ? 100 : Math.round((aPos / 58) * 100))}%` }} />
+            </div>
+            <span className="text-text-muted w-8 text-right">{aPos < 0 ? 'Base' : aPos >= 58 ? 'HOME' : `${Math.round((aPos / 58) * 100)}%`}</span>
+          </div>
+        </div>
+      )}
+
       <div className="text-[11px] text-text-muted text-center px-4 leading-relaxed">
         Roll 6 to enter. Land on opponent to capture. Reach the star to win!
       </div>
+    </div>
+  );
+}
+
+function DiceFace({ value, highlight }: { value: number | null; highlight?: boolean }) {
+  const pipLayouts: Record<number, [number, number][]> = {
+    1: [[50, 50]],
+    2: [[25, 25], [75, 75]],
+    3: [[25, 25], [50, 50], [75, 75]],
+    4: [[25, 25], [75, 25], [25, 75], [75, 75]],
+    5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+    6: [[25, 20], [75, 20], [25, 50], [75, 50], [25, 80], [75, 80]],
+  };
+  const pips = value !== null ? (pipLayouts[value] || []) : [];
+  return (
+    <div className={`w-12 h-12 rounded-xl flex items-center justify-center select-none border-2 transition-all ${
+      highlight ? 'bg-accent/20 border-accent shadow-lg shadow-accent/30' : 'bg-card border-white/10'
+    }`}>
+      {value === null ? (
+        <span className="text-2xl">🎲</span>
+      ) : (
+        <svg width="40" height="40" viewBox="0 0 100 100">
+          {pips.map(([cx, cy], i) => (
+            <circle key={i} cx={cx} cy={cy} r={10}
+              fill={highlight ? '#a78bfa' : '#e2e8f0'} />
+          ))}
+        </svg>
+      )}
     </div>
   );
 }

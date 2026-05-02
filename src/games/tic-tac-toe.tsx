@@ -204,7 +204,11 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl">⭕</div>
         <h2 className="text-2xl font-bold">Tic-Tac-Toe</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Get 3 of your marks in a row to win! Play against the AI.</p>
+        <div className="bg-card rounded-xl p-4 max-w-xs w-full space-y-2 text-sm">
+          <div className="flex items-center gap-2"><span>✖️</span><span className="text-text-muted">You are X — get 3 in a row to win</span></div>
+          <div className="flex items-center gap-2"><span>🏆</span><span className="text-text-muted">Target: <span className="text-accent">{targetWins} wins</span> to complete the stage</span></div>
+          <div className="flex items-center gap-2"><span>🤖</span><span className="text-text-muted capitalize">AI difficulty: <span className="text-accent">{difficulty}</span></span></div>
+        </div>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -217,9 +221,9 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
 
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4">
+    <div className="h-full flex flex-col items-center justify-center p-4 gap-1">
       {isOnline ? (
-        <div className="flex gap-3 mb-4 text-sm items-center">
+        <div className="flex gap-3 mb-3 text-sm items-center">
           <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
             You: {myMark}
           </span>
@@ -232,13 +236,29 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
           </span>
         </div>
       ) : (
-        <div className="flex gap-4 mb-4 text-sm">
-          <span className="bg-card rounded-lg px-3 py-1.5 text-accent font-bold">Wins: {wins}/{targetWins}</span>
-          <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">Games: {gamesPlayed}</span>
+        <div className="flex gap-3 mb-3 text-sm items-center">
+          <span className="bg-card rounded-lg px-3 py-1.5 text-accent font-bold">
+            Wins: {wins}/{targetWins}
+          </span>
+          <div className="flex gap-1">
+            {Array.from({ length: targetWins }, (_, i) => (
+              <div key={i} className={`w-3 h-3 rounded-full border ${i < wins ? 'bg-accent border-accent' : 'border-text-dim bg-transparent'}`} />
+            ))}
+          </div>
+          {losses > 0 && <span className="text-xs text-red-400">❌ {losses}/{MAX_LOSSES}</span>}
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-4 game-board">
+      {/* Turn indicator */}
+      {!winner && (
+        <div className={`text-xs font-bold mb-1 px-3 py-1 rounded-full transition-all ${
+          isMyTurn ? 'bg-accent/20 text-accent' : 'bg-card text-text-muted'
+        }`}>
+          {isOnline ? (isMyTurn ? 'Your turn' : 'Waiting...') : (isMyTurn ? 'Your turn (X)' : 'AI thinking...')}
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-3 game-board">
         {board.map((cell, i) => {
           const isWinCell = winLine?.includes(i) ?? false;
           return (
@@ -246,12 +266,14 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
               key={i}
               onClick={() => handleCell(i)}
               disabled={!!cell || inputDisabled}
-              className={`game-cell w-20 h-20 rounded-xl text-3xl font-bold flex items-center justify-center transition-all active:scale-90 ${
-                cell === 'X' ? 'text-accent' : cell === 'O' ? 'text-danger' : 'bg-card-hover hover:bg-card-hover'
-              } ${!cell && !inputDisabled ? 'hover:bg-card-hover' : ''} ${
-                isWinCell ? 'ring-3 ring-success bg-success/20' : ''
-              }`}
-              style={{ boxShadow: cell ? 'none' : '0 2px 0 rgba(0,0,0,0.2)' }}
+              className={`game-cell w-20 h-20 rounded-xl text-4xl font-bold flex items-center justify-center transition-all active:scale-90 ${
+                !cell && !inputDisabled ? 'hover:bg-card-hover' : ''
+              } ${isWinCell ? 'ring-2 ring-success bg-success/20' : cell ? '' : 'bg-card-hover/50'}`}
+              style={{
+                boxShadow: cell ? 'none' : '0 2px 0 rgba(0,0,0,0.2)',
+                color: cell === 'X' ? '#a78bfa' : cell === 'O' ? '#f87171' : undefined,
+                transform: isWinCell ? 'scale(1.05)' : undefined,
+              }}
             >
               {cell || ''}
             </button>
@@ -260,12 +282,14 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       </div>
 
       {winner && !isOnline && (
-        <button
-          onClick={resetBoard}
-          className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95"
-        >
-          {winner === 'draw' ? 'Draw — Play Again' : winner === human ? 'You Win! Play Again' : 'You Lost — Try Again'}
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          <div className={`text-lg font-bold ${winner === human ? 'text-accent' : winner === 'draw' ? 'text-warning' : 'text-danger'}`}>
+            {winner === 'draw' ? "It's a draw!" : winner === human ? '🎉 You Win!' : '🤖 AI Wins!'}
+          </div>
+          <button onClick={resetBoard} className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 text-sm">
+            Play Again
+          </button>
+        </div>
       )}
       {winner && isOnline && (
         <div className="text-center">

@@ -298,24 +298,33 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       )}
 
       <div className="bg-[#1a3a6a] p-2 rounded-xl">
-        {/* Column drop arrows */}
+        {/* Column drop arrows + ghost disc preview */}
         <div className="grid grid-cols-7 gap-1 mb-1">
-          {Array.from({ length: COLS }, (_, c) => (
-            <button
-              key={`arrow-${c}`}
-              onClick={() => handleDrop(c)}
-              onMouseEnter={() => setHoverCol(c)}
-              onMouseLeave={() => setHoverCol(null)}
-              disabled={inputDisabled || !!board[0][c]}
-              className="h-6 flex items-center justify-center text-sm transition-all disabled:opacity-0"
-              style={{
-                color: hoverCol === c && !inputDisabled ? '#ef4444' : '#ffffff40',
-                transform: hoverCol === c && !inputDisabled ? 'translateY(-2px)' : 'none',
-              }}
-            >
-              ▼
-            </button>
-          ))}
+          {Array.from({ length: COLS }, (_, c) => {
+            // Find where the ghost piece would land in this column
+            let ghostRow = -1;
+            if (hoverCol === c && !inputDisabled && !board[0][c]) {
+              for (let r = ROWS - 1; r >= 0; r--) {
+                if (!board[r][c]) { ghostRow = r; break; }
+              }
+            }
+            return (
+              <button
+                key={`arrow-${c}`}
+                onClick={() => handleDrop(c)}
+                onMouseEnter={() => setHoverCol(c)}
+                onMouseLeave={() => setHoverCol(null)}
+                disabled={inputDisabled || !!board[0][c]}
+                className="h-6 flex items-center justify-center text-sm transition-all disabled:opacity-0"
+                style={{
+                  color: hoverCol === c && !inputDisabled ? '#ef4444' : '#ffffff40',
+                  transform: hoverCol === c && !inputDisabled ? 'translateY(-2px)' : 'none',
+                }}
+              >
+                ▼
+              </button>
+            );
+          })}
         </div>
 
         {/* Board */}
@@ -323,6 +332,14 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
           {board.map((row, r) =>
             row.map((cell, c) => {
               const win = isWinCell(r, c);
+              // Ghost piece: where red would land in hovered column
+              let ghostRow = -1;
+              if (hoverCol === c && !inputDisabled && !board[0][c]) {
+                for (let gr = ROWS - 1; gr >= 0; gr--) {
+                  if (!board[gr][c]) { ghostRow = gr; break; }
+                }
+              }
+              const isGhost = !cell && r === ghostRow && hoverCol === c;
               return (
                 <button
                   key={`${r}-${c}`}
@@ -336,9 +353,11 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
                       ? win ? '#ef4444' : '#dc2626'
                       : cell === 'yellow'
                       ? win ? '#fbbf24' : '#d97706'
+                      : isGhost ? 'rgba(239,68,68,0.3)'
                       : hoverCol === c && !inputDisabled && !board[0][c] ? '#1e3a5a' : '#0f1d3a',
                     boxShadow: win
                       ? cell === 'red' ? '0 0 12px #ef4444, 0 0 24px #ef444460' : '0 0 12px #fbbf24, 0 0 24px #fbbf2460'
+                      : isGhost ? 'inset 0 0 0 2px rgba(239,68,68,0.6)'
                       : cell
                       ? 'inset 0 -2px 4px rgba(0,0,0,0.3)'
                       : 'inset 0 2px 4px rgba(0,0,0,0.5)',
