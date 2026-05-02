@@ -7,6 +7,7 @@ import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameCategory } from '@/types';
 import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap, Star, Sparkles } from 'lucide-react';
 import { RequestGameModal } from '@/components/RequestGameModal';
+import { getGameImage } from '@/lib/game-images';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
@@ -310,10 +311,20 @@ export function GameHub() {
                     </button>
                   )}
 
-                  {/* Emoji */}
-                  <div className="text-5xl mt-7 mb-3 leading-none group-hover:scale-110 transition-transform duration-300">
-                    {g.emoji}
-                  </div>
+                  {/* Thumbnail or emoji */}
+                  {getGameImage(g.id) ? (
+                    <div className="w-full rounded-2xl overflow-hidden mt-7 mb-3 aspect-square group-hover:scale-105 transition-transform duration-300">
+                      <img
+                        src={getGameImage(g.id)}
+                        alt={g.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-5xl mt-7 mb-3 leading-none group-hover:scale-110 transition-transform duration-300">
+                      {g.emoji}
+                    </div>
+                  )}
 
                   {/* Name + description */}
                   <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
@@ -388,8 +399,14 @@ export function GameHub() {
                       </span>
                     )}
 
-                    {/* Emoji */}
-                    <div className="text-5xl mb-3 leading-none mt-2 group-hover:scale-110 transition-transform duration-300">{g.emoji}</div>
+                    {/* Thumbnail or emoji */}
+                    {getGameImage(g.id) ? (
+                      <div className="w-full rounded-2xl overflow-hidden mt-2 mb-3 aspect-square group-hover:scale-105 transition-transform duration-300">
+                        <img src={getGameImage(g.id)} alt={g.name} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="text-5xl mb-3 leading-none mt-2 group-hover:scale-110 transition-transform duration-300">{g.emoji}</div>
+                    )}
 
                     {/* Name + description */}
                     <div className="font-bold text-sm mb-1 text-text">{g.name}</div>

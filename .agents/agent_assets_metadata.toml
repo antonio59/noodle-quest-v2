@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "Wlrr0mBycilG1iVAeJSNZ"
+uri = "file://src/assets/games/anagram.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "VJhyeM8ns1OceG2LUHDwV"
+uri = "file://src/assets/games/attention-archery.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Jrl8ry_gNowVTmlAg3k9f"
+uri = "file://src/assets/games/breath-bubbles.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "gO9c--hqrUt2AmdMzroF7"
+uri = "file://src/assets/games/color-rush.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "TalbKWYYAQzEvQDHiBvaK"
+uri = "file://src/assets/games/copy-cat.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "70U850yfzCYcuRcxpQjO1"
+uri = "file://src/assets/games/dual-n-back.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "gxzfbhtaGi50_StBNL0IP"
+uri = "file://src/assets/games/echo-tap.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1fwm92l7RiahXtfSVfCQH"
+uri = "file://src/assets/games/emotion-volcano.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "_e2Hjuw3lOVfToYOEXsHM"
+uri = "file://src/assets/games/empathy-engine.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "qrzgWS336UqnAjGMzGWjo"
+uri = "file://src/assets/games/feelings-faces.png"
+type = "image"
+title = "generated_image"
