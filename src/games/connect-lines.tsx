@@ -184,6 +184,7 @@ function stageSize(stage: number): number {
 
 export default function ConnectLinesGame({ stage = 1, onScore, onProgress, onEnd, onMessage }: Partial<GameProps>) {
   const size = stageSize(stage);
+  const [ready, setReady] = useState(true);
   const [seed, setSeed] = useState(() => Date.now() + stage * 1000);
   const { scrambled } = useMemo(() => buildPuzzle(size, seed), [size, seed]);
   const [puzzle, setPuzzle] = useState<Puzzle>(scrambled);
@@ -239,6 +240,27 @@ export default function ConnectLinesGame({ stage = 1, onScore, onProgress, onEnd
     setMoves(m => m + 1);
   };
 
+  if (ready) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-5 p-6 text-center">
+        <div className="text-6xl">🔌</div>
+        <h2 className="text-2xl font-bold text-accent">Connect Lines</h2>
+        <div className="bg-card rounded-2xl p-4 max-w-xs w-full space-y-3 text-sm text-text-muted">
+          <p>🔄 <span className="text-text">Tap</span> a pipe tile to rotate it</p>
+          <p>🔗 <span className="text-text">Connect</span> every pipe so no ends are left hanging</p>
+          <p>⭐ <span className="text-text">Fewer rotations</span> = higher score!</p>
+        </div>
+        <div className="text-text-muted text-sm">{size}×{size} grid · Stage {stage}</div>
+        <button
+          onClick={() => { setReady(false); startedAtRef.current = Date.now(); }}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Puzzle 🔌
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
@@ -255,7 +277,7 @@ export default function ConnectLinesGame({ stage = 1, onScore, onProgress, onEnd
 
       {solved && (
         <div className="mx-4 mb-2 text-center p-2 bg-success/20 rounded-lg flex-shrink-0">
-          <span className="text-success font-bold text-sm">🎉 Connected!</span>
+          <span className="text-success font-bold text-sm">🎉 Connected! Great puzzle solving!</span>
         </div>
       )}
 

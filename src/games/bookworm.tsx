@@ -119,6 +119,7 @@ function buildBoard(seed: number): Cell[][] {
 
 export default function BookwormGame({ stage = 1, onScore, onProgress, onEnd, onMessage }: Partial<GameProps>) {
   const cfg = cfgFor(stage);
+  const [ready, setReady] = useState(true);
   const [seed] = useState(() => Date.now());
   const idRef = useRef(ROWS * COLS);
   const [board, setBoard] = useState<Cell[][]>(() => buildBoard(seed));
@@ -128,8 +129,9 @@ export default function BookwormGame({ stage = 1, onScore, onProgress, onEnd, on
   const [flash, setFlash] = useState<{ kind: 'good' | 'bad'; word: string } | null>(null);
   const endedRef = useRef(false);
 
-  // Timer
+  // Timer — only starts once the player has left the intro screen
   useEffect(() => {
+    if (ready) return;
     const start = Date.now();
     const total = cfg.timeLimitSec * 1000;
     const tick = () => {
@@ -140,7 +142,7 @@ export default function BookwormGame({ stage = 1, onScore, onProgress, onEnd, on
     };
     const id = setInterval(tick, 200);
     return () => clearInterval(id);
-  }, []);
+  }, [ready]);
 
   const endGame = () => {
     if (endedRef.current) return;
@@ -237,6 +239,36 @@ export default function BookwormGame({ stage = 1, onScore, onProgress, onEnd, on
   };
 
   const selectedSet = useMemo(() => new Set(selection.map(([r, c]) => `${r},${c}`)), [selection]);
+
+  if (ready) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-5 p-6 text-center">
+        <div className="text-6xl">📚</div>
+        <h2 className="text-2xl font-bold text-accent">Bookworm</h2>
+        <div className="bg-card rounded-2xl p-4 max-w-xs w-full space-y-3 text-sm text-text-muted">
+          <p>🔤 <span className="text-text">Tap adjacent letters</span> to spell words</p>
+          <p>✅ <span className="text-text">3+ letters</span> make a valid word</p>
+          <p>📏 <span className="text-text">Longer words</span> score more points!</p>
+        </div>
+        <div className="bg-surface rounded-xl px-4 py-3 max-w-xs w-full text-sm">
+          <div className="flex justify-between">
+            <span className="text-text-muted">Target score</span>
+            <span className="font-bold text-accent">{cfg.target} pts</span>
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="text-text-muted">Time limit</span>
+            <span className="font-bold text-text">{cfg.timeLimitSec}s</span>
+          </div>
+        </div>
+        <button
+          onClick={() => setReady(false)}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start Reading! 📚
+        </button>
+      </div>
+    );
+  }
 
   const secs = Math.ceil(remainingMs / 1000);
   const timeColor = remainingMs < 15_000 ? 'text-danger' : 'text-text';

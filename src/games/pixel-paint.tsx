@@ -4,6 +4,39 @@ import { scaleFromLast } from '@/lib/endless-stage';
 
 const COLORS = ['#232146', '#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24'];
 
+type PatternType = 'rings' | 'diagonal' | 'checkerboard' | 'spiral' | 'cross' | 'random';
+
+function generatePattern(size: number, type?: PatternType): number[][] {
+  const pattern = Array.from({ length: size }, () => Array(size).fill(0));
+  const cx = (size - 1) / 2;
+  const cy = (size - 1) / 2;
+  const maxDist = Math.sqrt(cx * cx + cy * cy);
+  const t = type ?? (['rings', 'diagonal', 'checkerboard', 'cross', 'random'] as PatternType[])[Math.floor(Math.random() * 5)];
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (t === 'rings') {
+        const d = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2) / maxDist;
+        pattern[y][x] = d < 0.2 ? 4 : d < 0.4 ? 3 : d < 0.6 ? 2 : d < 0.8 ? 1 : 0;
+      } else if (t === 'diagonal') {
+        const v = Math.floor(((x + y) / (size * 2 - 2)) * 5);
+        pattern[y][x] = Math.min(4, v) + 1 > 5 ? 5 : Math.min(4, v) + 1;
+      } else if (t === 'checkerboard') {
+        const qx = Math.floor(x / Math.max(1, Math.floor(size / 3)));
+        const qy = Math.floor(y / Math.max(1, Math.floor(size / 3)));
+        pattern[y][x] = ((qx + qy) % 4) + 1;
+      } else if (t === 'cross') {
+        const mx = Math.abs(x - cx) / cx;
+        const my = Math.abs(y - cy) / cy;
+        pattern[y][x] = mx < 0.2 || my < 0.2 ? 3 : mx < 0.5 && my < 0.5 ? 2 : 1;
+      } else {
+        pattern[y][x] = Math.floor(Math.random() * 5) + 1;
+      }
+    }
+  }
+  return pattern;
+}
+
 const CONFIG: Record<number, { size: number; time: number }> = {
   1: { size: 5, time: 0 },
   2: { size: 6, time: 0 },
@@ -24,26 +57,6 @@ const TIPS = [
   '💡 Tip: The dark color (background) is already filled in — focus on the bright colors.',
   '💡 Tip: Take your time! Accuracy matters more than speed.',
 ];
-
-function generatePattern(size: number): number[][] {
-  const pattern = Array.from({ length: size }, () => Array(size).fill(0));
-  const cx = Math.floor(size / 2);
-  const cy = Math.floor(size / 2);
-  const maxDist = Math.sqrt(cx * cx + cy * cy);
-
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
-      const normalizedDist = dist / maxDist;
-      if (normalizedDist < 0.2) pattern[y][x] = 4;
-      else if (normalizedDist < 0.4) pattern[y][x] = 3;
-      else if (normalizedDist < 0.6) pattern[y][x] = 2;
-      else if (normalizedDist < 0.8) pattern[y][x] = 1;
-      else pattern[y][x] = 0;
-    }
-  }
-  return pattern;
-}
 
 type Phase = 'intro' | 'playing' | 'result';
 
@@ -81,8 +94,9 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
     if (phase !== 'playing' || !canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
     if (!ctx) return;
-    const cellSize = 60 / config.size;
-    ctx.clearRect(0, 0, 60, 60);
+    const canvasSize = 100;
+    const cellSize = canvasSize / config.size;
+    ctx.clearRect(0, 0, canvasSize, canvasSize);
     target.forEach((row, y) => {
       row.forEach((color, x) => {
         ctx.fillStyle = COLORS[color];
@@ -222,14 +236,14 @@ function PixelPaintGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
           <span className="text-primary text-xs">TARGET</span>
           <canvas
             ref={canvasRef}
-            width={60}
-            height={60}
-            className="w-[60px] h-[60px] bg-card rounded-md border-2 border-accent"
+            width={100}
+            height={100}
+            className="w-[100px] h-[100px] bg-card rounded-md border-2 border-accent"
           />
         </div>
         {config.time > 0 && (
-          <span className={`font-bold ${timeLeft <= 10 ? 'text-danger' : 'text-danger'}`}>
-            ⏱️ {timeLeft}
+          <span className={`font-bold ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : timeLeft <= 30 ? 'text-yellow-400' : 'text-green-400'}`}>
+            ⏱️ {timeLeft}s
           </span>
         )}
       </div>

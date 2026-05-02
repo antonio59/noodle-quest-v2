@@ -70,7 +70,7 @@ export default function QuickMath({ stage, onScore, onProgress, onEnd }: GamePro
   const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     problems: 0.1, timeLimit: -0.1, maxNum: 0.1,
   }, {
-    problems: 50, timeLimit: 1500, maxNum: 100, useDivision: true,
+    problems: 50, timeLimit: 1500, maxNum: 100,
   }), [stage]);
 
   const [phase, setPhase] = useState<Phase>('ready');
