@@ -129,10 +129,6 @@ export function GameHub() {
     navigate(`/play/${gameId}`, { state: { stage: 1, fromTab: tab, multiplayer: true } });
   };
 
-  const navigateToAiDifficulty = (gameId: string, difficulty: 'easy' | 'medium' | 'hard') => {
-    navigate(`/play/${gameId}`, { state: { stage: 1, fromTab: tab, aiDifficulty: difficulty } });
-  };
-
   const toggleFav = (id: string) => {
     setFavorites(prev => {
       const next = new Set(prev);
@@ -361,27 +357,13 @@ export function GameHub() {
 
                 <CardMeta gameId={g.id} size="lg" />
 
-                {/* Difficulty buttons */}
-                <div className="flex gap-1.5 mt-3 w-full" onClick={e => e.stopPropagation()}>
-                  <button
-                    onClick={() => navigateToAiDifficulty(g.id, 'easy')}
-                    className="flex-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold py-2 rounded-xl hover:bg-emerald-500/20 transition-colors"
-                  >
-                    Easy
-                  </button>
-                  <button
-                    onClick={() => navigateToAiDifficulty(g.id, 'medium')}
-                    className="flex-1 bg-accent/10 text-accent border border-accent/30 text-xs font-semibold py-2 rounded-xl hover:bg-accent/20 transition-colors"
-                  >
-                    Med
-                  </button>
-                  <button
-                    onClick={() => navigateToAiDifficulty(g.id, 'hard')}
-                    className="flex-1 bg-danger/10 text-danger border border-danger/30 text-xs font-semibold py-2 rounded-xl hover:bg-danger/20 transition-colors"
-                  >
-                    Hard
-                  </button>
-                </div>
+                {/* Play button */}
+                <button
+                  onClick={() => navigateToGame(g.id)}
+                  className="mt-3 w-full bg-accent/15 text-accent border border-accent/30 text-xs font-bold py-2.5 rounded-xl hover:bg-accent/25 transition-colors active:scale-95"
+                >
+                  Play
+                </button>
               </div>
             ))}
             {allGames.filter(g => g.category === 'board').length === 0 && (

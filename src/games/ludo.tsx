@@ -32,12 +32,6 @@ const BLUE_SPOTS: [number, number][] = [[10.7,10.7],[12.3,10.7],[10.7,12.3],[12.
 const SAFE_POSITIONS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
 const BLUE_ENTRY = 26;
 
-const DIFF_CFG = {
-  easy:   { enter: 0.3,  home: 0.35, cap: 0.25 },
-  medium: { enter: 0.7,  home: 0.8,  cap: 0.7  },
-  hard:   { enter: 1.0,  home: 1.0,  cap: 1.0  },
-};
-
 // Small px offsets when multiple pieces share one track square
 const STACK_OFF: [number, number][] = [[-4,-4],[4,-4],[-4,4],[4,4]];
 
@@ -83,26 +77,6 @@ function getMovableIndices(pieces: number[], d: number, isBlue: boolean): number
   return result;
 }
 
-function aiRollMulti(pPieces: number[], aPieces: number[], diff: 'easy'|'medium'|'hard'): number {
-  const cfg = DIFF_CFG[diff];
-  if (aPieces.some(p => p === -1) && Math.random() < cfg.enter) return 6;
-  for (const ap of aPieces) {
-    if (ap >= 0 && ap < 58 && Math.random() < cfg.home) {
-      const gap = 58 - ap;
-      if (gap > 0 && gap <= 6) return gap;
-    }
-  }
-  for (const ap of aPieces) {
-    for (const pp of pPieces) {
-      if (ap >= 0 && ap < 52 && pp >= 0 && pp < 52 && !SAFE_POSITIONS.has(pp) && Math.random() < cfg.cap) {
-        const gap = ((pp - ap + 52) % 52);
-        if (gap > 0 && gap <= 6) return gap;
-      }
-    }
-  }
-  return rollDie();
-}
-
 function scoreMove(np: number, pPieces: number[]): number {
   if (np >= 58) return 1000;
   let score = np >= 52 ? 200 + np : np;
@@ -112,7 +86,7 @@ function scoreMove(np: number, pPieces: number[]): number {
   return score;
 }
 
-function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
   const mySide: 'red' | 'blue' = isOnline
     ? (multiplayerState.playerNumber === 1 ? 'red' : 'blue')
@@ -136,7 +110,6 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   const [movable, setMovable] = useState<number[]>([]);
   const [over, setOver]       = useState(false);
   const [started, setStarted] = useState(false);
-  const diff = aiDifficulty || 'medium';
 
   const pRef     = useRef<number[]>([-1,-1,-1,-1]);
   const aRef     = useRef<number[]>([-1,-1,-1,-1]);
@@ -164,7 +137,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   // ── AI turn ──────────────────────────────────────────────────────────────
   const doAi = useCallback(() => {
     if (endedRef.current || overRef.current) return;
-    const d = aiRollMulti(pRef.current, aRef.current, diff);
+    const d = rollDie();
     setDice(d);
 
     const mv = getMovableIndices(aRef.current, d, mySide !== 'red');
@@ -219,7 +192,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
 
     if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus!'); schedule(doAi, 700); return; }
     setTurn('p');
-  }, [diff, mySide, oppAdv, onMessage, onEnd, schedule]);
+  }, [mySide, oppAdv, onMessage, onEnd, schedule]);
 
   // ── Move a player piece ──────────────────────────────────────────────────
   const movePiece = useCallback((idx: number, d: number) => {

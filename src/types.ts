@@ -8,7 +8,8 @@ export interface GameDefinition {
   benefits?: string[];
   duration?: string;
   bestFor?: string[];
-  aiDifficulty?: 'easy' | 'medium' | 'hard';
+  /** If true, AI difficulty scales automatically with the player's stage progress. */
+  hasAdaptiveAi?: boolean;
   tabDescription?: string;
   tabBenefits?: string[];
   /** Minimum human players for an online multiplayer session. Defaults to 2. */

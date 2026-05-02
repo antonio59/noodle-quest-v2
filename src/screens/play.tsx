@@ -18,7 +18,6 @@ export function PlayGame() {
   const stage = (location.state as any)?.stage ?? 1;
   const fromTab = (location.state as any)?.fromTab ?? 'brain';
   const isMultiplayer = (location.state as any)?.multiplayer ?? false;
-  const initialDifficulty = (location.state as any)?.aiDifficulty as string | undefined;
   const joinerSessionId = (location.state as any)?.sessionId as string | undefined;
 
   const [currentStage, setCurrentStage] = useState(stage);
@@ -28,11 +27,8 @@ export function PlayGame() {
   const [ended, setEnded] = useState<GameResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [nextStage, setNextStage] = useState<number | null>(null);
-  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>(
-    (initialDifficulty as any) || 'medium'
-  );
   const [numPlayers, setNumPlayers] = useState<number>(2);
-  const [showLobby, setShowLobby] = useState(!initialDifficulty);
+  const [lobbyDone, setLobbyDone] = useState(false);
   const [showStagePicker, setShowStagePicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -47,6 +43,9 @@ export function PlayGame() {
     player && gameId ? { playerId: player.playerId as any, gameId } : 'skip' as any,
   );
   const maxUnlocked = playerProgress?.maxUnlockedStage ?? 1;
+  // Difficulty climbs automatically with player progress — no manual selection needed
+  const aiDifficulty: 'easy' | 'medium' | 'hard' =
+    maxUnlocked <= 3 ? 'easy' : maxUnlocked <= 8 ? 'medium' : 'hard';
 
   // Monthly bonus pool: the 3 least-played games globally earn 3×, next 3 earn 2×.
   const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
@@ -83,6 +82,8 @@ export function PlayGame() {
 
   const minPlayers = gameMeta.minPlayers ?? 2;
   const maxPlayers = gameMeta.maxPlayers ?? 2;
+  // Lobby only appears for multi-player games so the user can choose how many AI opponents
+  const showLobby = !lobbyDone && maxPlayers > 2 && !isMultiplayer;
 
   // Once the session is live, the normal GameComponent render path kicks in.
   const isLivePlaying = isMultiplayer && !!liveSession && liveSession.status === 'playing';
@@ -293,54 +294,42 @@ export function PlayGame() {
     );
   }
 
-  // Show pre-game lobby for board games when no difficulty was pre-selected
-  if (showLobby && gameMeta.category === 'board') {
+  // Pre-game lobby: only shown for multi-player games so user can pick number of AI opponents
+  if (showLobby) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">{gameMeta.emoji}</div>
         <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
         <p className="text-text-muted text-sm mb-6 max-w-xs">{gameMeta.description}</p>
 
-        {maxPlayers > 2 && (
-          <div className="w-full max-w-xs mb-5">
-            <h3 className="text-sm font-semibold text-text-dim mb-2">Players</h3>
-            <div className="flex gap-2 justify-center">
-              {Array.from({ length: maxPlayers - 1 }, (_, i) => i + 2).map(n => (
-                <button
-                  key={n}
-                  onClick={() => setNumPlayers(n)}
-                  className={`flex-1 py-2 rounded-lg font-bold text-sm transition-all active:scale-95 ${
-                    numPlayers === n
-                      ? 'bg-accent text-bg'
-                      : 'bg-card text-text hover:bg-card-hover'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-text-dim mt-1.5 text-center">
-              You + {numPlayers - 1} AI opponent{numPlayers > 2 ? 's' : ''}
-            </p>
+        <div className="w-full max-w-xs mb-6">
+          <h3 className="text-sm font-semibold text-text-dim mb-3">How many players?</h3>
+          <div className="flex gap-2 justify-center">
+            {Array.from({ length: maxPlayers - 1 }, (_, i) => i + 2).map(n => (
+              <button
+                key={n}
+                onClick={() => setNumPlayers(n)}
+                className={`flex-1 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-95 ${
+                  numPlayers === n
+                    ? 'bg-accent text-bg'
+                    : 'bg-card text-text hover:bg-card-hover'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
           </div>
-        )}
-
-        <div className="w-full max-w-xs space-y-3 mb-6">
-          <h3 className="text-sm font-semibold text-text-dim">Choose Difficulty</h3>
-          {(['easy', 'medium', 'hard'] as const).map(d => (
-            <button
-              key={d}
-              onClick={() => { setAiDifficulty(d); setShowLobby(false); }}
-              className={`w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95 ${
-                d === 'easy' ? 'bg-success/20 text-success hover:bg-success/30'
-                : d === 'medium' ? 'bg-accent/20 text-accent hover:bg-accent/30'
-                : 'bg-danger/20 text-danger hover:bg-danger/30'
-              }`}
-            >
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </button>
-          ))}
+          <p className="text-[10px] text-text-dim mt-2 text-center">
+            You + {numPlayers - 1} AI opponent{numPlayers > 2 ? 's' : ''}
+          </p>
         </div>
+
+        <button
+          onClick={() => setLobbyDone(true)}
+          className="bg-accent text-bg font-bold px-10 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 mb-4"
+        >
+          Play!
+        </button>
 
         <button
           onClick={() => navigate(`/games${fromTab !== 'brain' ? `?tab=${fromTab}` : ''}`)}
@@ -593,7 +582,7 @@ export function PlayGame() {
           </div>
         }>
           {GameComponent && createElement(GameComponent, {
-            key: `${gameId}-${currentStage}-${aiDifficulty}-${numPlayers}-${sessionId ?? 'solo'}`,
+            key: `${gameId}-${currentStage}-${numPlayers}-${sessionId ?? 'solo'}`,
             stage: currentStage,
             onScore: (pts: number) => setScore(s => s + pts),
             onProgress: setProgress,

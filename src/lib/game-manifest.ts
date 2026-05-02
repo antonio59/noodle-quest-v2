@@ -12,7 +12,8 @@ interface Entry {
   description: string;
   category: GameCategory;
   stages: number;
-  aiDifficulty?: 'easy' | 'medium' | 'hard';
+  /** Set to true for games where AI skill should scale with player progress. */
+  hasAdaptiveAi?: boolean;
   benefits?: string[];
   duration?: string;
   bestFor?: string[];
@@ -173,87 +174,87 @@ reg('quick-math', {
 reg('tic-tac-toe', {
   name: 'Tic-Tac-Toe', emoji: '⭕',
   description: 'Classic X and O — beat the AI!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/tic-tac-toe'));
 
 reg('checkers', {
   name: 'Checkers', emoji: '⬤',
   description: 'Jump and capture your way to victory!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/checkers'));
 
 reg('chess', {
   name: 'Chess', emoji: '♔',
   description: 'The royal game — checkmate the AI king!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/chess'));
 
 reg('connect-four', {
   name: 'Connect Four', emoji: '🟡',
   description: 'Drop discs to connect four in a row!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/connect-four'));
 
 reg('ludo', {
   name: 'Ludo', emoji: '🎲',
-  description: 'Roll the dice and race your token home!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  description: 'Roll the dice and race all 4 pieces home!',
+  category: 'board', stages: 99,
   minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/ludo'));
 
 reg('snakes-ladders', {
   name: 'Snakes & Ladders', emoji: '🐍',
   description: 'Classic race game — climb ladders, dodge snakes!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99,
   minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/snakes-ladders'));
 
 reg('crossword', {
   name: 'Crossword', emoji: '📝',
   description: 'Solve crossword puzzles — tap to enter letters!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99,
 }, () => import('@/features/crossword/index'));
 
 reg('wordsearch', {
   name: 'Word Search', emoji: '🔍',
   description: 'Find hidden words in a letter grid!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99,
 }, () => import('@/features/wordsearch/index'));
 
 reg('flag-match', {
   name: 'Flag Match', emoji: '🚩',
   description: 'Match flags to their countries!',
-  category: 'memory', stages: 99, aiDifficulty: 'medium',
+  category: 'memory', stages: 99,
 }, () => import('@/games/flag-match'));
 
 reg('fill-blank', {
   name: 'Fill in the Blank', emoji: '✏️',
   description: 'Pick a theme and fill in missing letters. Endless mode!',
-  category: 'memory', stages: 99, aiDifficulty: 'medium',
+  category: 'memory', stages: 99,
 }, () => import('@/games/fill-blank'));
 
 reg('bingo', {
   name: 'Bingo', emoji: '🎱',
   description: 'Match numbers and complete your card!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99,
   minPlayers: 2, maxPlayers: 8,
 }, () => import('@/games/bingo'));
 
 reg('uno', {
   name: 'UNO', emoji: '🃏',
   description: 'Match colors and numbers — be first to empty your hand!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/uno'));
 
 reg('scrabble', {
   name: 'Scrabble', emoji: '🔤',
   description: 'Build words on the board for maximum points!',
-  category: 'board', stages: 99, aiDifficulty: 'medium',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/scrabble'));
 
