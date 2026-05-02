@@ -38,11 +38,20 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   }), [stage]);
 
   const [phase, setPhase] = useState<Phase>('intro');
-  const [colorCount, setColorCount] = useState(4);
   const [sequence, setSequence] = useState<number[]>([]);
   const [playerIndex, setPlayerIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const getColorCount = useCallback((seqLen: number): number => {
+    const max = Math.min(config.colors, COLOR_DATA.length);
+    if (seqLen <= 3) return Math.min(4, max);
+    if (seqLen <= 5) return Math.min(6, max);
+    if (seqLen <= 7) return Math.min(8, max);
+    return max;
+  }, [config.colors]);
+
+  const colorCount = getColorCount(sequence.length);
   const [statusText, setStatusText] = useState('Watch carefully...');
   const [statusColor, setStatusColor] = useState('#67e8f9');
   const [feedback, setFeedback] = useState('');
@@ -108,12 +117,10 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
   }, [config.speed, schedule]);
 
   const beginGame = useCallback(() => {
-    const options = [4, 6, 8, 10].filter(n => n <= Math.min(config.colors, COLOR_DATA.length));
-    const count = options[Math.floor(Math.random() * options.length)] || 4;
-    setColorCount(count);
+    const initialCount = getColorCount(config.startLength);
     const seq: number[] = [];
     for (let i = 0; i < config.startLength; i++) {
-      seq.push(Math.floor(Math.random() * count));
+      seq.push(Math.floor(Math.random() * initialCount));
     }
     setSequence(seq);
     setScore(0);
@@ -127,15 +134,16 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
       setStatusColor('#67e8f9');
       playSequence(seq);
     }, 2400);
-  }, [config.colors, config.startLength, playSequence, schedule]);
+  }, [config.startLength, getColorCount, playSequence, schedule]);
 
-  const nextRound = useCallback((currentSeq: number[], count: number) => {
-    const newSeq = [...currentSeq, Math.floor(Math.random() * count)];
+  const nextRound = useCallback((currentSeq: number[]) => {
+    const nextCount = getColorCount(currentSeq.length + 1);
+    const newSeq = [...currentSeq, Math.floor(Math.random() * nextCount)];
     setSequence(newSeq);
     const currentRound = newSeq.length - config.startLength + 1;
     onProgress(currentRound / config.maxRounds);
     schedule(() => playSequence(newSeq), 700);
-  }, [config.startLength, config.maxRounds, playSequence, onProgress, schedule]);
+  }, [config.startLength, config.maxRounds, getColorCount, playSequence, onProgress, schedule]);
 
   const handleTap = useCallback((index: number) => {
     if (phase !== 'playing') return;
@@ -170,12 +178,12 @@ function ReverseCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePr
         finishGame(newScore + 100, currentRound, true);
       } else {
         setStatusText('✨ Perfect! Get ready for more...');
-        setFeedback('+1 color, still reversed!');
+        setFeedback('+1 color added, still reversed!');
         setFeedbackColor('#fbbf24');
-        nextRound(sequence, colorCount);
+        nextRound(sequence);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, colorCount, onScore, onProgress, nextRound, schedule, finishGame]);
+  }, [phase, sequence, playerIndex, score, config, onScore, onProgress, nextRound, schedule, finishGame]);
 
   if (phase === 'intro') {
     return (

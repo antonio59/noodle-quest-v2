@@ -43,8 +43,17 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   const [score, setScore] = useState(0);
   const [round, setRound] = useState(1);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [colorCount, setColorCount] = useState(4);
   const [flashIndex, setFlashIndex] = useState<number | null>(null);
+
+  const getColorCount = useCallback((seqLen: number): number => {
+    const max = Math.min(config.colors, COLOR_DATA.length);
+    if (seqLen <= 3) return Math.min(4, max);
+    if (seqLen <= 5) return Math.min(6, max);
+    if (seqLen <= 7) return Math.min(8, max);
+    return max;
+  }, [config.colors]);
+
+  const colorCount = getColorCount(sequence.length);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -93,16 +102,14 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   }, [config.speed, onMessage, schedule]);
 
   const startGame = useCallback(() => {
-    const options = [4, 6, 8, 10].filter(n => n <= Math.min(config.colors, COLOR_DATA.length));
-    const count = options[Math.floor(Math.random() * options.length)] || 4;
-    setColorCount(count);
-    const seq = generateSequence(config.startLength, count);
+    const initialCount = getColorCount(config.startLength);
+    const seq = generateSequence(config.startLength, initialCount);
     setSequence(seq);
     setScore(0);
     setRound(1);
     setPlayerIndex(0);
     schedule(() => playSequence(seq), 500);
-  }, [config.colors, config.startLength, generateSequence, playSequence, schedule]);
+  }, [config.startLength, getColorCount, generateSequence, playSequence, schedule]);
 
   const finishGame = useCallback((finalScore: number, rounds: number, perfect: boolean) => {
     if (endedRef.current) return;
@@ -148,7 +155,8 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         finishGame(newScore + 100, currentRound, true);
       } else {
         onMessage('✨ Perfect! Get ready for more...');
-        const newSeq = [...sequence, Math.floor(Math.random() * colorCount)];
+        const nextCount = getColorCount(sequence.length + 1);
+        const newSeq = [...sequence, Math.floor(Math.random() * nextCount)];
         setSequence(newSeq);
         setRound(currentRound + 1);
         setPlayerIndex(0);
@@ -156,7 +164,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         schedule(() => playSequence(newSeq), 700);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, colorCount, onScore, onProgress, onMessage, playSequence, schedule, finishGame]);
+  }, [phase, sequence, playerIndex, score, config, getColorCount, onScore, onProgress, onMessage, playSequence, schedule, finishGame]);
 
   if (phase === 'intro') {
     return (

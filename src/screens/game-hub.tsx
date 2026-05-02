@@ -315,9 +315,6 @@ export function GameHub() {
                   {/* Stars */}
                   <CardMeta gameId={g.id} size="lg" />
 
-                  {/* Level info */}
-                  <div className="text-[10px] text-text-muted mt-1">{g.stages} levels</div>
-
                   {/* Hover play overlay */}
                   <div className="absolute inset-0 bg-bg/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <button
@@ -410,7 +407,6 @@ export function GameHub() {
                 <div className="text-3xl mb-2">{g.emoji}</div>
                 <div className="font-semibold text-sm mb-1">{g.name}</div>
                 <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-                <div className="text-text-muted text-xs mt-2">{g.stages} levels</div>
               </button>
             ))}
           </div>
