@@ -342,12 +342,7 @@ export function GameHub() {
             {allGames
               .filter(g => g.category === 'board')
               .slice()
-              .sort((a, b) => {
-                const ap = gameStages[a.id]?.timesPlayed ?? 0;
-                const bp = gameStages[b.id]?.timesPlayed ?? 0;
-                if (bp !== ap) return bp - ap;
-                return a.name.localeCompare(b.name);
-              })
+              .sort((a, b) => a.name.localeCompare(b.name))
               .map(g => {
                 const { bonusMultiplier } = statsFor(g.id);
                 const bonusTierBadge = getBonusTier(bonusMultiplier);
