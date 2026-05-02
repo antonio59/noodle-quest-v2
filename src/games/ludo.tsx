@@ -127,6 +127,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => { endedRef.current = true; timeoutsRef.current.forEach(clearTimeout); };
   }, []);
 

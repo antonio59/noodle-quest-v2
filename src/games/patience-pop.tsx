@@ -138,6 +138,8 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   useEffect(() => {
     if (phase !== 'playing') return;
 
+    gameActiveRef.current = true;
+
     const spawnTimer = setInterval(spawnBubble, config.spawnRate);
     const startedAt = Date.now();
     const progressTimer = setInterval(() => {

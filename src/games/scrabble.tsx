@@ -494,6 +494,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

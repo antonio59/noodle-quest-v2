@@ -229,6 +229,7 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

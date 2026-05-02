@@ -39,6 +39,7 @@ function TriangleBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
   const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       intervalsRef.current.forEach(clearInterval);

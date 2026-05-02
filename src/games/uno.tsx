@@ -206,6 +206,7 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

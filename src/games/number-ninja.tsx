@@ -54,6 +54,7 @@ function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

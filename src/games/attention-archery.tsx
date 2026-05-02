@@ -122,6 +122,8 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
   useEffect(() => {
     if (phase !== 'playing') return;
 
+    gameActiveRef.current = true;
+
     const spawnTimer = setInterval(spawnTarget, config.spawnRate);
     const startTime = Date.now();
 

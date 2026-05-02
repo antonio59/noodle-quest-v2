@@ -200,6 +200,8 @@ function FlexibilityFramesGame({ stage, onScore, onProgress, onMessage, onEnd }:
   useEffect(() => {
     if (phase !== 'playing') return;
 
+    gameActiveRef.current = true;
+
     const spawnInterval = setInterval(spawnItem, config.spawnRate);
     const ruleInterval = setInterval(changeRule, config.ruleChange);
     const startTime = Date.now();

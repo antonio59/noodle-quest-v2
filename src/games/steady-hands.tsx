@@ -53,6 +53,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

@@ -228,6 +228,7 @@ function MistakeMasterGame({ stage, onScore, onProgress, onMessage, onEnd }: Gam
   const endedRef = useRef(false);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
     };

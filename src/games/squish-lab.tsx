@@ -119,6 +119,7 @@ function SquishLabGame({ stage, onScore, onProgress, onMessage, onEnd }: GamePro
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

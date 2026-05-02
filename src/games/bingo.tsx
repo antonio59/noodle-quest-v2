@@ -95,6 +95,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

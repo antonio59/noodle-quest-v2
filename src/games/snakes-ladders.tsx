@@ -84,6 +84,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);

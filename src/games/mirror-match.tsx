@@ -55,6 +55,7 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);
