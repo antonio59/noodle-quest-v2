@@ -29,6 +29,12 @@ function reg(id: string, meta: Entry, loader: () => Promise<{ default: any }>) {
 
 // ── Brain games (alphabetical) ────────────────────────────────────
 
+reg('anagram', {
+  name: 'Anagram Blast', emoji: '🔀',
+  description: 'Unscramble the letters to reveal the hidden word!',
+  category: 'memory', stages: 99,
+}, () => import('@/games/anagram'));
+
 reg('attention-archery', {
   name: 'Attention Archery', emoji: '🏹',
   description: 'Hit the right targets! Watch out for sneaky decoys.',
@@ -41,11 +47,23 @@ reg('breath-bubbles', {
   category: 'focus', stages: 99,
 }, () => import('@/games/breath-bubbles'));
 
+reg('color-rush', {
+  name: 'Color Rush', emoji: '🌈',
+  description: 'A colour flashes — name it fast! Speed earns bonus points.',
+  category: 'focus', stages: 99,
+}, () => import('@/games/color-rush'));
+
 reg('copy-cat', {
   name: 'Copy Cat', emoji: '🐱',
   description: 'Watch the pattern, then copy it — forwards or backwards!',
   category: 'memory', stages: 99,
 }, () => import('@/games/copy-cat'));
+
+reg('dual-n-back', {
+  name: 'Dual N-Back', emoji: '🧠',
+  description: 'Track position AND letter N steps back. The gold standard of working memory!',
+  category: 'memory', stages: 99,
+}, () => import('@/games/dual-n-back'));
 
 reg('echo-tap', {
   name: 'Echo Tap', emoji: '🥁',
@@ -94,6 +112,18 @@ reg('focus-frenzy', {
   description: 'Tap the glowing orbs, but ignore the tricky distractions!',
   category: 'focus', stages: 99,
 }, () => import('@/games/focus-frenzy'));
+
+reg('go-no-go', {
+  name: 'Go / No-Go', emoji: '🚦',
+  description: 'Tap green, freeze on red. Train your impulse control and reaction speed!',
+  category: 'focus', stages: 99,
+}, () => import('@/games/go-no-go'));
+
+reg('grounding', {
+  name: 'Grounding Garden', emoji: '🌸',
+  description: '5-4-3-2-1: Name things you can see, hear, feel, smell and taste to anchor yourself.',
+  category: 'breathe', stages: 99,
+}, () => import('@/games/grounding'));
 
 reg('just-right', {
   name: 'Just Right', emoji: '🎨',
@@ -178,6 +208,12 @@ reg('stroop-challenge', {
   description: 'The word says one color but the ink is another — can your brain keep up?',
   category: 'flexibility', stages: 99,
 }, () => import('@/games/stroop-challenge'));
+
+reg('sudoku', {
+  name: 'Sudoku', emoji: '🔢',
+  description: 'Fill the 9×9 grid so every row, column and box contains 1–9.',
+  category: 'memory', stages: 99,
+}, () => import('@/games/sudoku'));
 
 // ── Board games (alphabetical) ────────────────────────────────────
 
