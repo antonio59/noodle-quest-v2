@@ -295,6 +295,8 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
 
   const board = game.board();
   const cs = boardSize / 8;
+  const FRAME = 18;             // px reserved for coordinate labels
+  const svgSize = boardSize + 2 * FRAME;
   const files = 'abcdefgh'.split('');
   const ranks = '87654321'.split('');
   const activeColor = isOnline ? myColor : 'w';
@@ -349,17 +351,48 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
             </span>
           </div>
         ) : (
-          <div className="flex gap-3 mb-2 text-sm items-center">
-            <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-              AI took: {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('') || '—'}
-            </span>
-            <span className={`bg-card rounded-lg px-3 py-1 text-xs font-bold ${game.isCheck() && turn === 'w' ? 'text-danger' : 'text-accent'}`}>
-              {game.isCheck() ? '⚠️ Check!' : isMyTurn ? 'Your turn (White)' : 'AI thinking...'}
-            </span>
+          <div className="w-full flex items-center justify-between gap-2 mb-1 px-1">
+            {/* AI row */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-text-muted font-semibold bg-card px-2 py-0.5 rounded-md">AI ♟</span>
+              <span className="text-xs tracking-tight text-text-muted">
+                {captured.b.map(p => PIECE_UNICODE['b' + p] || p).join('') || '—'}
+              </span>
+            </div>
+            {/* Turn/check indicator */}
+            <div className={`flex items-center gap-1.5 rounded-lg px-2 py-0.5 text-xs font-semibold ${
+              game.isCheck() && turn === 'w'
+                ? 'bg-red-900/40 text-red-400 ring-1 ring-red-500/40'
+                : isMyTurn
+                  ? 'bg-accent/20 text-accent'
+                  : 'bg-card text-text-muted'
+            }`}>
+              {game.isCheck() && turn === 'w' ? (
+                <><span className="animate-pulse">⚠️</span> Check!</>
+              ) : isMyTurn ? (
+                <>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+                  </span>
+                  Your turn
+                </>
+              ) : (
+                <><span className="animate-pulse">🤖</span> Thinking…</>
+              )}
+            </div>
           </div>
         )}
 
-        <svg width={boardSize} height={boardSize} viewBox={`0 0 ${boardSize} ${boardSize}`} className="rounded-lg overflow-hidden shadow-lg flex-shrink-0">
+        <svg
+          width={svgSize} height={svgSize}
+          viewBox={`0 0 ${svgSize} ${svgSize}`}
+          className="rounded-xl overflow-hidden shadow-2xl flex-shrink-0"
+        >
+          {/* Dark frame background */}
+          <rect width={svgSize} height={svgSize} fill="#12102a" rx={6} />
+
+          {/* Board squares */}
           {board.map((row, r) => row.map((cell, c) => {
             const isLight = (r + c) % 2 === 0;
             const sqName = `${files[c]}${ranks[r]}` as Square;
@@ -368,43 +401,95 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
             const isLast = lastMove?.from === sqName || lastMove?.to === sqName;
             const isKingInCheck = isInCheck && cell?.type === 'k' && cell.color === turn && sqName === kingSquares[turn];
             const pk = cell ? `${cell.color}${cell.type}` : null;
+            const x = FRAME + c * cs;
+            const y = FRAME + r * cs;
+
+            let squareFill = isLight ? '#f0d9b5' : '#b58863';
+            if (isSel) squareFill = '#6366f1';
+            else if (isKingInCheck) squareFill = '#dc2626';
+            else if (isLast) squareFill = isLight ? '#cdd26a' : '#aaa23a';
+
             return (
               <g key={sqName} onClick={() => handleSquareClick(sqName)} style={{ cursor: isMyTurn && !gameOver ? 'pointer' : 'default' }}>
-                <rect x={c * cs} y={r * cs} width={cs} height={cs}
-                  fill={isSel ? '#7b61ff' : isKingInCheck ? '#ff4444' : isLast ? '#baca2b' : isLight ? '#f0d9b5' : '#b58863'}
-                  opacity={isSel ? 0.8 : isKingInCheck ? 0.85 : 1} />
+                <rect x={x} y={y} width={cs} height={cs} fill={squareFill} />
+
+                {/* King-in-check pulsing ring */}
                 {isKingInCheck && (
-                  <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.46} fill="none" stroke="#ff0000" strokeWidth={2.5} opacity={0.7}>
-                    <animate attributeName="opacity" values="0.3;0.9;0.3" dur="0.8s" repeatCount="indefinite" />
+                  <circle cx={x + cs / 2} cy={y + cs / 2} r={cs * 0.44} fill="none" stroke="#ff2020" strokeWidth={2.5}>
+                    <animate attributeName="opacity" values="0.15;0.9;0.15" dur="0.75s" repeatCount="indefinite" />
                   </circle>
                 )}
+
+                {/* Legal move indicators */}
                 {isLegal && (cell
-                  ? <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.44} fill="none" stroke="#7b61ff" strokeWidth={3} opacity={0.6} />
-                  : <circle cx={c * cs + cs / 2} cy={r * cs + cs / 2} r={cs * 0.16} fill="#7b61ff" opacity={0.5} />)}
+                  ? <circle cx={x + cs / 2} cy={y + cs / 2} r={cs * 0.45} fill="none" stroke="rgba(99,102,241,0.8)" strokeWidth={3.5} />
+                  : <circle cx={x + cs / 2} cy={y + cs / 2} r={cs * 0.155} fill="rgba(0,0,0,0.3)" />
+                )}
+
+                {/* Piece — outline layer then face layer */}
                 {cell && pk && (
                   <>
-                    <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
-                      fontSize={cs * 0.7} fill={PIECE_STROKE[cell.color]} stroke={PIECE_STROKE[cell.color]} strokeWidth={cell.color === 'w' ? 0.5 : 0}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
-                    <text x={c * cs + cs / 2} y={r * cs + cs / 2} textAnchor="middle" dominantBaseline="central"
-                      fontSize={cs * 0.7} fill={PIECE_COLORS[cell.color]}
-                      style={{ pointerEvents: 'none', userSelect: 'none' }}>{PIECE_UNICODE[pk]}</text>
+                    <text
+                      x={x + cs / 2} y={y + cs / 2}
+                      textAnchor="middle" dominantBaseline="central"
+                      fontSize={cs * 0.73}
+                      fill={cell.color === 'w' ? '#3b2000' : '#e8d5b7'}
+                      stroke={cell.color === 'w' ? '#3b2000' : '#c8b090'}
+                      strokeWidth={cell.color === 'w' ? 3 : 2.5}
+                      strokeLinejoin="round"
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >{PIECE_UNICODE[pk]}</text>
+                    <text
+                      x={x + cs / 2} y={y + cs / 2}
+                      textAnchor="middle" dominantBaseline="central"
+                      fontSize={cs * 0.73}
+                      fill={cell.color === 'w' ? '#ffffff' : '#1a1a35'}
+                      style={{ pointerEvents: 'none', userSelect: 'none' }}
+                    >{PIECE_UNICODE[pk]}</text>
                   </>
                 )}
               </g>
             );
           }))}
-          {files.map((f, i) => <text key={`f${f}`} x={i * cs + cs - 3} y={boardSize - 3} fontSize={9} fill={(i + 7) % 2 === 0 ? '#b58863' : '#f0d9b5'} textAnchor="end" style={{ pointerEvents: 'none' }}>{f}</text>)}
-          {ranks.map((r, i) => <text key={`r${r}`} x={3} y={i * cs + 11} fontSize={9} fill={i % 2 === 0 ? '#f0d9b5' : '#b58863'} style={{ pointerEvents: 'none' }}>{r}</text>)}
+
+          {/* Board inner border */}
+          <rect x={FRAME} y={FRAME} width={boardSize} height={boardSize}
+            fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={1}
+            style={{ pointerEvents: 'none' }} />
+
+          {/* File labels a–h (below board) */}
+          {files.map((f, i) => (
+            <text key={`f${f}`}
+              x={FRAME + i * cs + cs / 2} y={FRAME + boardSize + FRAME / 2}
+              textAnchor="middle" dominantBaseline="central"
+              fontSize={10} fontWeight="bold" fontFamily="system-ui"
+              fill="#9ca3af" style={{ pointerEvents: 'none' }}
+            >{f}</text>
+          ))}
+
+          {/* Rank labels 8–1 (left of board) */}
+          {ranks.map((rank, i) => (
+            <text key={`r${rank}`}
+              x={FRAME / 2} y={FRAME + i * cs + cs / 2}
+              textAnchor="middle" dominantBaseline="central"
+              fontSize={10} fontWeight="bold" fontFamily="system-ui"
+              fill="#9ca3af" style={{ pointerEvents: 'none' }}
+            >{rank}</text>
+          ))}
         </svg>
 
-        <div className="mt-2 flex gap-3 text-sm items-center flex-wrap justify-center">
-          <span className="bg-card rounded-lg px-3 py-1 text-text-muted text-xs">
-            You took: {captured.w.map(p => PIECE_UNICODE['b' + p] || p).join('') || '—'}
-          </span>
+        <div className="mt-1 w-full flex items-center justify-between gap-2 px-1">
+          {/* You row */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-accent font-semibold bg-accent/10 px-2 py-0.5 rounded-md ring-1 ring-accent/30">You ♙</span>
+            <span className="text-xs tracking-tight text-text-muted">
+              {captured.w.map(p => PIECE_UNICODE['b' + p] || p).join('') || '—'}
+            </span>
+          </div>
+          {/* Material advantage */}
           {matAdv !== 0 && (
-            <span className={`rounded-lg px-2 py-1 text-xs font-bold ${matAdv > 0 ? 'text-green-400 bg-green-900/30' : 'text-red-400 bg-red-900/30'}`}>
-              {matAdv > 0 ? `+${matAdv}` : matAdv} material
+            <span className={`rounded-lg px-2 py-0.5 text-xs font-bold ${matAdv > 0 ? 'text-green-400 bg-green-900/30 ring-1 ring-green-500/30' : 'text-red-400 bg-red-900/30 ring-1 ring-red-500/30'}`}>
+              {matAdv > 0 ? `+${matAdv}` : matAdv}
             </span>
           )}
         </div>
