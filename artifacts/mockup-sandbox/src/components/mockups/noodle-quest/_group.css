@@ -1,0 +1,61 @@
+.nq-glass-header {
+  background: rgba(26, 23, 48, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(167, 139, 250, 0.1);
+}
+
+.nq-bottom-nav {
+  background: rgba(26, 23, 48, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(167, 139, 250, 0.1);
+}
+
+.nq-card {
+  background: linear-gradient(145deg, #232040 0%, #1a1730 100%);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.nq-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(167, 139, 250, 0.2);
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.nq-card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 0%, rgba(167, 139, 250, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+.nq-animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.nq-tab-active {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(167, 139, 250, 0.05) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  box-shadow: 0 0 15px rgba(167, 139, 250, 0.2);
+}
+
+.nq-hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.nq-hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
