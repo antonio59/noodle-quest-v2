@@ -353,16 +353,18 @@ export function GameHub() {
                 <div className="flex gap-2 mt-3 w-full" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => navigateToGame(g.id)}
-                    className="flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity active:scale-95"
+                    className={`flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity active:scale-95`}
                   >
                     Play
                   </button>
-                  <button
-                    onClick={() => navigateToMultiplayer(g.id)}
-                    className="flex-1 flex items-center justify-center gap-1 bg-surface border border-white/10 text-text-muted text-xs font-bold py-2.5 rounded-xl hover:bg-card-hover hover:text-accent hover:border-accent/30 transition-all active:scale-95"
-                  >
-                    <Users size={12} /> Friends
-                  </button>
+                  {(g.minPlayers ?? 1) >= 2 && (
+                    <button
+                      onClick={() => navigateToMultiplayer(g.id)}
+                      className="flex-1 flex items-center justify-center gap-1 bg-surface border border-white/10 text-text-muted text-xs font-bold py-2.5 rounded-xl hover:bg-card-hover hover:text-accent hover:border-accent/30 transition-all active:scale-95"
+                    >
+                      <Users size={12} /> Friends
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

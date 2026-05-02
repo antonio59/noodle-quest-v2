@@ -92,24 +92,33 @@ export function InvitePage() {
   }
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-      <div className="text-6xl mb-4">{game?.emoji || '🎮'}</div>
-      <h2 className="text-2xl font-bold mb-2">Game Invite</h2>
-      <p className="text-text-dim mb-1">
-        <span className="font-semibold">{invite.fromAvatar} {invite.fromName}</span> invited you to play
-      </p>
-      <p className="text-accent font-bold text-lg mb-6">{game?.name || invite.gameId}</p>
+    <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+      {/* Sender avatar + name bubble */}
+      <div className="relative mb-5">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent/30 to-accent/10 border-2 border-accent/40 flex items-center justify-center text-4xl shadow-lg">
+          {invite.fromAvatar}
+        </div>
+        <div className="absolute -bottom-2 -right-2 text-3xl">{game?.emoji || '🎮'}</div>
+      </div>
+
+      <p className="text-text-muted text-sm mb-1">You've been invited by</p>
+      <h2 className="text-2xl font-bold text-text mb-1">{invite.fromName}</h2>
+      <p className="text-text-muted text-sm mb-4">to play a game of</p>
+      <div className="bg-accent/10 border border-accent/30 rounded-2xl px-6 py-3 mb-6">
+        <p className="text-accent font-bold text-xl">{game?.name || invite.gameId}</p>
+        {game?.description && (
+          <p className="text-text-muted text-xs mt-1">{game.description}</p>
+        )}
+      </div>
 
       {error && <p className="text-danger text-sm mb-4">{error}</p>}
 
       {isMyInvite ? (
-        <div className="space-y-3">
-          <p className="text-text-muted text-sm">This is your invite link. Share it with a friend!</p>
+        <div className="space-y-3 w-full max-w-xs">
+          <p className="text-text-muted text-sm">This is your own invite link — share it with a friend!</p>
           <button
-            onClick={() => {
-              navigator.clipboard.writeText(window.location.href);
-            }}
-            className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90"
+            onClick={() => { navigator.clipboard.writeText(window.location.href); }}
+            className="w-full bg-accent text-bg font-bold px-6 py-3 rounded-xl hover:opacity-90 active:scale-95"
           >
             Copy Link
           </button>
@@ -121,20 +130,20 @@ export function InvitePage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3 w-full max-w-xs">
           <button
             onClick={handleJoin}
             disabled={joining}
-            className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2 mx-auto"
+            className="w-full bg-accent text-bg font-bold px-8 py-3.5 rounded-xl text-lg hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-accent/20"
           >
             {joining ? <Loader2 className="animate-spin" size={20} /> : <Users size={20} />}
             {joining ? 'Joining...' : 'Accept & Play'}
           </button>
           <button
             onClick={() => navigate('/games')}
-            className="text-text-muted text-sm hover:text-accent"
+            className="text-text-muted text-sm hover:text-accent transition-colors py-2"
           >
-            Decline
+            Maybe later
           </button>
         </div>
       )}
