@@ -128,6 +128,8 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   useEffect(() => {
     if (phase !== 'playing') return;
 
+    gameActiveRef.current = true;
+
     const spawnTimer = setInterval(spawnOrb, config.spawnRate);
     const startedAt = Date.now();
 
