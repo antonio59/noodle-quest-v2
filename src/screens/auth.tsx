@@ -258,7 +258,7 @@ export function Auth() {
           </div>
 
           <p className="text-center text-text-muted text-xs mt-4">
-            Forgot your passcode? Ask a grown-up for help!
+            Forgot your passcode? Ask whoever set it up for help.
           </p>
         </div>
       </div>

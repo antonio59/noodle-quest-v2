@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames, getGame } from '@/lib/game-registry';
 import { Trophy, Star, ChevronDown, Crown, Gamepad2 } from 'lucide-react';
+import { getRankTier } from '@/lib/rank-tiers';
 
 interface LeaderboardEntry {
   playerId: string;
@@ -13,18 +14,6 @@ interface LeaderboardEntry {
   totalScore: number;
   gamesPlayed: number;
   topGames: { gameId: string; stars: number; score: number }[];
-}
-
-const RANK_TIERS = [
-  { min: 300, label: 'Diamond', emoji: '💎', color: 'text-cyan-300',   bg: 'bg-cyan-500/15',   border: 'border-cyan-500/30' },
-  { min: 150, label: 'Gold',    emoji: '🥇', color: 'text-yellow-300', bg: 'bg-yellow-500/15', border: 'border-yellow-500/30' },
-  { min: 50,  label: 'Silver',  emoji: '🥈', color: 'text-slate-300',  bg: 'bg-slate-500/15',  border: 'border-slate-500/30' },
-  { min: 10,  label: 'Bronze',  emoji: '🥉', color: 'text-orange-300', bg: 'bg-orange-500/15', border: 'border-orange-500/30' },
-  { min: 0,   label: 'Starter', emoji: '🌱', color: 'text-green-400',  bg: 'bg-green-500/15',  border: 'border-green-500/30' },
-];
-
-function getRankTier(stars: number) {
-  return RANK_TIERS.find(t => stars >= t.min) ?? RANK_TIERS[RANK_TIERS.length - 1];
 }
 
 const TOP3 = [

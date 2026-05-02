@@ -342,41 +342,65 @@ export function GameHub() {
             {allGames
               .filter(g => g.category === 'board')
               .slice()
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map(g => (
-              <div
-                key={g.id}
-                onClick={() => navigateToGame(g.id)}
-                className="bg-card rounded-3xl p-5 flex flex-col items-center text-center border border-white/5 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(167,139,250,0.2)]"
-              >
-                {/* Emoji */}
-                <div className="text-5xl mb-3 leading-none">{g.emoji}</div>
-
-                {/* Name + description */}
-                <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
-                <div className="text-text-muted text-xs line-clamp-2 mb-3 px-1">{g.description}</div>
-
-                <CardMeta gameId={g.id} size="lg" />
-
-                {/* Solo + Friends buttons */}
-                <div className="flex gap-2 mt-3 w-full" onClick={e => e.stopPropagation()}>
-                  <button
+              .sort((a, b) => {
+                const ap = gameStages[a.id]?.timesPlayed ?? 0;
+                const bp = gameStages[b.id]?.timesPlayed ?? 0;
+                if (bp !== ap) return bp - ap;
+                return a.name.localeCompare(b.name);
+              })
+              .map(g => {
+                const { bonusMultiplier } = statsFor(g.id);
+                const bonusTierBadge = getBonusTier(bonusMultiplier);
+                const isMulti = (g.minPlayers ?? 1) >= 2;
+                return (
+                  <div
+                    key={g.id}
                     onClick={() => navigateToGame(g.id)}
-                    className={`flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity active:scale-95`}
+                    className="bg-card rounded-3xl p-5 flex flex-col items-center text-center border border-white/5 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(167,139,250,0.2)] group relative overflow-hidden"
                   >
-                    Play
-                  </button>
-                  {(g.minPlayers ?? 1) >= 2 && (
-                    <button
-                      onClick={() => navigateToMultiplayer(g.id)}
-                      className="flex-1 flex items-center justify-center gap-1 bg-surface border border-white/10 text-text-muted text-xs font-bold py-2.5 rounded-xl hover:bg-card-hover hover:text-accent hover:border-accent/30 transition-all active:scale-95"
-                    >
-                      <Users size={12} /> Friends
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                    {/* Bonus badge top-right */}
+                    {bonusTierBadge && (
+                      <span className={`absolute top-3 right-3 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-warning/20 border border-warning/30 ${bonusTierBadge.color} animate-pulse`}>
+                        {bonusTierBadge.label}
+                      </span>
+                    )}
+
+                    {/* Multiplayer indicator top-left */}
+                    {isMulti && (
+                      <span className="absolute top-3 left-3 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-accent/10 border border-accent/20 text-accent">
+                        2P
+                      </span>
+                    )}
+
+                    {/* Emoji */}
+                    <div className="text-5xl mb-3 leading-none mt-2 group-hover:scale-110 transition-transform duration-300">{g.emoji}</div>
+
+                    {/* Name + description */}
+                    <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
+                    <div className="text-text-muted text-xs line-clamp-2 mb-3 px-1">{g.description}</div>
+
+                    <CardMeta gameId={g.id} size="lg" />
+
+                    {/* Solo + Friends buttons */}
+                    <div className="flex gap-2 mt-3 w-full" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => navigateToGame(g.id)}
+                        className="flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity active:scale-95"
+                      >
+                        Play
+                      </button>
+                      {isMulti && (
+                        <button
+                          onClick={() => navigateToMultiplayer(g.id)}
+                          className="flex-1 flex items-center justify-center gap-1 bg-surface border border-white/10 text-text-muted text-xs font-bold py-2.5 rounded-xl hover:bg-card-hover hover:text-accent hover:border-accent/30 transition-all active:scale-95"
+                        >
+                          <Users size={12} /> Friends
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             {allGames.filter(g => g.category === 'board').length === 0 && (
               <div className="col-span-2 text-center text-text-muted text-sm py-12">
                 <div className="text-5xl mb-4">🎲</div>

@@ -398,76 +398,119 @@ export function PlayGame() {
     const prevBestEntry = playerProgress?.stages?.find(s => s.stage === currentStage);
     const prevBest = prevBestEntry?.highScore ?? 0;
     const isNewBest = ended.score > prevBest;
+    const isPerfect = ended.stars === 3;
+    const isGood = ended.stars >= 2;
+    const backLabel = fromTab === 'breathe' ? 'Breathe' : fromTab === 'board' ? 'Board' : fromTab === 'tracks' ? 'Tracks' : 'Games';
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-        <div className={`text-6xl mb-4 ${ended.stars >= 2 ? 'animate-[celebrate_0.4s_ease]' : ''}`}>
-          {ended.stars === 3 ? '🏆' : ended.stars === 2 ? '🎉' : '👏'}
-        </div>
-        <h2 className="text-2xl font-bold mb-2">
-          {ended.stars === 3 ? 'Amazing!' : ended.stars === 2 ? 'Great Job!' : 'Good Effort!'}
-        </h2>
-        {renderStars(ended.stars)}
-        <p className="text-accent text-2xl font-bold mb-1">{ended.score}</p>
-        {bonusTier && (
-          <p className={`text-xs font-semibold mb-1 ${bonusTier.color}`}>
-            {bonusTier.label} applied · {bonusTier.multiplier}× multiplier
-          </p>
-        )}
-        <div className="text-xs mb-3 min-h-[18px]">
-          {isNewBest && prevBest > 0 ? (
-            <span className="text-success font-semibold">
-              New best on Stage {currentStage}! +{ended.score - prevBest} over previous
-            </span>
-          ) : isNewBest ? (
-            <span className="text-success font-semibold">New best on Stage {currentStage}!</span>
-          ) : (
-            <span className="text-text-muted">
-              Stage {currentStage} · Best: {prevBest}
-            </span>
+      <div className="h-full overflow-y-auto flex flex-col items-center justify-center p-5">
+        <div className={`w-full max-w-sm rounded-3xl p-6 border text-center transition-all ${
+          isPerfect
+            ? 'bg-yellow-500/8 border-yellow-500/25 shadow-[0_0_40px_rgba(253,224,71,0.15)]'
+            : isGood
+            ? 'bg-accent/8 border-accent/25 shadow-[0_0_32px_rgba(167,139,250,0.12)]'
+            : 'bg-card border-white/8'
+        }`}>
+
+          {/* Result emoji */}
+          <div className={`text-6xl mb-2 ${isGood ? 'animate-[celebrate_0.4s_ease]' : ''}`}>
+            {isPerfect ? '🏆' : isGood ? '🎉' : '👏'}
+          </div>
+
+          {/* Title */}
+          <h2 className={`text-2xl font-black mb-4 ${
+            isPerfect ? 'text-yellow-300' : isGood ? 'text-accent' : 'text-text'
+          }`}>
+            {isPerfect ? 'Perfect!' : isGood ? 'Great job!' : 'Good effort!'}
+          </h2>
+
+          {/* Stars */}
+          <div className="flex justify-center gap-3 mb-5">
+            {[1, 2, 3].map(i => (
+              <Star
+                key={i}
+                size={36}
+                className={i <= ended.stars ? 'text-yellow-400' : 'text-white/10'}
+                fill="currentColor"
+              />
+            ))}
+          </div>
+
+          {/* Score block */}
+          <div className={`rounded-2xl px-6 py-4 mb-4 ${isPerfect ? 'bg-yellow-500/12' : 'bg-surface/60'}`}>
+            <div className={`text-4xl font-black tracking-tight ${isPerfect ? 'text-yellow-300' : 'text-accent'}`}>
+              {ended.score.toLocaleString()}
+            </div>
+            <div className="text-text-muted text-xs mt-1">points · Stage {currentStage}/{gameMeta.stages}</div>
+            {bonusTier && (
+              <div className={`text-xs font-bold mt-1.5 ${bonusTier.color}`}>
+                {bonusTier.label} bonus · {bonusTier.multiplier}× multiplier
+              </div>
+            )}
+          </div>
+
+          {/* New best banner */}
+          {isNewBest && prevBest > 0 && (
+            <div className="bg-emerald-500/12 border border-emerald-500/25 rounded-xl px-4 py-2.5 mb-4">
+              <p className="text-emerald-400 text-sm font-bold">
+                New personal best! +{ended.score - prevBest} over previous
+              </p>
+            </div>
           )}
-        </div>
-        {saving && <p className="text-text-muted text-xs mb-2">Saving...</p>}
-        <p className="text-text-muted text-sm mb-4 max-w-xs">{ended.summary}</p>
-        {ended.stars >= 2 && nextStage && (
-          <p className="text-accent text-sm mb-4 animate-pulse">Advancing to Stage {nextStage}...</p>
-        )}
-        <div className="flex gap-3 flex-wrap justify-center">
-          <button
-            onClick={() => {
-              setEnded(null);
-              setScore(0);
-              setProgress(0);
-              setNextStage(null);
-            }}
-            className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95"
-          >
-            Play Again
-          </button>
-          {nextStage && (
+          {isNewBest && prevBest === 0 && (
+            <p className="text-emerald-400 text-xs font-bold mb-3">
+              First time completing Stage {currentStage}!
+            </p>
+          )}
+          {!isNewBest && prevBest > 0 && (
+            <p className="text-text-muted text-xs mb-3">Stage {currentStage} best: {prevBest.toLocaleString()}</p>
+          )}
+
+          {/* Summary */}
+          {ended.summary && (
+            <p className="text-text-muted text-xs mb-4 leading-relaxed">{ended.summary}</p>
+          )}
+
+          {saving && <p className="text-text-muted text-xs mb-3 animate-pulse">Saving...</p>}
+
+          {isGood && nextStage && (
+            <p className="text-accent text-sm font-semibold mb-4 animate-pulse">
+              Advancing to Stage {nextStage}...
+            </p>
+          )}
+
+          {/* Primary actions */}
+          <div className="grid grid-cols-2 gap-2 mb-2">
             <button
-              onClick={() => {
-                setEnded(null);
-                setScore(0);
-                setProgress(0);
-                setNextStage(null);
-                setCurrentStage(nextStage);
-              }}
-              className="bg-success text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 flex items-center gap-1"
+              onClick={() => { setEnded(null); setScore(0); setProgress(0); setNextStage(null); }}
+              className="bg-card hover:bg-card-hover text-text font-bold py-3 rounded-2xl transition-colors active:scale-95 text-sm"
             >
-              Stage {nextStage} <ChevronRight size={16} />
+              Play Again
             </button>
-          )}
+            {nextStage ? (
+              <button
+                onClick={() => { setEnded(null); setScore(0); setProgress(0); setNextStage(null); setCurrentStage(nextStage); }}
+                className={`font-bold py-3 rounded-2xl hover:opacity-90 active:scale-95 text-sm flex items-center justify-center gap-1 ${
+                  isPerfect ? 'bg-yellow-400 text-bg' : 'bg-accent text-bg'
+                }`}
+              >
+                Stage {nextStage} <ChevronRight size={15} />
+              </button>
+            ) : (
+              <button
+                onClick={goBackToGames}
+                className="bg-accent text-bg font-bold py-3 rounded-2xl hover:opacity-90 active:scale-95 text-sm"
+              >
+                Done
+              </button>
+            )}
+          </div>
+
+          {/* Secondary link */}
           <button
             onClick={goBackToGames}
-            className="bg-card text-text font-bold px-6 py-2.5 rounded-xl hover:bg-card-hover active:scale-95 flex items-center gap-1"
+            className="w-full text-text-muted text-sm hover:text-text transition-colors py-2 flex items-center justify-center gap-1"
           >
-            <ArrowLeft size={16} /> Back to {fromTab === 'breathe' ? 'Breathe' : fromTab === 'board' ? 'Board' : fromTab === 'tracks' ? 'Tracks' : 'Games'}
-          </button>
-          <button
-            onClick={() => navigate('/games')}
-            className="bg-card text-text-muted font-bold px-6 py-2.5 rounded-xl hover:bg-card-hover active:scale-95 flex items-center gap-1"
-          >
-            All Games <ArrowRight size={16} />
+            <ArrowLeft size={13} /> Back to {backLabel}
           </button>
         </div>
       </div>

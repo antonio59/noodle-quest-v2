@@ -5,18 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { Star, Zap, Gamepad2, Sparkles, ChevronRight, ArrowRight } from 'lucide-react';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
-
-const RANK_TIERS = [
-  { min: 300, label: 'Diamond', emoji: '💎', color: 'text-cyan-300',   bg: 'bg-cyan-500/15',    border: 'border-cyan-500/30',  next: null },
-  { min: 150, label: 'Gold',    emoji: '🥇', color: 'text-yellow-300', bg: 'bg-yellow-500/15',  border: 'border-yellow-500/30',next: 300  },
-  { min: 50,  label: 'Silver',  emoji: '🥈', color: 'text-slate-300',  bg: 'bg-slate-500/15',   border: 'border-slate-500/30', next: 150  },
-  { min: 10,  label: 'Bronze',  emoji: '🥉', color: 'text-orange-300', bg: 'bg-orange-500/15',  border: 'border-orange-500/30',next: 50   },
-  { min: 0,   label: 'Starter', emoji: '🌱', color: 'text-emerald-400',bg: 'bg-emerald-500/15', border: 'border-emerald-500/30',next: 10  },
-];
-
-function getRankTier(stars: number) {
-  return RANK_TIERS.find(t => stars >= t.min) ?? RANK_TIERS[RANK_TIERS.length - 1];
-}
+import { getRankTier, RANK_TIERS } from '@/lib/rank-tiers';
 
 function getGreeting() {
   const h = new Date().getHours();

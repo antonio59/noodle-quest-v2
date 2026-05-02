@@ -14,7 +14,7 @@ export function NavBar() {
   const location = useLocation();
 
   return (
-    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface">
+    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface px-1">
       {tabs.map(t => {
         const Icon = t.icon;
         const active = location.pathname === t.path;
@@ -22,12 +22,15 @@ export function NavBar() {
           <button
             key={t.path}
             onClick={() => navigate(t.path)}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 transition-colors focus:outline-none ${
+            className={`flex-1 flex flex-col items-center gap-1 py-2.5 transition-colors focus:outline-none relative rounded-xl mx-0.5 my-1 ${
               active ? 'text-accent' : 'text-text-muted hover:text-text'
             }`}
           >
-            <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-            <span className="text-[10px] font-semibold">{t.label}</span>
+            {active && (
+              <span className="absolute inset-0 bg-accent/10 rounded-xl" />
+            )}
+            <Icon size={20} strokeWidth={active ? 2.5 : 2} className="relative" />
+            <span className={`text-[10px] font-semibold relative ${active ? 'text-accent' : ''}`}>{t.label}</span>
           </button>
         );
       })}
