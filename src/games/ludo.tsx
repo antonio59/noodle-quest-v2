@@ -1,58 +1,38 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 
-/**
- * Full Ludo board — 15×15 grid with cross-shaped track.
- * 52 outer squares, 6 home-stretch squares per color, 1 center home.
- * Currently supports 2-player (Red vs Blue AI).
- */
-
-const C = 24; // cell size
+const C = 26; // cell size px
 const N = 15;
 const W = C * N;
 
 // Full 52-square outer track (clockwise from Red entry)
 const TRACK: [number, number][] = [
-  // Red's start → across top of left arm (0-5)  [row, col]
-  [6, 1], [6, 2], [6, 3], [6, 4], [6, 5],
-  // Up left side of top arm (5-11)
-  [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6],
-  // Across top (12)
-  [0, 7],
-  // Down right side of top arm (13-18) — Green's side
-  [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8],
-  // Across top of right arm (19-24)
-  [6, 9], [6, 10], [6, 11], [6, 12], [6, 13],
-  // Right-bottom turn (25)
-  [7, 14],
-  // Down right side (26-31) — Blue approach
-  [8, 13], [8, 12], [8, 11], [8, 10], [8, 9],
-  // Down right side of bottom arm (32-37)
-  [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8],
-  // Bottom turn (38)
-  [14, 7],
-  // Up left side of bottom arm (39-44)
-  [14, 6], [13, 6], [12, 6], [11, 6], [10, 6], [9, 6],
-  // Across bottom of left arm (45-50)
-  [8, 5], [8, 4], [8, 3], [8, 2], [8, 1],
-  // Left turn back to red start (51)
-  [7, 0],
+  [6,1],[6,2],[6,3],[6,4],[6,5],
+  [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
+  [0,7],
+  [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],
+  [6,9],[6,10],[6,11],[6,12],[6,13],
+  [7,14],
+  [8,13],[8,12],[8,11],[8,10],[8,9],
+  [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
+  [14,7],
+  [14,6],[13,6],[12,6],[11,6],[10,6],[9,6],
+  [8,5],[8,4],[8,3],[8,2],[8,1],
+  [7,0],
 ];
 
-// Red home stretch: enters from square 51 (left side), goes right toward center
-const RED_STRETCH: [number, number][] = [
-  [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6],
-];
+const RED_STRETCH: [number, number][] = [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]];
+const BLUE_STRETCH: [number, number][] = [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]];
+const GREEN_STRETCH: [number, number][] = [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]];
+const YELLOW_STRETCH: [number, number][] = [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]];
 
-// Blue home stretch: enters from square 25 (right side), goes left toward center
-const BLUE_STRETCH: [number, number][] = [
-  [7, 13], [7, 12], [7, 11], [7, 10], [7, 9], [7, 8],
-];
+// Safe squares on the main track (entry squares + star squares)
+const SAFE_POSITIONS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
 
 const DIFF_CFG = {
-  easy: { enter: 0.3, home: 0.35, cap: 0.25 },
-  medium: { enter: 0.7, home: 0.8, cap: 0.7 },
-  hard: { enter: 1.0, home: 1.0, cap: 1.0 },
+  easy:   { enter: 0.3,  home: 0.35, cap: 0.25 },
+  medium: { enter: 0.7,  home: 0.8,  cap: 0.7  },
+  hard:   { enter: 1.0,  home: 1.0,  cap: 1.0  },
 };
 
 function rollDie(): number { return Math.floor(Math.random() * 6) + 1; }
@@ -61,7 +41,7 @@ function posCoord(pos: number, stretch: [number, number][]): [number, number] {
   if (pos < 0) return [-1, -1];
   if (pos < 52) return TRACK[pos];
   if (pos < 58) return stretch[pos - 52];
-  return [7, 7]; // center home
+  return [7, 7];
 }
 
 function advance(pos: number, steps: number): number {
@@ -84,30 +64,16 @@ function aiRoll(pPos: number, aPos: number, diff: 'easy' | 'medium' | 'hard'): n
   return rollDie();
 }
 
-// Board cell classification for coloring
-function cellType(r: number, c: number): string | null {
-  // Red home base (top-left)
-  if (r >= 0 && r <= 5 && c >= 0 && c <= 5) return 'red-base';
-  // Green home base (top-right)
-  if (r >= 0 && r <= 5 && c >= 9 && c <= 14) return 'green-base';
-  // Yellow home base (bottom-left)
-  if (r >= 0 + 9 && r <= 14 && c >= 0 && c <= 5) return 'yellow-base';
-  // Blue home base (bottom-right)
-  if (r >= 9 && r <= 14 && c >= 9 && c <= 14) return 'blue-base';
-  return null;
-}
-
-
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
   const mySide: 'red' | 'blue' = isOnline
     ? (multiplayerState.playerNumber === 1 ? 'red' : 'blue')
     : 'red';
   const oppSide: 'red' | 'blue' = mySide === 'red' ? 'blue' : 'red';
-  const myStretch = mySide === 'red' ? RED_STRETCH : BLUE_STRETCH;
-  const oppStretch = mySide === 'red' ? BLUE_STRETCH : RED_STRETCH;
-  const myColor = mySide === 'red' ? '#ef4444' : '#3b82f6';
-  const oppColor = mySide === 'red' ? '#3b82f6' : '#ef4444';
+  const myStretch   = mySide === 'red' ? RED_STRETCH  : BLUE_STRETCH;
+  const oppStretch  = mySide === 'red' ? BLUE_STRETCH : RED_STRETCH;
+  const myColor     = mySide === 'red' ? '#ef4444' : '#3b82f6';
+  const oppColor    = mySide === 'red' ? '#3b82f6' : '#ef4444';
 
   const [pPos, setPPos] = useState(-1);
   const [aPos, setAPos] = useState(-1);
@@ -117,13 +83,11 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   const [started, setStarted] = useState(false);
   const diff = aiDifficulty || 'medium';
 
-  // Blue AI enters at position 26 (its entry square) instead of 0
   const BLUE_ENTRY = 26;
 
-  // Refs to avoid stale closures inside chained setTimeouts
-  const pPosRef = useRef(-1);
-  const aPosRef = useRef(-1);
-  const overRef = useRef(false);
+  const pPosRef  = useRef(-1);
+  const aPosRef  = useRef(-1);
+  const overRef  = useRef(false);
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -147,22 +111,20 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     onMessage(isOnline ? 'Online Ludo — roll a 6 to enter!' : 'Roll a 6 to enter the track!');
   }, [onMessage, isOnline]);
 
-  // Online sync: reconcile from server boardState
   useEffect(() => {
     if (!isOnline || !multiplayerState) return;
     const bs = multiplayerState.boardState as { redPos?: number; bluePos?: number; lastRoll?: number } | null | undefined;
     if (!bs) return;
-    const redPos = typeof bs.redPos === 'number' ? bs.redPos : -1;
+    const redPos  = typeof bs.redPos  === 'number' ? bs.redPos  : -1;
     const bluePos = typeof bs.bluePos === 'number' ? bs.bluePos : -1;
-    const myPos = mySide === 'red' ? redPos : bluePos;
-    const oppPos = mySide === 'red' ? bluePos : redPos;
+    const myPos   = mySide === 'red' ? redPos  : bluePos;
+    const oppPos  = mySide === 'red' ? bluePos : redPos;
     pPosRef.current = myPos;
     aPosRef.current = oppPos;
     setPPos(myPos);
     setAPos(oppPos);
     if (typeof bs.lastRoll === 'number') setDice(bs.lastRoll);
     setTurn(multiplayerState.currentPlayer === multiplayerState.playerNumber ? 'p' : 'a');
-    // Endgame: anyone reached home
     if ((redPos >= 58 || bluePos >= 58) && !endedRef.current) {
       endedRef.current = true;
       const iWon = myPos >= 58;
@@ -170,51 +132,34 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     }
   }, [isOnline, multiplayerState, mySide, onEnd]);
 
-
   const updatePPos = (v: number) => { pPosRef.current = v; setPPos(v); };
   const updateAPos = (v: number) => { aPosRef.current = v; setAPos(v); };
   const updateOver = (v: boolean) => { overRef.current = v; setOver(v); };
 
-
   const advanceAI = (pos: number, steps: number): number => {
     if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
     const next = pos + steps;
-    // AI enters home stretch at position 25 (before its entry)
     if (pos < 52 && next >= 52) {
-      // Check if AI should enter its home stretch
       const overTrack = next - 52;
-      if (overTrack <= 6) return 52 + overTrack; // into stretch
-      return pos; // can't overshoot
+      if (overTrack <= 6) return 52 + overTrack;
+      return pos;
     }
     if (pos >= 52) {
       const nextStretch = pos + steps;
       return nextStretch > 58 ? pos : nextStretch;
     }
-    return next % 52; // wrap around track
+    return next % 52;
   };
 
   const doAi = () => {
     if (endedRef.current || overRef.current) return;
-    const curP = pPosRef.current;
-    const curA = aPosRef.current;
+    const curP = pPosRef.current, curA = aPosRef.current;
     const d = aiRoll(curP, curA, diff);
     setDice(d);
     const np = advanceAI(curA, d);
-
-    if (np === curA && curA !== -1) {
-      onMessage(`AI rolled ${d} — can't move.`);
-      setTurn('p');
-      return;
-    }
-    if (np === -1) {
-      onMessage(`AI rolled ${d} — needs a 6.`);
-      setTurn('p');
-      return;
-    }
-
+    if (np === curA && curA !== -1) { onMessage(`AI rolled ${d} — can't move.`); setTurn('p'); return; }
+    if (np === -1)                   { onMessage(`AI rolled ${d} — needs a 6.`); setTurn('p'); return; }
     updateAPos(np);
-
-    // Capture check (only on main track)
     if (np >= 0 && np < 52 && np === curP) {
       updatePPos(-1);
       onMessage(`AI rolled ${d} — captured you!`);
@@ -228,72 +173,37 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
       onMessage(`AI rolled ${d} → ${label}`);
     }
-
-    if (d === 6 && !overRef.current) {
-      onMessage('AI rolled 6 — bonus roll!');
-      schedule(doAi, 700);
-      return;
-    }
+    if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus roll!'); schedule(doAi, 700); return; }
     setTurn('p');
   };
 
   const handleRoll = () => {
     if (endedRef.current || overRef.current || turn !== 'p') return;
-    const curP = pPosRef.current;
-    const curA = aPosRef.current;
+    const curP = pPosRef.current, curA = aPosRef.current;
     const d = rollDie();
     setDice(d);
 
     if (isOnline && multiplayerState && onMultiplayerMove) {
-      // Online: my side uses appropriate advance fn (red=advance, blue=advanceAI semantics)
       const myAdvance = mySide === 'red' ? advance : advanceAI;
       const np = myAdvance(curP, d);
-      if (np === curP && curP !== -1) {
-        onMessage(`Rolled ${d} — can't move.`);
-        return;
-      }
-      if (np === -1) {
-        onMessage(`Rolled ${d} — need a 6.`);
-        return;
-      }
-      // Capture opponent if I land on their main-track position
+      if (np === curP && curP !== -1) { onMessage(`Rolled ${d} — can't move.`); return; }
+      if (np === -1)                   { onMessage(`Rolled ${d} — need a 6.`); return; }
       let newOpp = curA;
-      if (np >= 0 && np < 52 && np === curA) {
-        newOpp = -1;
-        onMessage(`Rolled ${d} — captured opponent!`);
-      }
+      if (np >= 0 && np < 52 && np === curA) { newOpp = -1; onMessage(`Rolled ${d} — captured opponent!`); }
       updatePPos(np);
       if (newOpp !== curA) updateAPos(newOpp);
-      const redPos = mySide === 'red' ? np : newOpp;
+      const redPos  = mySide === 'red' ? np : newOpp;
       const bluePos = mySide === 'red' ? newOpp : np;
       const iWon = np >= 58;
-      onMultiplayerMove({
-        boardState: { redPos, bluePos, lastRoll: d },
-        winner: iWon ? multiplayerState.playerNumber : undefined,
-      });
-      if (iWon) {
-        onScore(100);
-      }
+      onMultiplayerMove({ boardState: { redPos, bluePos, lastRoll: d }, winner: iWon ? multiplayerState.playerNumber : undefined });
+      if (iWon) onScore(100);
       return;
     }
 
     const np = advance(curP, d);
-
-    if (np === curP && curP !== -1) {
-      onMessage(`Rolled ${d} — can't overshoot!`);
-      setTurn('a');
-      schedule(doAi, 800);
-      return;
-    }
-    if (np === -1) {
-      onMessage(`Rolled ${d} — need a 6!`);
-      setTurn('a');
-      schedule(doAi, 800);
-      return;
-    }
-
+    if (np === curP && curP !== -1) { onMessage(`Rolled ${d} — can't overshoot!`); setTurn('a'); schedule(doAi, 800); return; }
+    if (np === -1)                   { onMessage(`Rolled ${d} — need a 6!`);        setTurn('a'); schedule(doAi, 800); return; }
     updatePPos(np);
-
     if (np >= 0 && np < 52 && np === curA) {
       updateAPos(-1);
       onMessage(`Rolled ${d} — captured AI!`);
@@ -303,107 +213,168 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       onScore(100);
       onProgress(1);
       endedRef.current = true;
-      schedule(() => onEnd({ score: 100, stars: 3, summary: 'You got all your pieces home first! Well done!' }), 1000);
+      schedule(() => onEnd({ score: 100, stars: 3, summary: 'You got your piece home first! Well done!' }), 1000);
       return;
     } else {
       const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
       onMessage(`Rolled ${d} → ${label}`);
     }
-
-    if (d === 6 && !overRef.current) {
-      onMessage('Rolled 6 — bonus roll!');
-      return;
-    }
+    if (d === 6 && !overRef.current) { onMessage('Rolled 6 — bonus roll!'); return; }
     setTurn('a');
     schedule(doAi, 800);
   };
 
-  const px = (col: number) => col * C;
+  // SVG helpers
   const cx = (col: number) => col * C + C / 2;
   const cy = (row: number) => row * C + C / 2;
 
   const renderBoard = () => {
     const el: React.ReactElement[] = [];
 
-    // Background
-    el.push(<rect key="bg" x={0} y={0} width={W} height={W} fill="#0f172a" rx={8} />);
+    // ── Outer board frame ─────────────────────────────────────────────────
+    el.push(
+      <rect key="frame" x={0} y={0} width={W} height={W} fill="#0a0818" rx={10} />,
+      <rect key="bg" x={2} y={2} width={W - 4} height={W - 4} fill="#0e0c1f" rx={9} />,
+    );
 
-    // Home bases — colored quadrants
+    // ── Home bases ────────────────────────────────────────────────────────
     const bases = [
-      { key: 'rb', x: 0, y: 0, color: '#ef4444', label: 'RED', labelX: 3, labelY: 3 },
-      { key: 'gb', x: 9, y: 0, color: '#22c55e', label: 'GREEN', labelX: 12, labelY: 3 },
-      { key: 'yb', x: 0, y: 9, color: '#eab308', label: 'YELLOW', labelX: 3, labelY: 12 },
-      { key: 'bb', x: 9, y: 9, color: '#3b82f6', label: 'BLUE', labelX: 12, labelY: 12 },
+      { key: 'rb', gx: 0, gy: 0,  color: '#ef4444', label: 'RED'    },
+      { key: 'gb', gx: 9, gy: 0,  color: '#22c55e', label: 'GREEN'  },
+      { key: 'yb', gx: 0, gy: 9,  color: '#eab308', label: 'YELLOW' },
+      { key: 'bb', gx: 9, gy: 9,  color: '#3b82f6', label: 'BLUE'   },
     ];
 
     for (const b of bases) {
+      const bpx = b.gx * C, bpy = b.gy * C;
+      // Outer quadrant
       el.push(
-        <rect key={b.key} x={b.x * C + 2} y={b.y * C + 2} width={6 * C - 4} height={6 * C - 4}
-          fill={b.color} fillOpacity={0.1} rx={8} stroke={b.color} strokeWidth={1} strokeOpacity={0.2} />,
-        <rect key={`${b.key}i`} x={(b.x + 1) * C} y={(b.y + 1) * C} width={4 * C} height={4 * C}
-          fill={b.color} fillOpacity={0.15} rx={6} stroke={b.color} strokeWidth={1.5} strokeOpacity={0.25} />,
-        <text key={`${b.key}l`} x={cx(b.labelX)} y={cy(b.labelY)} textAnchor="middle" dominantBaseline="central"
-          fontSize={8} fill={b.color} fontWeight="bold" opacity={0.5}>{b.label}</text>,
+        <rect key={`${b.key}o`}
+          x={bpx + 3} y={bpy + 3} width={6*C - 6} height={6*C - 6}
+          fill={b.color} fillOpacity={0.12} rx={10}
+          stroke={b.color} strokeWidth={1.5} strokeOpacity={0.3} />,
+      );
+      // Inner platform
+      el.push(
+        <rect key={`${b.key}i`}
+          x={(b.gx + 1)*C + 5} y={(b.gy + 1)*C + 5}
+          width={4*C - 10} height={4*C - 10}
+          fill={b.color} fillOpacity={0.18} rx={8}
+          stroke={b.color} strokeWidth={1.5} strokeOpacity={0.4} />,
+      );
+      // 4 piece-parking circles
+      const spots: [number, number][] = [
+        [b.gx + 1.7, b.gy + 1.7],
+        [b.gx + 3.3, b.gy + 1.7],
+        [b.gx + 1.7, b.gy + 3.3],
+        [b.gx + 3.3, b.gy + 3.3],
+      ];
+      for (let si = 0; si < spots.length; si++) {
+        const [sc, sr] = spots[si];
+        el.push(
+          <circle key={`${b.key}sp${si}`}
+            cx={cx(sc)} cy={cy(sr)} r={C * 0.33}
+            fill="rgba(0,0,0,0.25)"
+            stroke={b.color} strokeWidth={1.5} strokeOpacity={0.5} />,
+        );
+      }
+      // Label
+      el.push(
+        <text key={`${b.key}l`}
+          x={cx(b.gx + 2.5)} y={cy(b.gy + 4.7)}
+          textAnchor="middle" dominantBaseline="central"
+          fontSize={8} fill={b.color} fontWeight="bold" opacity={0.55}>
+          {b.label}
+        </text>,
       );
     }
 
-    // Cross arms background
+    // ── Cross arms ────────────────────────────────────────────────────────
     el.push(
-      <rect key="arm-t" x={6 * C} y={0} width={3 * C} height={6 * C} fill="#1e293b" />,
-      <rect key="arm-l" x={0} y={6 * C} width={6 * C} height={3 * C} fill="#1e293b" />,
-      <rect key="arm-c" x={6 * C} y={6 * C} width={3 * C} height={3 * C} fill="#1e293b" />,
-      <rect key="arm-r" x={9 * C} y={6 * C} width={6 * C} height={3 * C} fill="#1e293b" />,
-      <rect key="arm-b" x={6 * C} y={9 * C} width={3 * C} height={6 * C} fill="#1e293b" />,
+      <rect key="arm-t" x={6*C} y={0}    width={3*C} height={6*C} fill="#111827" />,
+      <rect key="arm-l" x={0}   y={6*C}  width={6*C} height={3*C} fill="#111827" />,
+      <rect key="arm-c" x={6*C} y={6*C}  width={3*C} height={3*C} fill="#111827" />,
+      <rect key="arm-r" x={9*C} y={6*C}  width={6*C} height={3*C} fill="#111827" />,
+      <rect key="arm-b" x={6*C} y={9*C}  width={3*C} height={6*C} fill="#111827" />,
     );
 
-    // Track squares
+    // ── Track squares ─────────────────────────────────────────────────────
     TRACK.forEach(([row, col], i) => {
-      const isRedEntry = i === 0;
+      const isSafe  = SAFE_POSITIONS.has(i);
+      const isRedEntry  = i === 0;
       const isBlueEntry = i === BLUE_ENTRY;
       const isGreenEntry = i === 13;
       const isYellowEntry = i === 39;
-      let fill = '#e2e8f0';
-      if (isRedEntry) fill = '#fecaca';
-      if (isBlueEntry) fill = '#bfdbfe';
-      if (isGreenEntry) fill = '#bbf7d0';
-      if (isYellowEntry) fill = '#fef08a';
+
+      let fill = '#182038';
+      let stroke = '#2a3a5a';
+      if (isRedEntry)    { fill = 'rgba(239,68,68,0.28)';   stroke = '#ef4444'; }
+      if (isBlueEntry)   { fill = 'rgba(59,130,246,0.28)';  stroke = '#3b82f6'; }
+      if (isGreenEntry)  { fill = 'rgba(34,197,94,0.28)';   stroke = '#22c55e'; }
+      if (isYellowEntry) { fill = 'rgba(234,179,8,0.28)';   stroke = '#eab308'; }
+
       el.push(
-        <rect key={`t${i}`} x={col * C + 0.5} y={row * C + 0.5} width={C - 1} height={C - 1}
-          fill={fill} stroke="#94a3b8" strokeWidth={0.4} rx={2} />,
+        <rect key={`t${i}`}
+          x={col*C + 1} y={row*C + 1} width={C - 2} height={C - 2}
+          fill={fill} stroke={stroke} strokeWidth={isSafe ? 0.8 : 0.5} rx={3} />,
       );
+
+      // Star on safe squares (non-entry)
+      if (isSafe && !isRedEntry && !isBlueEntry && !isGreenEntry && !isYellowEntry) {
+        el.push(
+          <text key={`safe${i}`}
+            x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
+            fontSize={9} fill="rgba(255,255,255,0.35)" style={{ userSelect: 'none' }}>
+            ✦
+          </text>,
+        );
+      }
     });
 
-    // Home stretches
-    const stretches = [
-      { data: RED_STRETCH, color: '#ef4444', fillColor: '#fecaca', label: 'R' },
-      { data: BLUE_STRETCH, color: '#3b82f6', fillColor: '#bfdbfe', label: 'B' },
+    // ── Home stretch lanes ────────────────────────────────────────────────
+    const stretchDefs = [
+      { data: RED_STRETCH,    color: '#ef4444', fillOpacity: 0.22 },
+      { data: BLUE_STRETCH,   color: '#3b82f6', fillOpacity: 0.22 },
+      { data: GREEN_STRETCH,  color: '#22c55e', fillOpacity: 0.18 },
+      { data: YELLOW_STRETCH, color: '#eab308', fillOpacity: 0.18 },
     ];
-    // Also show green/yellow stretch visually (not playable yet)
-    const greenStretch: [number, number][] = [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7], [6, 7]];
-    const yellowStretch: [number, number][] = [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7], [8, 7]];
-    const decorativeStretches = [
-      { data: greenStretch, color: '#22c55e', fillColor: '#bbf7d0' },
-      { data: yellowStretch, color: '#eab308', fillColor: '#fef08a' },
-    ];
-
-    for (const s of [...stretches, ...decorativeStretches]) {
+    for (const s of stretchDefs) {
       s.data.forEach(([row, col], i) => {
         el.push(
-          <rect key={`s-${s.color}-${i}`} x={col * C + 0.5} y={row * C + 0.5} width={C - 1} height={C - 1}
-            fill={s.fillColor} stroke={s.color} strokeWidth={0.6} rx={2} />,
-          <text key={`sl-${s.color}-${i}`} x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
-            fontSize={6} fill={s.color} fontWeight="bold">{i + 1}</text>,
+          <rect key={`sr-${s.color}-${i}`}
+            x={col*C + 1} y={row*C + 1} width={C - 2} height={C - 2}
+            fill={s.color} fillOpacity={s.fillOpacity}
+            stroke={s.color} strokeWidth={0.8} rx={3} />,
+          <text key={`sn-${s.color}-${i}`}
+            x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
+            fontSize={7} fill={s.color} fillOpacity={0.7} fontWeight="bold">
+            {i + 1}
+          </text>,
         );
       });
     }
 
-    // Center home triangle
-    const centerX = cx(7), centerY = cy(7);
+    // ── Center home ────────────────────────────────────────────────────────
+    const mx = 6*C, my = 6*C, ms = 3*C;
+    const hcx = mx + ms / 2, hcy = my + ms / 2;
+    // 4 colored triangles
+    const tris = [
+      { color: '#ef4444', pts: `${mx},${my} ${mx+ms},${my} ${hcx},${hcy}` },         // top → red
+      { color: '#22c55e', pts: `${mx+ms},${my} ${mx+ms},${my+ms} ${hcx},${hcy}` },   // right → green
+      { color: '#3b82f6', pts: `${mx},${my+ms} ${mx+ms},${my+ms} ${hcx},${hcy}` },   // bottom → blue
+      { color: '#eab308', pts: `${mx},${my} ${mx},${my+ms} ${hcx},${hcy}` },         // left → yellow
+    ];
+    for (const t of tris) {
+      el.push(<polygon key={`tri-${t.color}`} points={t.pts} fill={t.color} fillOpacity={0.25} />);
+    }
+    // Center circle
     el.push(
-      <circle key="home-bg" cx={centerX} cy={centerY} r={C * 1.2} fill="#fbbf24" fillOpacity={0.12} />,
-      <circle key="home-fg" cx={centerX} cy={centerY} r={C * 0.7} fill="#fbbf24" fillOpacity={0.2} stroke="#f59e0b" strokeWidth={1} />,
-      <text key="home-star" x={centerX} y={centerY + 1} textAnchor="middle" dominantBaseline="central"
-        fontSize={14} fill="#92400e" fontWeight="bold">{'\u2605'}</text>,
+      <circle key="home-ring" cx={hcx} cy={hcy} r={C * 0.95}
+        fill="#0e0c1f" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />,
+      <circle key="home-inner" cx={hcx} cy={hcy} r={C * 0.7}
+        fill="rgba(251,191,36,0.12)" stroke="#f59e0b" strokeWidth={1.2} />,
+      <text key="home-star" x={hcx} y={hcy + 1} textAnchor="middle" dominantBaseline="central"
+        fontSize={16} fill="#fbbf24">★</text>,
     );
 
     return el;
@@ -411,42 +382,56 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
 
   const renderTokens = () => {
     const el: React.ReactElement[] = [];
-    const r = C * 0.4;
-    const pColor = isOnline ? myColor : '#ef4444';
-    const aColor = isOnline ? oppColor : '#3b82f6';
-    const pStretch = isOnline ? myStretch : RED_STRETCH;
+    const r = C * 0.42;
+    const pColor  = isOnline ? myColor  : '#ef4444';
+    const aColor  = isOnline ? oppColor : '#3b82f6';
+    const pLight  = isOnline ? (mySide === 'red' ? '#fca5a5' : '#93c5fd') : '#fca5a5';
+    const aLight  = isOnline ? (mySide === 'red' ? '#93c5fd' : '#fca5a5') : '#93c5fd';
+    const pStretch = isOnline ? myStretch  : RED_STRETCH;
     const aStretch = isOnline ? oppStretch : BLUE_STRETCH;
-    const pBaseR = mySide === 'red' ? 2 : 12;
-    const pBaseC = mySide === 'red' ? 2 : 12;
-    const aBaseR = mySide === 'red' ? 12 : 2;
-    const aBaseC = mySide === 'red' ? 12 : 2;
 
-    // Player
+    // Base positions for tokens not yet on track
+    const pBaseC = mySide === 'red' ? 2.5 : 12.5;
+    const pBaseR = mySide === 'red' ? 2.5 : 12.5;
+    const aBaseC = mySide === 'red' ? 12.5 : 2.5;
+    const aBaseR = mySide === 'red' ? 12.5 : 2.5;
+
+    const drawToken = (id: string, tx: number, ty: number, color: string, light: string, label: string, isActive: boolean) => {
+      return [
+        // Drop shadow
+        <circle key={`${id}-sh`} cx={tx + 1.5} cy={ty + 2.5} r={r + 1}
+          fill="rgba(0,0,0,0.5)" />,
+        // Glow ring when active
+        ...(isActive ? [
+          <circle key={`${id}-glow`} cx={tx} cy={ty} r={r + 4}
+            fill="none" stroke={color} strokeWidth={2} opacity={0.5} />,
+        ] : []),
+        // Main body
+        <circle key={`${id}-body`} cx={tx} cy={ty} r={r}
+          fill={color} stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} />,
+        // Top-left highlight
+        <circle key={`${id}-hl`} cx={tx - r * 0.28} cy={ty - r * 0.3} r={r * 0.42}
+          fill={light} opacity={0.45} />,
+        // Letter
+        <text key={`${id}-txt`} x={tx} y={ty + 1} textAnchor="middle" dominantBaseline="central"
+          fontSize={r * 0.85} fill="white" fontWeight="bold">{label}</text>,
+      ];
+    };
+
+    // Player token
     if (pPos === -1) {
-      el.push(
-        <circle key="pt" cx={cx(pBaseC)} cy={cy(pBaseR)} r={r + 1} fill={pColor} stroke="white" strokeWidth={1.5} />,
-        <text key="ptl" x={cx(pBaseC)} y={cy(pBaseR) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">P</text>,
-      );
+      el.push(...drawToken('p', cx(pBaseC), cy(pBaseR), pColor, pLight, 'P', turn === 'p'));
     } else {
       const [row, col] = posCoord(pPos, pStretch);
-      el.push(
-        <circle key="pt" cx={cx(col)} cy={cy(row)} r={r} fill={pColor} stroke="white" strokeWidth={1.5} />,
-        <text key="ptl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">P</text>,
-      );
+      el.push(...drawToken('p', cx(col), cy(row), pColor, pLight, 'P', turn === 'p'));
     }
 
-    // Opponent
+    // AI / opponent token
     if (aPos === -1) {
-      el.push(
-        <circle key="at" cx={cx(aBaseC)} cy={cy(aBaseR)} r={r + 1} fill={aColor} stroke="white" strokeWidth={1.5} />,
-        <text key="atl" x={cx(aBaseC)} y={cy(aBaseR) + 1} textAnchor="middle" dominantBaseline="central" fontSize={8} fill="white" fontWeight="bold">{isOnline ? 'O' : 'A'}</text>,
-      );
+      el.push(...drawToken('a', cx(aBaseC), cy(aBaseR), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
     } else {
       const [row, col] = posCoord(aPos, aStretch);
-      el.push(
-        <circle key="at" cx={cx(col)} cy={cy(row)} r={r} fill={aColor} stroke="white" strokeWidth={1.5} />,
-        <text key="atl" x={cx(col)} y={cy(row) + 1} textAnchor="middle" dominantBaseline="central" fontSize={7} fill="white" fontWeight="bold">{isOnline ? 'O' : 'A'}</text>,
-      );
+      el.push(...drawToken('a', cx(col), cy(row), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
     }
 
     return el;
@@ -456,17 +441,37 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     if (pos === -1) return 'Base';
     if (pos < 52) return `Track ${pos}`;
     if (pos < 58) return `Stretch ${pos - 51}/6`;
-    return 'HOME';
+    return '🏠 HOME';
   };
+
   if (!started) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
-        <div className="text-6xl">🎲</div>
-        <h2 className="text-2xl font-bold">Ludo</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Roll the dice and race all 4 pieces to the center home!</p>
+      <div className="h-full flex flex-col items-center justify-center gap-5 p-6 text-center">
+        <div className="text-6xl select-none">🎲</div>
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Ludo</h2>
+          <p className="text-text-muted text-sm max-w-xs">
+            Race your piece from base to the golden star home. Roll a 6 to enter the track!
+          </p>
+        </div>
+        {/* Rules card */}
+        <div className="bg-card rounded-xl p-4 text-left max-w-xs w-full text-xs space-y-2 text-text-muted">
+          {[
+            ['🎲', 'Roll a 6 to leave base and enter the track'],
+            ['✦', 'Star squares are safe — you can\'t be captured there'],
+            ['💥', 'Land on opponent to send them back to base'],
+            ['🎁', 'Roll a 6 again for a bonus turn'],
+            ['🏠', 'Reach the star in the center to win!'],
+          ].map(([icon, rule], i) => (
+            <div key={i} className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 text-center">{icon}</span>
+              <span>{rule}</span>
+            </div>
+          ))}
+        </div>
         <button
           onClick={() => setStarted(true)}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+          className="bg-accent text-bg font-bold px-10 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
         >
           Start Game
         </button>
@@ -474,67 +479,85 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     );
   }
 
+  const pPct = pPos < 0 ? 0 : pPos >= 58 ? 100 : Math.round((pPos / 58) * 100);
+  const aPct = aPos < 0 ? 0 : aPos >= 58 ? 100 : Math.round((aPos / 58) * 100);
 
   return (
-    <div className="h-full flex flex-col items-center p-2 gap-1.5">
+    <div className="h-full flex flex-col items-center p-2 gap-2">
       {/* Status bar */}
-      <div className="flex gap-2 text-xs items-center flex-wrap justify-center">
-        <span className="bg-card rounded-lg px-2 py-0.5 font-bold flex items-center gap-1" style={{ color: isOnline ? myColor : undefined }}>
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: isOnline ? myColor : '#ef4444' }} />
-          You: {posLabel(pPos)}
-        </span>
-        <span className="bg-card rounded-lg px-2 py-0.5 font-bold flex items-center gap-1" style={{ color: isOnline ? oppColor : undefined }}>
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: isOnline ? oppColor : '#3b82f6' }} />
-          {isOnline ? (multiplayerState?.opponentName || 'Opponent') : 'AI'}: {posLabel(aPos)}
-        </span>
-        {!isOnline && <span className="bg-card rounded-lg px-2 py-0.5 text-accent font-bold">{turn === 'p' ? 'Your turn' : 'AI rolling...'}</span>}
+      <div className="w-full max-w-[400px] flex items-center justify-between gap-2 px-1">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: isOnline ? myColor : '#ef4444' }} />
+          <span className="text-xs font-bold" style={{ color: isOnline ? myColor : '#ef4444' }}>You</span>
+          <span className="text-[11px] text-text-muted">{posLabel(pPos)}</span>
+        </div>
+        {/* Turn pill */}
+        <div className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${
+          turn === 'p'
+            ? 'bg-accent/20 text-accent ring-1 ring-accent/40'
+            : 'bg-card text-text-muted'
+        }`}>
+          {turn === 'p' ? (
+            <><span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span> Your turn</>
+          ) : (
+            <><span className="animate-pulse">🤖</span> {isOnline ? 'Their turn' : 'AI rolling…'}</>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-text-muted">{posLabel(aPos)}</span>
+          <span className="text-xs font-bold" style={{ color: isOnline ? oppColor : '#3b82f6' }}>{isOnline ? (multiplayerState?.opponentName || 'Opp') : 'AI'}</span>
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: isOnline ? oppColor : '#3b82f6' }} />
+        </div>
       </div>
 
       {/* Board */}
-      <div className="w-full max-w-[380px] flex-shrink-0">
-        <svg viewBox={`0 0 ${W} ${W}`} className="w-full h-auto rounded-xl" style={{ maxHeight: '58vh' }}>
+      <div className="flex-shrink-0 w-full flex justify-center">
+        <svg viewBox={`0 0 ${W} ${W}`} className="rounded-xl w-full h-auto shadow-2xl"
+          style={{ maxWidth: 390, maxHeight: '55vh' }}>
           {renderBoard()}
           {renderTokens()}
         </svg>
       </div>
 
-      {/* Dice + Roll */}
+      {/* Dice + Roll button */}
       <div className="flex items-center gap-3">
         <DiceFace value={dice} highlight={dice === 6} />
         <button
           onClick={handleRoll}
           disabled={over || turn !== 'p'}
-          className="bg-accent text-bg font-bold px-5 py-2 rounded-xl text-sm hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all"
+          className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl text-sm hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all shadow-lg shadow-accent/25"
         >
-          {turn === 'p' ? 'Roll!' : (isOnline ? 'Opponent rolling...' : 'AI thinking...')}
+          {turn === 'p' ? 'Roll!' : isOnline ? "Opponent's turn" : 'AI thinking\u2026'}
         </button>
       </div>
 
       {/* Progress bars */}
       {!isOnline && (
-        <div className="w-full max-w-[380px] flex flex-col gap-1 px-1">
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-red-400 font-bold w-6">You</span>
-            <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
-              <div className="h-full bg-red-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(0, pPos < 0 ? 0 : pPos >= 58 ? 100 : Math.round((pPos / 58) * 100))}%` }} />
+        <div className="w-full max-w-[400px] flex flex-col gap-1.5 px-1">
+          {[
+            { label: 'You', pct: pPct, color: '#ef4444', pos: pPos },
+            { label: 'AI',  pct: aPct, color: '#3b82f6', pos: aPos },
+          ].map(bar => (
+            <div key={bar.label} className="flex items-center gap-2 text-xs">
+              <span className="font-bold w-5 text-right" style={{ color: bar.color }}>{bar.label}</span>
+              <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${bar.pct}%`, background: bar.color }} />
+              </div>
+              <span className="text-text-muted w-10 text-right font-medium">
+                {bar.pos < 0 ? 'Base' : bar.pos >= 58 ? '🏠' : `${bar.pct}%`}
+              </span>
             </div>
-            <span className="text-text-muted w-8 text-right">{pPos < 0 ? 'Base' : pPos >= 58 ? 'HOME' : `${Math.round((pPos / 58) * 100)}%`}</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-blue-400 font-bold w-6">AI</span>
-            <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(0, aPos < 0 ? 0 : aPos >= 58 ? 100 : Math.round((aPos / 58) * 100))}%` }} />
-            </div>
-            <span className="text-text-muted w-8 text-right">{aPos < 0 ? 'Base' : aPos >= 58 ? 'HOME' : `${Math.round((aPos / 58) * 100)}%`}</span>
-          </div>
+          ))}
         </div>
       )}
 
-      <div className="text-[11px] text-text-muted text-center px-4 leading-relaxed">
-        Roll 6 to enter. Land on opponent to capture. Reach the star to win!
-      </div>
+      <p className="text-[11px] text-text-muted text-center">
+        Roll 6 to enter · Land on opponent to capture · Reach ★ to win
+      </p>
     </div>
   );
 }
@@ -542,24 +565,28 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
 function DiceFace({ value, highlight }: { value: number | null; highlight?: boolean }) {
   const pipLayouts: Record<number, [number, number][]> = {
     1: [[50, 50]],
-    2: [[25, 25], [75, 75]],
-    3: [[25, 25], [50, 50], [75, 75]],
-    4: [[25, 25], [75, 25], [25, 75], [75, 75]],
-    5: [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
-    6: [[25, 20], [75, 20], [25, 50], [75, 50], [25, 80], [75, 80]],
+    2: [[28, 28], [72, 72]],
+    3: [[28, 28], [50, 50], [72, 72]],
+    4: [[28, 28], [72, 28], [28, 72], [72, 72]],
+    5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
+    6: [[28, 22], [72, 22], [28, 50], [72, 50], [28, 78], [72, 78]],
   };
   const pips = value !== null ? (pipLayouts[value] || []) : [];
   return (
-    <div className={`w-12 h-12 rounded-xl flex items-center justify-center select-none border-2 transition-all ${
-      highlight ? 'bg-accent/20 border-accent shadow-lg shadow-accent/30' : 'bg-card border-white/10'
+    <div className={`w-14 h-14 rounded-xl flex items-center justify-center select-none border-2 transition-all shadow-md ${
+      highlight
+        ? 'bg-accent/20 border-accent shadow-accent/30'
+        : 'bg-card border-white/10'
     }`}>
       {value === null ? (
-        <span className="text-2xl">🎲</span>
+        <span className="text-3xl">🎲</span>
       ) : (
-        <svg width="40" height="40" viewBox="0 0 100 100">
-          {pips.map(([cx, cy], i) => (
-            <circle key={i} cx={cx} cy={cy} r={10}
-              fill={highlight ? '#a78bfa' : '#e2e8f0'} />
+        <svg width="44" height="44" viewBox="0 0 100 100">
+          <rect x={2} y={2} width={96} height={96} rx={14}
+            fill={highlight ? 'rgba(167,139,250,0.08)' : 'rgba(255,255,255,0.04)'} />
+          {pips.map(([px, py], i) => (
+            <circle key={i} cx={px} cy={py} r={10}
+              fill={highlight ? '#a78bfa' : '#cbd5e1'} />
           ))}
         </svg>
       )}
