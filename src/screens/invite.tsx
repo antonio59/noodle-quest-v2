@@ -7,7 +7,7 @@ import { getGame } from '@/lib/game-registry';
 import { Users, Loader2, AlertCircle } from 'lucide-react';
 
 export function InvitePage() {
-  const { code } = useParams<{ code: string }>();
+  const { gameSlug, code } = useParams<{ gameSlug: string; code: string }>();
   const navigate = useNavigate();
   const { player } = useAuth();
   const [joining, setJoining] = useState(false);
@@ -48,7 +48,7 @@ export function InvitePage() {
   };
 
   if (!player) {
-    const returnTo = `/invite/${code}`;
+    const returnTo = `/invite/${gameSlug}/${code}`;
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center">
         <div className="text-6xl mb-4">🍜</div>

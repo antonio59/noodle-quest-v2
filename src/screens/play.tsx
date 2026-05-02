@@ -177,7 +177,7 @@ export function PlayGame() {
   }
 
   if (isMultiplayer && inviteCode && !isLivePlaying) {
-    const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
+    const inviteUrl = `${window.location.origin}/invite/${gameId}/${inviteCode}`;
     const handleCopy = () => {
       navigator.clipboard.writeText(inviteUrl)
         .then(() => { setHasCopied(true); setTimeout(() => setHasCopied(false), 2500); })

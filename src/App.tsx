@@ -57,7 +57,7 @@ export function AppRouter() {
         } />
 
         {/* Invite links (public — redirects to auth if needed) */}
-        <Route path="/invite/:code" element={
+        <Route path="/invite/:gameSlug/:code" element={
           <Suspense fallback={<ScreenFallback />}>
             <InvitePage />
           </Suspense>
