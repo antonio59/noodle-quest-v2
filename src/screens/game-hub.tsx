@@ -10,6 +10,24 @@ import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
 
+const BREATHE_THEMES: Record<string, { from: string; border: string; glow: string; accent: string; iconBg: string }> = {
+  'box-breathing':      { from: 'from-violet-600/20 to-violet-900/5',  border: 'border-violet-500/25', glow: 'hover:shadow-[0_0_30px_rgba(139,92,246,0.18)]', accent: 'text-violet-400',  iconBg: 'bg-violet-500/20' },
+  'calm-breathing':     { from: 'from-blue-600/20 to-blue-900/5',      border: 'border-blue-500/25',   glow: 'hover:shadow-[0_0_30px_rgba(59,130,246,0.18)]',  accent: 'text-blue-400',    iconBg: 'bg-blue-500/20' },
+  'triangle-breathing': { from: 'from-cyan-600/20 to-cyan-900/5',      border: 'border-cyan-500/25',   glow: 'hover:shadow-[0_0_30px_rgba(6,182,212,0.18)]',   accent: 'text-cyan-400',    iconBg: 'bg-cyan-500/20' },
+  'coherent-breathing': { from: 'from-emerald-600/20 to-emerald-900/5',border: 'border-emerald-500/25',glow: 'hover:shadow-[0_0_30px_rgba(16,185,129,0.18)]',  accent: 'text-emerald-400', iconBg: 'bg-emerald-500/20' },
+};
+
+const TRACK_TYPE_STYLES: Record<string, { bg: string; border: string; iconBg: string; accent: string; pill: string }> = {
+  lofi:       { bg: 'bg-amber-500/8',   border: 'border-amber-500/20',   iconBg: 'bg-amber-500/20',   accent: 'text-amber-400',   pill: 'bg-amber-500/15 text-amber-400' },
+  focus:      { bg: 'bg-sky-500/8',     border: 'border-sky-500/20',     iconBg: 'bg-sky-500/20',     accent: 'text-sky-400',     pill: 'bg-sky-500/15 text-sky-400' },
+  nature:     { bg: 'bg-emerald-500/8', border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/20', accent: 'text-emerald-400', pill: 'bg-emerald-500/15 text-emerald-400' },
+  meditation: { bg: 'bg-violet-500/8',  border: 'border-violet-500/20',  iconBg: 'bg-violet-500/20',  accent: 'text-violet-400',  pill: 'bg-violet-500/15 text-violet-400' },
+};
+
+const TRACK_TYPE_LABELS: Record<string, string> = {
+  lofi: '☕ Lo-Fi', focus: '🧠 Focus', nature: '🌿 Nature', meditation: '🧘 Meditation',
+};
+
 const CATEGORY_STYLES: Record<string, { label: string; badge: string; glow: string; playBtn: string }> = {
   focus:       { label: 'Focus',       badge: 'bg-sky-500/20 text-sky-300 border-sky-500/30',         glow: 'hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]',   playBtn: 'bg-sky-500 hover:shadow-[0_0_20px_rgba(56,189,248,0.5)]' },
   memory:      { label: 'Memory',      badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30', glow: 'hover:shadow-[0_0_30px_rgba(167,139,250,0.25)]',  playBtn: 'bg-[#a78bfa] hover:shadow-[0_0_20px_rgba(167,139,250,0.5)]' },
@@ -381,18 +399,52 @@ export function GameHub() {
 
       {tab === 'breathe' && (
         <div className="flex-1 overflow-y-auto">
-          <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {allGames.filter(g => g.category === 'breathe').map(g => (
-              <button
-                key={g.id}
-                onClick={() => navigateToGame(g.id)}
-                className="bg-card hover:bg-card-hover rounded-xl p-4 text-left transition-all active:scale-95 shadow-sm hover:shadow-md"
-              >
-                <div className="text-3xl mb-2">{g.emoji}</div>
-                <div className="font-semibold text-sm mb-1">{g.name}</div>
-                <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-              </button>
-            ))}
+          <div className="p-4 space-y-3">
+            {allGames.filter(g => g.category === 'breathe').map(g => {
+              const th = BREATHE_THEMES[g.id] ?? BREATHE_THEMES['box-breathing'];
+              return (
+                <div
+                  key={g.id}
+                  onClick={() => navigateToGame(g.id)}
+                  className={`bg-gradient-to-br ${th.from} border ${th.border} rounded-2xl p-5 cursor-pointer transition-all duration-200 active:scale-[0.98] ${th.glow}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-14 h-14 rounded-2xl ${th.iconBg} border ${th.border} flex items-center justify-center text-3xl flex-shrink-0`}>
+                      {g.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="font-bold text-base text-text">{g.name}</h3>
+                        {g.duration && (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/5 border ${th.border} ${th.accent}`}>
+                            {g.duration}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-text-muted text-xs mb-2.5 leading-relaxed">{g.description}</p>
+                      {g.bestFor && g.bestFor.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.bestFor.slice(0, 3).map((item, i) => (
+                            <span key={i} className="text-[10px] bg-white/5 text-text-muted px-2 py-0.5 rounded-full border border-white/8">
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/5">
+                    <CardMeta gameId={g.id} size="sm" />
+                    <button
+                      onClick={e => { e.stopPropagation(); navigateToGame(g.id); }}
+                      className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl bg-white/8 ${th.accent} hover:bg-white/15 transition-colors active:scale-95 border ${th.border}`}
+                    >
+                      <Wind size={13} /> Begin
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -412,46 +464,40 @@ function formatTime(seconds: number): string {
 
 function NowPlayingBar({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
   const [elapsed, setElapsed] = useState(0);
-  const duration = 180; // 3 minutes per procedural track
 
   useEffect(() => {
     setElapsed(0);
-    const interval = setInterval(() => {
-      setElapsed(prev => (prev + 1) % duration);
-    }, 1000);
+    const interval = setInterval(() => setElapsed(prev => prev + 1), 1000);
     return () => clearInterval(interval);
   }, [audio.currentTrack]);
 
   const track = TRACKS.find(t => t.id === audio.currentTrack);
-  const pct = (elapsed / duration) * 100;
+  const ts = TRACK_TYPE_STYLES[track?.type ?? 'focus'];
 
   return (
-    <div className="sticky bottom-0 p-3 bg-surface/80 backdrop-blur border-t border-white/5">
-      <div className="flex items-center gap-3 mb-2">
-        <div className="text-xl animate-[celebrate_2s_ease_infinite]">🎵</div>
-        <div className="flex-1">
-          <div className="text-xs font-semibold text-accent flex items-center gap-2">
-            Now Playing
+    <div className={`sticky bottom-0 p-3 bg-surface/90 backdrop-blur-md border-t border-white/8`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl ${ts.iconBg} flex items-center justify-center text-xl flex-shrink-0`}>
+          {track?.emoji ?? '🎵'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className={`text-xs font-bold ${ts.accent} flex items-center gap-1.5`}>
+            Now playing
             <span className="inline-flex items-end gap-[2px] h-3">
-              <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.6s_ease-in-out_infinite]" style={{ height: '60%' }} />
-              <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s]" style={{ height: '100%' }} />
-              <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '40%' }} />
+              <span className={`w-[3px] rounded-full animate-[equalizer_0.6s_ease-in-out_infinite] ${ts.iconBg}`} style={{ height: '60%' }} />
+              <span className={`w-[3px] rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s] ${ts.iconBg}`} style={{ height: '100%' }} />
+              <span className={`w-[3px] rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s] ${ts.iconBg}`} style={{ height: '40%' }} />
             </span>
           </div>
-          <div className="text-xs text-text-muted">{track?.name}</div>
-        </div>
-        <div className="text-xs text-text-muted tabular-nums">
-          {formatTime(elapsed)} / {formatTime(duration)}
+          <div className="text-sm font-semibold text-text truncate">{track?.name}</div>
+          <div className="text-[10px] text-text-muted">{formatTime(elapsed)} · looping</div>
         </div>
         <button
           onClick={audio.stop}
-          className="bg-card text-text px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-card-hover"
+          className="flex items-center gap-1 bg-card border border-white/10 text-text-muted text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-card-hover hover:text-text transition-colors"
         >
-          Stop
+          <Pause size={12} /> Stop
         </button>
-      </div>
-      <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
-        <div className="h-full bg-accent transition-all duration-1000 rounded-full" style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -463,65 +509,81 @@ function TracksPanel({ audio }: { audio: ReturnType<typeof useAudioEngine> }) {
   const filtered = TRACKS.filter(t => filter === 'all' || t.type === filter);
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="p-4 pb-0">
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
-          {types.map(t => (
-            <button
-              key={t}
-              onClick={() => setFilter(t)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                filter === t ? 'bg-accent text-bg' : 'bg-card text-text-muted hover:text-text'
-              }`}
-            >
-              {t === 'all' ? 'All' : t === 'lofi' ? '☕ Lo-Fi' : t === 'focus' ? '🧠 Focus' : t === 'nature' ? '🌿 Nature' : '🧘 Meditation'}
-            </button>
-          ))}
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Filter bar */}
+      <div className="px-4 pt-3 pb-2 flex-shrink-0">
+        <div className="flex gap-2 overflow-x-auto scrollbar-none">
+          {types.map(t => {
+            const active = filter === t;
+            const ts = t !== 'all' ? TRACK_TYPE_STYLES[t] : null;
+            return (
+              <button
+                key={t}
+                onClick={() => setFilter(t)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                  active
+                    ? ts ? `${ts.pill} border ${ts.border}` : 'bg-accent text-bg'
+                    : 'bg-card text-text-muted hover:text-text border border-transparent'
+                }`}
+              >
+                {t === 'all' ? '✦ All' : TRACK_TYPE_LABELS[t]}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="p-4 space-y-2">
-        {filtered.map(track => {
-          const isPlaying = audio.isPlaying && audio.currentTrack === track.id;
-          return (
-            <button
-              key={track.id}
-              onClick={() => audio.toggle(track.id, { type: track.type, bpm: track.bpm })}
-              className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all active:scale-95 ${
-                isPlaying ? 'bg-accent/20 ring-1 ring-accent' : 'bg-card hover:bg-card-hover'
-              }`}
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-                isPlaying ? 'bg-accent/30' : 'bg-card-hover'
-              }`}>
-                {track.emoji}
-              </div>
-              <div className="flex-1 text-left">
-                <div className="font-semibold text-sm flex items-center gap-2">
-                  {track.name}
-                  {isPlaying && (
-                    <span className="inline-flex items-end gap-[2px] h-3">
-                      <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.6s_ease-in-out_infinite]" style={{ height: '60%' }} />
-                      <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s]" style={{ height: '100%' }} />
-                      <span className="w-[3px] bg-accent rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s]" style={{ height: '40%' }} />
-                    </span>
-                  )}
+      {/* Track list */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 pt-1 space-y-2">
+          {filtered.map(track => {
+            const isPlaying = audio.isPlaying && audio.currentTrack === track.id;
+            const ts = TRACK_TYPE_STYLES[track.type];
+            return (
+              <button
+                key={track.id}
+                onClick={() => audio.toggle(track.id, { type: track.type, bpm: track.bpm })}
+                className={`w-full flex items-center gap-3 p-3.5 rounded-xl transition-all active:scale-[0.98] border ${
+                  isPlaying
+                    ? `${ts.bg} ${ts.border} ring-1 ring-inset ${ts.border}`
+                    : 'bg-card border-white/5 hover:bg-card-hover hover:border-white/10'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors ${
+                  isPlaying ? ts.iconBg : 'bg-card-hover'
+                }`}>
+                  {track.emoji}
                 </div>
-                <div className="text-text-muted text-xs">{track.description}</div>
-              </div>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                isPlaying ? 'bg-accent text-bg' : 'bg-card-hover text-text-muted'
-              }`}>
-                {isPlaying ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
-              </div>
-            </button>
-          );
-        })}
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-semibold text-sm text-text truncate">{track.name}</span>
+                    {isPlaying && (
+                      <span className="inline-flex items-end gap-[2px] h-3 flex-shrink-0">
+                        <span className={`w-[3px] rounded-full animate-[equalizer_0.6s_ease-in-out_infinite] ${ts.iconBg}`} style={{ height: '60%' }} />
+                        <span className={`w-[3px] rounded-full animate-[equalizer_0.8s_ease-in-out_infinite_0.1s] ${ts.iconBg}`} style={{ height: '100%' }} />
+                        <span className={`w-[3px] rounded-full animate-[equalizer_0.5s_ease-in-out_infinite_0.2s] ${ts.iconBg}`} style={{ height: '40%' }} />
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ts.pill}`}>
+                      {TRACK_TYPE_LABELS[track.type]}
+                    </span>
+                    <span className="text-text-muted text-xs truncate">{track.description}</span>
+                  </div>
+                </div>
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                  isPlaying ? `${ts.iconBg} ${ts.accent}` : 'bg-card-hover text-text-muted'
+                }`}>
+                  {isPlaying ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {audio.isPlaying && (
-        <NowPlayingBar audio={audio} />
-      )}
+      {audio.isPlaying && <NowPlayingBar audio={audio} />}
     </div>
   );
 }
