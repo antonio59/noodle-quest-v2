@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Lock, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const PIN_LENGTH = 6;
 const PROFILE_COLORS = [
@@ -23,6 +23,8 @@ interface Profile {
 export function Auth() {
   const { login, signup } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo') || '/';
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [pin, setPin] = useState('');
@@ -103,7 +105,7 @@ export function Auth() {
         setPin('');
         setTimeout(() => setError(''), 2000);
       } else {
-        navigate('/');
+        navigate(returnTo);
       }
     }
   };
@@ -125,7 +127,7 @@ export function Auth() {
     const err = await signup(signupName.trim(), signupPin);
     setLoading(false);
     if (err) setError(err);
-    else navigate('/');
+    else navigate(returnTo);
   };
 
   if (showSignup) {

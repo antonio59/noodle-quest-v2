@@ -1,6 +1,6 @@
 import { useState, useEffect, createElement, Suspense } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock, Flag } from 'lucide-react';
+import { ArrowLeft, Star, ChevronRight, ChevronDown, ArrowRight, Lock, Flag, Loader2, Copy, Check } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +31,7 @@ export function PlayGame() {
   const [lobbyDone, setLobbyDone] = useState(false);
   const [showStagePicker, setShowStagePicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
 
   const saveScore = useMutation(api.games.saveScore);
 
@@ -71,6 +72,25 @@ export function PlayGame() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(joinerSessionId ?? null);
   const [creatingInvite, setCreatingInvite] = useState(false);
+
+  // Auto-create an invite as soon as the host enters multiplayer mode
+  useEffect(() => {
+    if (!isMultiplayer || !player || inviteCode || sessionId || creatingInvite || joinerSessionId) return;
+    if (!gameId) return;
+    const minP = gameMeta?.minPlayers ?? 2;
+    const maxP = gameMeta?.maxPlayers ?? 2;
+    setCreatingInvite(true);
+    createInvite({ gameId, fromId: player.playerId as any, minPlayers: minP, maxPlayers: maxP })
+      .then((result: any) => {
+        if (result && result.inviteCode) {
+          setInviteCode(result.inviteCode as string);
+          if (result.sessionId) setSessionId(result.sessionId as string);
+        }
+        setCreatingInvite(false);
+      })
+      .catch(() => setCreatingInvite(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMultiplayer, player?.playerId, gameId]);
 
   // Live lobby state — roster of players who've joined so far.
   const liveSession = useQuery(
@@ -138,50 +158,19 @@ export function PlayGame() {
     );
   }
 
-  // Multiplayer invite flow (host creating invite)
-  if (isMultiplayer && !sessionId && !inviteCode && !creatingInvite && !isLivePlaying) {
-    const handleCreateInvite = async () => {
-      if (!player) return;
-      setCreatingInvite(true);
-      try {
-        const result = await createInvite({
-          gameId,
-          fromId: player.playerId as any,
-          minPlayers,
-          maxPlayers,
-        });
-        if (result && 'inviteCode' in result) {
-          setInviteCode(result.inviteCode as string);
-          if ('sessionId' in result && result.sessionId) {
-            setSessionId(result.sessionId as string);
-          }
-        }
-      } catch {
-        // invite creation failed
-      }
-      setCreatingInvite(false);
-    };
-
+  // Multiplayer invite flow — generating link (auto-triggered by useEffect above)
+  if (isMultiplayer && !inviteCode && !isLivePlaying) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">{gameMeta.emoji}</div>
         <h2 className="text-2xl font-bold mb-2">{gameMeta.name}</h2>
-        <p className="text-text-muted text-sm mb-2">
-          {maxPlayers > 2
-            ? `Invite up to ${maxPlayers - 1} friends (min ${minPlayers} players total)`
-            : 'Invite a friend to play!'}
-        </p>
-        <button
-          onClick={handleCreateInvite}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 mb-4 mt-4"
-        >
-          Create Invite Link
-        </button>
+        <p className="text-text-muted text-sm mb-6">Setting up your game room...</p>
+        <Loader2 className="animate-spin text-accent" size={36} />
         <button
           onClick={() => navigate(`/games?tab=board`)}
-          className="text-text-muted text-sm hover:text-text transition-colors"
+          className="text-text-muted text-xs hover:text-text transition-colors mt-8"
         >
-          <ArrowLeft size={14} className="inline mr-1" /> Back to Games
+          <ArrowLeft size={13} className="inline mr-1" /> Back to Games
         </button>
       </div>
     );
@@ -190,7 +179,9 @@ export function PlayGame() {
   if (isMultiplayer && inviteCode && !isLivePlaying) {
     const inviteUrl = `${window.location.origin}/invite/${inviteCode}`;
     const handleCopy = () => {
-      navigator.clipboard.writeText(inviteUrl).catch(() => {});
+      navigator.clipboard.writeText(inviteUrl)
+        .then(() => { setHasCopied(true); setTimeout(() => setHasCopied(false), 2500); })
+        .catch(() => {});
     };
     const handleShare = () => {
       if (navigator.share) {
@@ -217,18 +208,23 @@ export function PlayGame() {
 
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">{gameMeta.emoji}</div>
-        <h2 className="text-2xl font-bold mb-2">Invite Created!</h2>
-        <p className="text-text-muted text-sm mb-4">Share this code with your friend:</p>
-        <div className="bg-card rounded-xl px-6 py-4 mb-4">
+        <div className="text-6xl mb-3">{gameMeta.emoji}</div>
+        <h2 className="text-2xl font-bold mb-1">{gameMeta.name}</h2>
+        <p className="text-text-muted text-sm mb-4">Share this link with your friend to start playing!</p>
+        <div className="bg-card rounded-xl px-5 py-4 mb-3 w-full max-w-xs">
           <div className="text-3xl font-mono font-bold text-accent tracking-widest mb-2">{inviteCode}</div>
-          <div className="text-xs text-text-muted break-all">{inviteUrl}</div>
+          <div className="text-[11px] text-text-muted break-all leading-relaxed">{inviteUrl}</div>
         </div>
-        <div className="flex gap-3 mb-6">
-          <button onClick={handleCopy} className="bg-card text-text font-bold px-5 py-2.5 rounded-xl hover:bg-card-hover active:scale-95">
-            Copy Link
+        <div className="flex gap-2 mb-5 w-full max-w-xs">
+          <button
+            onClick={handleCopy}
+            className={`flex-1 flex items-center justify-center gap-1.5 font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 ${
+              hasCopied ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-card text-text hover:bg-card-hover'
+            }`}
+          >
+            {hasCopied ? <><Check size={15} /> Copied!</> : <><Copy size={15} /> Copy Link</>}
           </button>
-          <button onClick={handleShare} className="bg-accent text-bg font-bold px-5 py-2.5 rounded-xl hover:opacity-90 active:scale-95">
+          <button onClick={handleShare} className="flex-1 bg-accent text-bg font-bold px-4 py-2.5 rounded-xl hover:opacity-90 active:scale-95">
             Share
           </button>
         </div>

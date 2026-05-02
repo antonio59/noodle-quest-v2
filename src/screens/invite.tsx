@@ -48,16 +48,17 @@ export function InvitePage() {
   };
 
   if (!player) {
+    const returnTo = `/invite/${code}`;
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center">
         <div className="text-6xl mb-4">🍜</div>
         <h2 className="text-xl font-bold mb-2">Join a Game</h2>
         <p className="text-text-muted text-sm mb-6">Log in to accept this invite</p>
         <button
-          onClick={() => navigate('/auth')}
+          onClick={() => navigate(`/auth?returnTo=${encodeURIComponent(returnTo)}`)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90"
         >
-          Log In
+          Log In / Sign Up
         </button>
       </div>
     );

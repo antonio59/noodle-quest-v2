@@ -337,19 +337,11 @@ export function GameHub() {
               .map(g => (
               <div
                 key={g.id}
-                className="bg-card rounded-3xl p-5 relative flex flex-col items-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(167,139,250,0.2)]"
+                onClick={() => navigateToGame(g.id)}
+                className="bg-card rounded-3xl p-5 flex flex-col items-center text-center border border-white/5 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(167,139,250,0.2)]"
               >
-                {/* vs AI / Friend badge */}
-                <button
-                  onClick={e => { e.stopPropagation(); navigateToMultiplayer(g.id); }}
-                  className="absolute top-3 right-3 flex items-center gap-1 text-[10px] text-accent bg-surface px-2.5 py-1 rounded-full border border-accent/20 hover:bg-card-hover transition-colors"
-                  title="Play with Friend"
-                >
-                  <Users size={11} /> vs Friend
-                </button>
-
                 {/* Emoji */}
-                <div className="text-5xl mt-7 mb-3 leading-none">{g.emoji}</div>
+                <div className="text-5xl mb-3 leading-none">{g.emoji}</div>
 
                 {/* Name + description */}
                 <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
@@ -357,13 +349,21 @@ export function GameHub() {
 
                 <CardMeta gameId={g.id} size="lg" />
 
-                {/* Play button */}
-                <button
-                  onClick={() => navigateToGame(g.id)}
-                  className="mt-3 w-full bg-accent/15 text-accent border border-accent/30 text-xs font-bold py-2.5 rounded-xl hover:bg-accent/25 transition-colors active:scale-95"
-                >
-                  Play
-                </button>
+                {/* Solo + Friends buttons */}
+                <div className="flex gap-2 mt-3 w-full" onClick={e => e.stopPropagation()}>
+                  <button
+                    onClick={() => navigateToGame(g.id)}
+                    className="flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity active:scale-95"
+                  >
+                    Play
+                  </button>
+                  <button
+                    onClick={() => navigateToMultiplayer(g.id)}
+                    className="flex-1 flex items-center justify-center gap-1 bg-surface border border-white/10 text-text-muted text-xs font-bold py-2.5 rounded-xl hover:bg-card-hover hover:text-accent hover:border-accent/30 transition-all active:scale-95"
+                  >
+                    <Users size={12} /> Friends
+                  </button>
+                </div>
               </div>
             ))}
             {allGames.filter(g => g.category === 'board').length === 0 && (
