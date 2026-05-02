@@ -10,6 +10,15 @@ import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { TRACKS } from '@/tracks/track-list';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
 
+const CATEGORY_STYLES: Record<string, { label: string; badge: string; glow: string; playBtn: string }> = {
+  focus:       { label: 'Focus',       badge: 'bg-sky-500/20 text-sky-300 border-sky-500/30',         glow: 'hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]',   playBtn: 'bg-sky-500 hover:shadow-[0_0_20px_rgba(56,189,248,0.5)]' },
+  memory:      { label: 'Memory',      badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30', glow: 'hover:shadow-[0_0_30px_rgba(167,139,250,0.25)]',  playBtn: 'bg-[#a78bfa] hover:shadow-[0_0_20px_rgba(167,139,250,0.5)]' },
+  motor:       { label: 'Motor',       badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30', glow: 'hover:shadow-[0_0_30px_rgba(249,115,22,0.25)]',   playBtn: 'bg-orange-500 hover:shadow-[0_0_20px_rgba(249,115,22,0.5)]' },
+  flexibility: { label: 'Flexibility', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', glow: 'hover:shadow-[0_0_30px_rgba(234,179,8,0.25)]',    playBtn: 'bg-yellow-500 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)]' },
+  social:      { label: 'Social',      badge: 'bg-pink-500/20 text-pink-300 border-pink-500/30',       glow: 'hover:shadow-[0_0_30px_rgba(236,72,153,0.25)]',   playBtn: 'bg-pink-500 hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]' },
+  sequence:    { label: 'Sequence',    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', glow: 'hover:shadow-[0_0_30px_rgba(52,211,153,0.25)]', playBtn: 'bg-emerald-500 hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]' },
+};
+
 const TABS = [
   { 
     id: 'brain', 
@@ -136,17 +145,18 @@ export function GameHub() {
 
   const currentTab = TABS.find(t => t.id === tab) || TABS[0];
 
-  const CardMeta = ({ gameId }: { gameId: string }) => {
+  const CardMeta = ({ gameId, size = 'sm' }: { gameId: string; size?: 'sm' | 'lg' }) => {
     const { starsEarned, bonusMultiplier } = statsFor(gameId);
     const tier = getBonusTier(bonusMultiplier);
     const earned = Math.min(starsEarned, 3);
+    const starSize = size === 'lg' ? 18 : 11;
     return (
       <div className="flex items-center justify-between gap-1 mt-2 min-h-[18px]">
         <div className="flex gap-0.5" aria-label={`${earned} of 3 stars earned`}>
           {[1, 2, 3].map(i => (
             <Star
               key={i}
-              size={11}
+              size={starSize}
               className={i <= earned ? 'text-warning' : 'text-card-hover'}
               fill={i <= earned ? 'currentColor' : 'none'}
             />
@@ -260,27 +270,66 @@ export function GameHub() {
           </div>
 
           <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {filteredGames.map(g => (
-              <div key={g.id} className="bg-card rounded-xl p-4 relative group shadow-sm hover:shadow-md transition-shadow">
-                <button
-                  onClick={() => toggleFav(g.id)}
-                  className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+            {filteredGames.map(g => {
+              const style = CATEGORY_STYLES[g.category] ?? CATEGORY_STYLES.memory;
+              const { bonusMultiplier } = statsFor(g.id);
+              const tier = getBonusTier(bonusMultiplier);
+              return (
+                <div
+                  key={g.id}
+                  className={`bg-card rounded-3xl p-5 relative group overflow-hidden cursor-pointer flex flex-col items-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-1 ${style.glow}`}
+                  onClick={() => navigateToGame(g.id)}
                 >
-                  <Heart
-                    size={16}
-                    className={favorites.has(g.id) ? 'text-danger' : 'text-text-muted'}
-                    fill={favorites.has(g.id) ? 'currentColor' : 'none'}
-                  />
-                </button>
-                <button onClick={() => navigateToGame(g.id)} className="text-left w-full">
-                  <div className="text-3xl mb-2">{g.emoji}</div>
-                  <div className="font-semibold text-sm mb-1">{g.name}</div>
-                  <div className="text-text-muted text-xs line-clamp-2">{g.description}</div>
-                  <div className="text-text-muted text-xs mt-2">{g.stages} levels</div>
-                  <CardMeta gameId={g.id} />
-                </button>
-              </div>
-            ))}
+                  {/* Category badge — top left */}
+                  <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${style.badge}`}>
+                    {style.label}
+                  </span>
+
+                  {/* Bonus badge — top right */}
+                  {tier ? (
+                    <span className="absolute top-3 right-3 bg-warning/20 text-warning px-2.5 py-1 rounded-full text-[10px] font-bold border border-warning/30 animate-pulse">
+                      {tier.label}
+                    </span>
+                  ) : (
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleFav(g.id); }}
+                      className="absolute top-3 right-3 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Heart
+                        size={14}
+                        className={favorites.has(g.id) ? 'text-danger' : 'text-text-muted'}
+                        fill={favorites.has(g.id) ? 'currentColor' : 'none'}
+                      />
+                    </button>
+                  )}
+
+                  {/* Emoji */}
+                  <div className="text-5xl mt-7 mb-3 leading-none group-hover:scale-110 transition-transform duration-300">
+                    {g.emoji}
+                  </div>
+
+                  {/* Name + description */}
+                  <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
+                  <div className="text-text-muted text-xs line-clamp-2 mb-2">{g.description}</div>
+
+                  {/* Stars */}
+                  <CardMeta gameId={g.id} size="lg" />
+
+                  {/* Level info */}
+                  <div className="text-[10px] text-text-muted mt-1">{g.stages} levels</div>
+
+                  {/* Hover play overlay */}
+                  <div className="absolute inset-0 bg-bg/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <button
+                      className={`${style.playBtn} text-white rounded-full px-5 py-2.5 flex items-center gap-2 font-bold text-sm translate-y-4 group-hover:translate-y-0 transition-all duration-300`}
+                    >
+                      <Play size={16} className="fill-current" />
+                      Play Now
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -295,36 +344,43 @@ export function GameHub() {
               .map(g => (
               <div
                 key={g.id}
-                onClick={() => navigateToGame(g.id)}
-                className="bg-card hover:bg-card-hover rounded-xl p-4 relative cursor-pointer transition-colors shadow-sm hover:shadow-md"
+                className="bg-card rounded-3xl p-5 relative flex flex-col items-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(167,139,250,0.2)]"
               >
+                {/* vs AI / Friend badge */}
                 <button
                   onClick={e => { e.stopPropagation(); navigateToMultiplayer(g.id); }}
-                  className="absolute top-2 right-2 p-2 text-text-muted hover:text-accent transition-colors"
+                  className="absolute top-3 right-3 flex items-center gap-1 text-[10px] text-accent bg-surface px-2.5 py-1 rounded-full border border-accent/20 hover:bg-card-hover transition-colors"
                   title="Play with Friend"
                 >
-                  <Users size={16} />
+                  <Users size={11} /> vs Friend
                 </button>
-                <div className="text-3xl mb-2">{g.emoji}</div>
-                <div className="font-semibold text-sm mb-1">{g.name}</div>
-                <div className="text-text-muted text-xs line-clamp-2 mb-2">{g.description}</div>
-                <CardMeta gameId={g.id} />
-                <div className="flex gap-1 mt-2" onClick={e => e.stopPropagation()}>
+
+                {/* Emoji */}
+                <div className="text-5xl mt-7 mb-3 leading-none">{g.emoji}</div>
+
+                {/* Name + description */}
+                <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
+                <div className="text-text-muted text-xs line-clamp-2 mb-3 px-1">{g.description}</div>
+
+                <CardMeta gameId={g.id} size="lg" />
+
+                {/* Difficulty buttons */}
+                <div className="flex gap-1.5 mt-3 w-full" onClick={e => e.stopPropagation()}>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'easy')}
-                    className="flex-1 bg-surface text-text-muted text-xs font-semibold py-2.5 rounded-lg hover:bg-card-hover transition-colors"
+                    className="flex-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs font-semibold py-2 rounded-xl hover:bg-emerald-500/20 transition-colors"
                   >
                     Easy
                   </button>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'medium')}
-                    className="flex-1 bg-accent/20 text-accent text-xs font-semibold py-2.5 rounded-lg hover:bg-accent/30 transition-colors"
+                    className="flex-1 bg-accent/10 text-accent border border-accent/30 text-xs font-semibold py-2 rounded-xl hover:bg-accent/20 transition-colors"
                   >
-                    Medium
+                    Med
                   </button>
                   <button
                     onClick={() => navigateToAiDifficulty(g.id, 'hard')}
-                    className="flex-1 bg-danger/20 text-danger text-xs font-semibold py-2.5 rounded-lg hover:bg-danger/30 transition-colors"
+                    className="flex-1 bg-danger/10 text-danger border border-danger/30 text-xs font-semibold py-2 rounded-xl hover:bg-danger/20 transition-colors"
                   >
                     Hard
                   </button>
