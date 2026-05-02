@@ -1,93 +1,99 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { GameProps } from '@/types';
 
 interface Country {
   code: string;
   name: string;
   flag: string;
+  continent: string;
+  capital: string;
 }
 
 const COUNTRIES: Country[] = [
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
-  { code: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
-  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
-  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
-  { code: 'RU', name: 'Russia', flag: '🇷🇺' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
-  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
-  { code: 'NO', name: 'Norway', flag: '🇳🇴' },
-  { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
-  { code: 'FI', name: 'Finland', flag: '🇫🇮' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
-  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
-  { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
-  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
-  { code: 'GR', name: 'Greece', flag: '🇬🇷' },
-  { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
-  { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
-  { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
-  { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
-  { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: 'TR', name: 'Turkey', flag: '🇹🇷' },
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: 'IL', name: 'Israel', flag: '🇮🇱' },
-  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
-  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
-  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
-  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
-  { code: 'PE', name: 'Peru', flag: '🇵🇪' },
-  { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
-  { code: 'UA', name: 'Ukraine', flag: '🇺🇦' },
-  { code: 'RO', name: 'Romania', flag: '🇷🇴' },
-  { code: 'HU', name: 'Hungary', flag: '🇭🇺' },
-  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' },
-  { code: 'HR', name: 'Croatia', flag: '🇭🇷' },
-  { code: 'RS', name: 'Serbia', flag: '🇷🇸' },
-  { code: 'BG', name: 'Bulgaria', flag: '🇧🇬' },
-  { code: 'SK', name: 'Slovakia', flag: '🇸🇰' },
-  { code: 'SI', name: 'Slovenia', flag: '🇸🇮' },
-  { code: 'LT', name: 'Lithuania', flag: '🇱🇹' },
-  { code: 'LV', name: 'Latvia', flag: '🇱🇻' },
-  { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
-  { code: 'IS', name: 'Iceland', flag: '🇮🇸' },
-  { code: 'MA', name: 'Morocco', flag: '🇲🇦' },
-  { code: 'TN', name: 'Tunisia', flag: '🇹🇳' },
-  { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
-  { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
-  { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
-  { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
-  { code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
-  { code: 'HK', name: 'Hong Kong', flag: '🇭🇰' },
-  { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
-  { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
-  { code: 'MM', name: 'Myanmar', flag: '🇲🇲' },
-  { code: 'KH', name: 'Cambodia', flag: '🇰🇭' },
-  { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
-  { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
-  { code: 'JO', name: 'Jordan', flag: '🇯🇴' },
-  { code: 'UZ', name: 'Uzbekistan', flag: '🇺🇿' },
-  { code: 'KZ', name: 'Kazakhstan', flag: '🇰🇿' },
-  { code: 'GE', name: 'Georgia', flag: '🇬🇪' },
+  { code: 'US', name: 'United States',       flag: '🇺🇸', continent: 'Americas', capital: 'Washington D.C.' },
+  { code: 'GB', name: 'United Kingdom',       flag: '🇬🇧', continent: 'Europe',   capital: 'London'          },
+  { code: 'CA', name: 'Canada',               flag: '🇨🇦', continent: 'Americas', capital: 'Ottawa'          },
+  { code: 'AU', name: 'Australia',            flag: '🇦🇺', continent: 'Oceania',  capital: 'Canberra'        },
+  { code: 'DE', name: 'Germany',              flag: '🇩🇪', continent: 'Europe',   capital: 'Berlin'          },
+  { code: 'FR', name: 'France',               flag: '🇫🇷', continent: 'Europe',   capital: 'Paris'           },
+  { code: 'IT', name: 'Italy',                flag: '🇮🇹', continent: 'Europe',   capital: 'Rome'            },
+  { code: 'ES', name: 'Spain',                flag: '🇪🇸', continent: 'Europe',   capital: 'Madrid'          },
+  { code: 'JP', name: 'Japan',                flag: '🇯🇵', continent: 'Asia',     capital: 'Tokyo'           },
+  { code: 'CN', name: 'China',                flag: '🇨🇳', continent: 'Asia',     capital: 'Beijing'         },
+  { code: 'KR', name: 'South Korea',          flag: '🇰🇷', continent: 'Asia',     capital: 'Seoul'           },
+  { code: 'IN', name: 'India',                flag: '🇮🇳', continent: 'Asia',     capital: 'New Delhi'       },
+  { code: 'BR', name: 'Brazil',               flag: '🇧🇷', continent: 'Americas', capital: 'Brasília'        },
+  { code: 'MX', name: 'Mexico',               flag: '🇲🇽', continent: 'Americas', capital: 'Mexico City'     },
+  { code: 'AR', name: 'Argentina',            flag: '🇦🇷', continent: 'Americas', capital: 'Buenos Aires'    },
+  { code: 'RU', name: 'Russia',               flag: '🇷🇺', continent: 'Europe',   capital: 'Moscow'          },
+  { code: 'NL', name: 'Netherlands',          flag: '🇳🇱', continent: 'Europe',   capital: 'Amsterdam'       },
+  { code: 'SE', name: 'Sweden',               flag: '🇸🇪', continent: 'Europe',   capital: 'Stockholm'       },
+  { code: 'NO', name: 'Norway',               flag: '🇳🇴', continent: 'Europe',   capital: 'Oslo'            },
+  { code: 'DK', name: 'Denmark',              flag: '🇩🇰', continent: 'Europe',   capital: 'Copenhagen'      },
+  { code: 'FI', name: 'Finland',              flag: '🇫🇮', continent: 'Europe',   capital: 'Helsinki'        },
+  { code: 'PL', name: 'Poland',               flag: '🇵🇱', continent: 'Europe',   capital: 'Warsaw'          },
+  { code: 'CH', name: 'Switzerland',          flag: '🇨🇭', continent: 'Europe',   capital: 'Bern'            },
+  { code: 'AT', name: 'Austria',              flag: '🇦🇹', continent: 'Europe',   capital: 'Vienna'          },
+  { code: 'BE', name: 'Belgium',              flag: '🇧🇪', continent: 'Europe',   capital: 'Brussels'        },
+  { code: 'PT', name: 'Portugal',             flag: '🇵🇹', continent: 'Europe',   capital: 'Lisbon'          },
+  { code: 'GR', name: 'Greece',               flag: '🇬🇷', continent: 'Europe',   capital: 'Athens'          },
+  { code: 'IE', name: 'Ireland',              flag: '🇮🇪', continent: 'Europe',   capital: 'Dublin'          },
+  { code: 'NZ', name: 'New Zealand',          flag: '🇳🇿', continent: 'Oceania',  capital: 'Wellington'      },
+  { code: 'ZA', name: 'South Africa',         flag: '🇿🇦', continent: 'Africa',   capital: 'Pretoria'        },
+  { code: 'EG', name: 'Egypt',                flag: '🇪🇬', continent: 'Africa',   capital: 'Cairo'           },
+  { code: 'NG', name: 'Nigeria',              flag: '🇳🇬', continent: 'Africa',   capital: 'Abuja'           },
+  { code: 'KE', name: 'Kenya',                flag: '🇰🇪', continent: 'Africa',   capital: 'Nairobi'         },
+  { code: 'TH', name: 'Thailand',             flag: '🇹🇭', continent: 'Asia',     capital: 'Bangkok'         },
+  { code: 'VN', name: 'Vietnam',              flag: '🇻🇳', continent: 'Asia',     capital: 'Hanoi'           },
+  { code: 'ID', name: 'Indonesia',            flag: '🇮🇩', continent: 'Asia',     capital: 'Jakarta'         },
+  { code: 'MY', name: 'Malaysia',             flag: '🇲🇾', continent: 'Asia',     capital: 'Kuala Lumpur'    },
+  { code: 'PH', name: 'Philippines',          flag: '🇵🇭', continent: 'Asia',     capital: 'Manila'          },
+  { code: 'SG', name: 'Singapore',            flag: '🇸🇬', continent: 'Asia',     capital: 'Singapore'       },
+  { code: 'TR', name: 'Turkey',               flag: '🇹🇷', continent: 'Asia',     capital: 'Ankara'          },
+  { code: 'SA', name: 'Saudi Arabia',         flag: '🇸🇦', continent: 'Asia',     capital: 'Riyadh'          },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪', continent: 'Asia',     capital: 'Abu Dhabi'       },
+  { code: 'IL', name: 'Israel',               flag: '🇮🇱', continent: 'Asia',     capital: 'Jerusalem'       },
+  { code: 'PK', name: 'Pakistan',             flag: '🇵🇰', continent: 'Asia',     capital: 'Islamabad'       },
+  { code: 'BD', name: 'Bangladesh',           flag: '🇧🇩', continent: 'Asia',     capital: 'Dhaka'           },
+  { code: 'CO', name: 'Colombia',             flag: '🇨🇴', continent: 'Americas', capital: 'Bogotá'          },
+  { code: 'CL', name: 'Chile',                flag: '🇨🇱', continent: 'Americas', capital: 'Santiago'        },
+  { code: 'PE', name: 'Peru',                 flag: '🇵🇪', continent: 'Americas', capital: 'Lima'            },
+  { code: 'VE', name: 'Venezuela',            flag: '🇻🇪', continent: 'Americas', capital: 'Caracas'         },
+  { code: 'UA', name: 'Ukraine',              flag: '🇺🇦', continent: 'Europe',   capital: 'Kyiv'            },
+  { code: 'RO', name: 'Romania',              flag: '🇷🇴', continent: 'Europe',   capital: 'Bucharest'       },
+  { code: 'HU', name: 'Hungary',              flag: '🇭🇺', continent: 'Europe',   capital: 'Budapest'        },
+  { code: 'CZ', name: 'Czech Republic',       flag: '🇨🇿', continent: 'Europe',   capital: 'Prague'          },
+  { code: 'HR', name: 'Croatia',              flag: '🇭🇷', continent: 'Europe',   capital: 'Zagreb'          },
+  { code: 'RS', name: 'Serbia',               flag: '🇷🇸', continent: 'Europe',   capital: 'Belgrade'        },
+  { code: 'BG', name: 'Bulgaria',             flag: '🇧🇬', continent: 'Europe',   capital: 'Sofia'           },
+  { code: 'SK', name: 'Slovakia',             flag: '🇸🇰', continent: 'Europe',   capital: 'Bratislava'      },
+  { code: 'SI', name: 'Slovenia',             flag: '🇸🇮', continent: 'Europe',   capital: 'Ljubljana'       },
+  { code: 'LT', name: 'Lithuania',            flag: '🇱🇹', continent: 'Europe',   capital: 'Vilnius'         },
+  { code: 'LV', name: 'Latvia',               flag: '🇱🇻', continent: 'Europe',   capital: 'Riga'            },
+  { code: 'EE', name: 'Estonia',              flag: '🇪🇪', continent: 'Europe',   capital: 'Tallinn'         },
+  { code: 'IS', name: 'Iceland',              flag: '🇮🇸', continent: 'Europe',   capital: 'Reykjavik'       },
+  { code: 'MA', name: 'Morocco',              flag: '🇲🇦', continent: 'Africa',   capital: 'Rabat'           },
+  { code: 'TN', name: 'Tunisia',              flag: '🇹🇳', continent: 'Africa',   capital: 'Tunis'           },
+  { code: 'GH', name: 'Ghana',                flag: '🇬🇭', continent: 'Africa',   capital: 'Accra'           },
+  { code: 'ET', name: 'Ethiopia',             flag: '🇪🇹', continent: 'Africa',   capital: 'Addis Ababa'     },
+  { code: 'TZ', name: 'Tanzania',             flag: '🇹🇿', continent: 'Africa',   capital: 'Dodoma'          },
+  { code: 'UG', name: 'Uganda',               flag: '🇺🇬', continent: 'Africa',   capital: 'Kampala'         },
+  { code: 'TW', name: 'Taiwan',               flag: '🇹🇼', continent: 'Asia',     capital: 'Taipei'          },
+  { code: 'NP', name: 'Nepal',                flag: '🇳🇵', continent: 'Asia',     capital: 'Kathmandu'       },
+  { code: 'LK', name: 'Sri Lanka',            flag: '🇱🇰', continent: 'Asia',     capital: 'Sri Jayawardenepura Kotte' },
+  { code: 'MM', name: 'Myanmar',              flag: '🇲🇲', continent: 'Asia',     capital: 'Naypyidaw'       },
+  { code: 'KH', name: 'Cambodia',             flag: '🇰🇭', continent: 'Asia',     capital: 'Phnom Penh'      },
+  { code: 'QA', name: 'Qatar',                flag: '🇶🇦', continent: 'Asia',     capital: 'Doha'            },
+  { code: 'KW', name: 'Kuwait',               flag: '🇰🇼', continent: 'Asia',     capital: 'Kuwait City'     },
+  { code: 'JO', name: 'Jordan',               flag: '🇯🇴', continent: 'Asia',     capital: 'Amman'           },
+  { code: 'UZ', name: 'Uzbekistan',           flag: '🇺🇿', continent: 'Asia',     capital: 'Tashkent'        },
+  { code: 'KZ', name: 'Kazakhstan',           flag: '🇰🇿', continent: 'Asia',     capital: 'Astana'          },
+  { code: 'GE', name: 'Georgia',              flag: '🇬🇪', continent: 'Asia',     capital: 'Tbilisi'         },
+];
+
+const BEGINNER_CODES = [
+  'US','GB','CA','AU','FR','DE','IT','ES','JP','CN','BR','IN','MX','KR','ZA',
+  'RU','SE','CH','GR','IE','NZ','NG','TH','SG','TR','AR',
 ];
 
 function shuffle<T>(arr: T[]): T[] {
@@ -99,240 +105,217 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function FlagGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
-  const difficulty = aiDifficulty || 'medium';
-  const numFlags = difficulty === 'hard' ? 8 : difficulty === 'medium' ? 6 : 4;
+function pickWrongOptions(correct: Country, pool: Country[], count: number): Country[] {
+  const sameContinent = pool.filter(c => c.code !== correct.code && c.continent === correct.continent);
+  const other         = pool.filter(c => c.code !== correct.code && c.continent !== correct.continent);
+  const candidates    = [...shuffle(sameContinent), ...shuffle(other)];
+  return candidates.slice(0, count);
+}
 
-  const [score, setScore] = useState(0);
-  const [selectedFlag, setSelectedFlag] = useState<Country | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<Country | null>(null);
-  const [gameRound, setGameRound] = useState(0);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
-  const [roundComplete, setRoundComplete] = useState(false);
-  const [streak, setStreak] = useState(0);
-  const [options, setOptions] = useState<{ flags: Country[]; countries: Country[] }>({ flags: [], countries: [] });
+interface Question {
+  correct: Country;
+  options: Country[];
+}
 
-  const endedRef = useRef(false);
-  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const streakRef = useRef(0);
+function buildQuestions(pool: Country[], count: number): Question[] {
+  const flagPool = shuffle(pool).slice(0, count);
+  return flagPool.map(correct => {
+    const wrong   = pickWrongOptions(correct, pool, 3);
+    const options = shuffle([correct, ...wrong]);
+    return { correct, options };
+  });
+}
 
-  const schedule = useCallback((fn: () => void, delay: number) => {
+type AnswerState = { chosen: string; correct: boolean } | null;
+
+export default function FlagGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+  const TOTAL_Q = Math.min(10 + Math.floor(stage / 2) * 2, 20);
+
+  const pool = useMemo(() => {
+    if (stage <= 2) return COUNTRIES.filter(c => BEGINNER_CODES.includes(c.code));
+    if (stage <= 5) return COUNTRIES.slice(0, 50);
+    return COUNTRIES;
+  }, [stage]);
+
+  const questions = useMemo(() => buildQuestions(pool, TOTAL_Q), [pool, TOTAL_Q]);
+
+  const [qi, setQi]             = useState(0);
+  const [score, setScore]       = useState(0);
+  const [streak, setStreak]     = useState(0);
+  const [answer, setAnswer]     = useState<AnswerState>(null);
+  const [showFact, setShowFact] = useState(false);
+
+  const endedRef  = useRef(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, ms: number) => {
     const id = setTimeout(() => {
-      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
+      timersRef.current = timersRef.current.filter(x => x !== id);
       if (!endedRef.current) fn();
-    }, delay);
-    timeoutsRef.current.push(id);
-    return id;
+    }, ms);
+    timersRef.current.push(id);
   }, []);
 
   useEffect(() => {
+    endedRef.current = false;
     return () => {
       endedRef.current = true;
-      timeoutsRef.current.forEach(clearTimeout);
+      timersRef.current.forEach(clearTimeout);
     };
   }, []);
 
-  const numRounds = Math.min(10 + stage, 50);
-
-  const allRounds = useMemo(() => {
-    const shuffled = shuffle(COUNTRIES);
-    return Array.from({ length: numRounds }, (_, i) => shuffled.slice(i * numFlags, (i + 1) * numFlags));
-  }, [numFlags, numRounds]);
-
-  useEffect(() => {
-    if (gameRound >= numRounds) {
+  const advance = useCallback(() => {
+    const next = qi + 1;
+    if (next >= questions.length) {
       if (endedRef.current) return;
       endedRef.current = true;
-      const stars = score >= 80 ? 3 : score >= 50 ? 2 : 1;
-      onEnd({ score, stars, summary: `Matched ${Math.round(score / 10)} flags correctly across ${numRounds} rounds!` });
+      const pct   = score / (questions.length * 10);
+      const stars = pct >= 0.85 ? 3 : pct >= 0.6 ? 2 : 1;
+      onEnd({ score, stars, summary: `Answered ${Math.round(score / 10)} of ${questions.length} flags correctly!` });
       return;
     }
+    setQi(next);
+    setAnswer(null);
+    setShowFact(false);
+    onProgress(next / questions.length);
+    onMessage('Which country does this flag belong to?');
+  }, [qi, questions.length, score, onEnd, onProgress, onMessage]);
 
-    const roundCountries = allRounds[gameRound] || [];
-    const flags = shuffle([...roundCountries]);
-    const countries = shuffle([...roundCountries]);
+  const handlePick = useCallback((chosen: Country) => {
+    if (answer) return;
+    const q       = questions[qi];
+    const correct = chosen.code === q.correct.code;
 
-    setOptions({ flags, countries });
-    setSelectedFlag(null);
-    setSelectedCountry(null);
-    setFeedback(null);
-    setRoundComplete(false);
-    onMessage('Match the flag to the correct country!');
-  }, [gameRound, allRounds, score, onEnd, onMessage]);
+    setAnswer({ chosen: chosen.code, correct });
 
-  const checkAnswer = useCallback((flag: Country, country: Country) => {
-    const isCorrect = flag.code === country.code;
-    setFeedback(isCorrect ? 'correct' : 'wrong');
-    setRoundComplete(true);
-
-    if (isCorrect) {
-      streakRef.current++;
-      setStreak(streakRef.current);
-      const bonus = streakRef.current >= 3 ? 5 : 0;
-      const pts = 10 + bonus;
-      setScore(prev => prev + pts);
+    if (correct) {
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      const bonus  = newStreak >= 3 ? 5 : 0;
+      const pts    = 10 + bonus;
+      setScore(s => s + pts);
       onScore(pts);
-      onMessage(streakRef.current >= 3 ? `🔥 ${streakRef.current} streak! +${pts}` : 'Correct! Great job!');
+      setShowFact(true);
+      onMessage(newStreak >= 3 ? `🔥 ${newStreak} streak! +${pts}` : '✓ Correct!');
+      schedule(advance, 1800);
     } else {
-      streakRef.current = 0;
       setStreak(0);
-      onMessage(`Wrong! ${flag.flag} is ${flag.name}`);
+      setShowFact(true);
+      onMessage(`The correct answer was ${q.correct.name}`);
+      schedule(advance, 2600);
     }
+  }, [answer, questions, qi, streak, onScore, onMessage, schedule, advance]);
 
-    onProgress(Math.min((gameRound + 1) / numRounds, 1));
-    schedule(() => setGameRound(prev => prev + 1), 1400);
-  }, [gameRound, onScore, onMessage, onProgress, schedule, numRounds]);
-
-  const handleFlagClick = (country: Country) => {
-    if (feedback || roundComplete) return;
-    setSelectedFlag(country);
-    if (selectedCountry) checkAnswer(country, selectedCountry);
-  };
-
-  const handleCountryClick = (country: Country) => {
-    if (feedback || roundComplete) return;
-    setSelectedCountry(country);
-    if (selectedFlag) checkAnswer(selectedFlag, country);
-  };
-
-  const progressPct = numRounds > 0 ? (gameRound / numRounds) * 100 : 0;
+  if (qi >= questions.length) return null;
+  const q = questions[qi];
 
   return (
-    <div className="h-full flex flex-col p-3 overflow-hidden">
-      <div className="flex justify-between items-center mb-2">
+    <div className="h-full flex flex-col p-4 gap-3 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-lg font-bold text-accent">Flag Match</span>
+          <span className="text-sm font-bold text-text-muted">Question {qi + 1}/{questions.length}</span>
           {streak >= 3 && (
             <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded-full font-bold animate-pulse">
               🔥 {streak} streak!
             </span>
           )}
         </div>
-        <div className="flex gap-2 text-xs">
-          <span className="bg-card rounded-lg px-2 py-1 text-text-muted">{gameRound + 1}/{numRounds}</span>
-          <span className="bg-accent/20 text-accent rounded-lg px-2 py-1 font-bold">{score} pts</span>
-        </div>
+        <span className="bg-accent/20 text-accent rounded-lg px-2.5 py-1 text-sm font-bold">{score} pts</span>
       </div>
 
-      <div className="w-full h-1.5 bg-surface rounded-full mb-3 overflow-hidden">
+      {/* Progress bar */}
+      <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden flex-shrink-0">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{
-            width: `${progressPct}%`,
+            width: `${(qi / questions.length) * 100}%`,
             background: 'linear-gradient(90deg, var(--color-accent), #67e8f9)',
           }}
         />
       </div>
 
-      <div className="text-center mb-3 text-sm text-text-muted">
-        Tap a flag, then tap its matching country name
+      {/* Flag display */}
+      <div className="flex-shrink-0 flex flex-col items-center gap-2 py-2">
+        <div className="text-7xl leading-none select-none">{q.correct.flag}</div>
+        <p className="text-text-muted text-sm font-medium">Which country is this?</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-sm font-bold text-accent mb-2 text-center">🚩 Flags</h3>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {options.flags.map((country) => {
-                const isSelected = selectedFlag?.code === country.code;
-                const isCorrectResult = feedback === 'correct' && isSelected;
-                const isWrongResult = feedback === 'wrong' && isSelected;
-                return (
-                  <button
-                    key={`flag-${country.code}-${gameRound}`}
-                    onClick={() => handleFlagClick(country)}
-                    disabled={roundComplete}
-                    className="w-14 h-14 rounded-xl text-3xl flex items-center justify-center transition-all duration-150"
-                    style={{
-                      background: isCorrectResult
-                        ? 'rgba(74,222,128,0.25)'
-                        : isWrongResult
-                          ? 'rgba(239,68,68,0.25)'
-                          : isSelected
-                            ? 'rgba(167,139,250,0.25)'
-                            : 'var(--color-card)',
-                      border: isCorrectResult
-                        ? '2px solid #4ade80'
-                        : isWrongResult
-                          ? '2px solid #ef4444'
-                          : isSelected
-                            ? '2px solid var(--color-accent)'
-                            : '2px solid transparent',
-                      boxShadow: isCorrectResult
-                        ? '0 0 12px #4ade8066'
-                        : isWrongResult
-                          ? '0 0 12px #ef444466'
-                          : isSelected
-                            ? '0 0 12px rgba(167,139,250,0.4)'
-                            : 'none',
-                      opacity: roundComplete && !isSelected ? 0.5 : 1,
-                      transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                    }}
-                  >
-                    {country.flag}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+      {/* Answer options */}
+      <div className="grid grid-cols-2 gap-2.5 flex-shrink-0">
+        {q.options.map(opt => {
+          const isChosen  = answer?.chosen === opt.code;
+          const isCorrect = opt.code === q.correct.code;
+          const revealed  = !!answer;
 
-          <div>
-            <h3 className="text-sm font-bold text-accent mb-2 text-center">🌍 Countries</h3>
-            <div className="flex flex-col gap-1.5">
-              {options.countries.map((country) => {
-                const isSelected = selectedCountry?.code === country.code;
-                const isCorrectResult = feedback === 'correct' && isSelected;
-                const isWrongResult = feedback === 'wrong' && isSelected;
-                return (
-                  <button
-                    key={`country-${country.code}-${gameRound}`}
-                    onClick={() => handleCountryClick(country)}
-                    disabled={roundComplete}
-                    className="px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 text-left"
-                    style={{
-                      background: isCorrectResult
-                        ? 'rgba(74,222,128,0.25)'
-                        : isWrongResult
-                          ? 'rgba(239,68,68,0.25)'
-                          : isSelected
-                            ? 'rgba(167,139,250,0.25)'
-                            : 'var(--color-card)',
-                      border: isCorrectResult
-                        ? '2px solid #4ade80'
-                        : isWrongResult
-                          ? '2px solid #ef4444'
-                          : isSelected
-                            ? '2px solid var(--color-accent)'
-                            : '2px solid transparent',
-                      color: isSelected ? 'white' : 'var(--color-text)',
-                      opacity: roundComplete && !isSelected ? 0.5 : 1,
-                    }}
-                  >
-                    {country.name}
-                  </button>
-                );
-              })}
+          let bg     = 'bg-card hover:bg-card-hover';
+          let border = 'border border-white/5 hover:border-white/15';
+          let text   = 'text-text';
+
+          if (revealed) {
+            if (isCorrect) {
+              bg = 'bg-emerald-500/20'; border = 'border-2 border-emerald-400'; text = 'text-emerald-300 font-bold';
+            } else if (isChosen) {
+              bg = 'bg-red-500/20'; border = 'border-2 border-red-400'; text = 'text-red-300';
+            } else {
+              bg = 'bg-card/50'; border = 'border border-white/5'; text = 'text-text-muted';
+            }
+          }
+
+          return (
+            <button
+              key={opt.code}
+              onClick={() => handlePick(opt)}
+              disabled={!!answer}
+              className={`${bg} ${border} ${text} rounded-2xl px-3 py-3.5 text-sm font-semibold text-center transition-all active:scale-95 disabled:cursor-default relative overflow-hidden`}
+            >
+              {revealed && isCorrect && (
+                <span className="absolute top-1.5 right-2 text-emerald-400 text-xs">✓</span>
+              )}
+              {revealed && isChosen && !isCorrect && (
+                <span className="absolute top-1.5 right-2 text-red-400 text-xs">✗</span>
+              )}
+              {opt.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Feedback / learning fact */}
+      {showFact && answer && (
+        <div className={`flex-shrink-0 rounded-2xl px-4 py-3 border text-sm transition-all ${
+          answer.correct
+            ? 'bg-emerald-500/12 border-emerald-500/25 text-emerald-300'
+            : 'bg-red-500/12 border-red-500/25 text-red-300'
+        }`}>
+          {answer.correct ? (
+            <div>
+              <span className="font-bold">✓ Correct! </span>
+              <span className="text-text-muted text-xs">
+                Capital of {q.correct.name}: <span className="font-semibold text-text">{q.correct.capital}</span>
+              </span>
             </div>
-          </div>
+          ) : (
+            <div>
+              <span className="font-bold">✗ Not quite. </span>
+              <span>
+                {q.correct.flag} That flag belongs to{' '}
+                <span className="font-bold text-emerald-300">{q.correct.name}</span>
+                <span className="text-text-muted text-xs block mt-0.5">
+                  Capital: {q.correct.capital}
+                </span>
+              </span>
+            </div>
+          )}
         </div>
+      )}
 
-        {feedback && (
-          <div
-            className="mt-4 p-3 rounded-xl text-center font-medium transition-all"
-            style={{
-              background: feedback === 'correct' ? 'rgba(74,222,128,0.15)' : 'rgba(239,68,68,0.15)',
-              color: feedback === 'correct' ? '#4ade80' : '#ef4444',
-              border: `1px solid ${feedback === 'correct' ? '#4ade8044' : '#ef444444'}`,
-            }}
-          >
-            {feedback === 'correct'
-              ? `✓ Correct!${streak >= 3 ? ` 🔥 ${streak} in a row!` : ''}`
-              : `✗ ${selectedFlag?.name ?? ''} is ${options.flags.find(c => c.code === selectedFlag?.code)?.name ?? ''}`}
-          </div>
-        )}
-      </div>
+      {/* Continent breadcrumb — subtle learning context */}
+      {!answer && (
+        <p className="text-center text-text-muted text-xs flex-shrink-0">
+          {q.correct.continent}
+        </p>
+      )}
     </div>
   );
 }
-
-export default FlagGame;
