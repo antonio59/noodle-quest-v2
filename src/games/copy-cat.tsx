@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
@@ -16,34 +16,50 @@ const COLOR_DATA = [
 ];
 
 const CONFIG: Record<number, { colors: number; startLength: number; maxRounds: number; speed: number }> = {
-  1: { colors: 4, startLength: 2, maxRounds: 4, speed: 700 },
-  2: { colors: 4, startLength: 2, maxRounds: 5, speed: 650 },
-  3: { colors: 4, startLength: 3, maxRounds: 5, speed: 600 },
-  4: { colors: 6, startLength: 3, maxRounds: 5, speed: 550 },
-  5: { colors: 6, startLength: 3, maxRounds: 6, speed: 500 },
-  6: { colors: 6, startLength: 4, maxRounds: 6, speed: 480 },
-  7: { colors: 8, startLength: 4, maxRounds: 6, speed: 450 },
-  8: { colors: 8, startLength: 4, maxRounds: 7, speed: 420 },
-  9: { colors: 8, startLength: 5, maxRounds: 7, speed: 400 },
-  10: { colors: 8, startLength: 5, maxRounds: 8, speed: 380 },
+  1:  { colors: 4, startLength: 2, maxRounds: 4,  speed: 700 },
+  2:  { colors: 4, startLength: 2, maxRounds: 5,  speed: 650 },
+  3:  { colors: 4, startLength: 3, maxRounds: 5,  speed: 600 },
+  4:  { colors: 6, startLength: 3, maxRounds: 5,  speed: 550 },
+  5:  { colors: 6, startLength: 3, maxRounds: 6,  speed: 500 },
+  6:  { colors: 6, startLength: 4, maxRounds: 6,  speed: 480 },
+  7:  { colors: 8, startLength: 4, maxRounds: 6,  speed: 450 },
+  8:  { colors: 8, startLength: 4, maxRounds: 7,  speed: 420 },
+  9:  { colors: 8, startLength: 5, maxRounds: 7,  speed: 400 },
+  10: { colors: 8, startLength: 5, maxRounds: 8,  speed: 380 },
 };
 
-type Phase = 'intro' | 'watching' | 'playing' | 'done';
+type Phase = 'intro' | 'announce' | 'watching' | 'playing' | 'done';
+type Mode  = 'copy' | 'reverse';
 
 function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     colors: 0.15, startLength: 0.15, maxRounds: 0.1, speed: -0.15,
-  }, {
-    colors: 12, startLength: 8, maxRounds: 12, speed: 250,
-  }), [stage]);
+  }, { colors: 12, startLength: 8, maxRounds: 12, speed: 250 }), [stage]);
 
-  const [phase, setPhase] = useState<Phase>('intro');
-  const [sequence, setSequence] = useState<number[]>([]);
+  const [phase, setPhase]           = useState<Phase>('intro');
+  const [mode, setMode]             = useState<Mode>('copy');
+  const [sequence, setSequence]     = useState<number[]>([]);
   const [playerIndex, setPlayerIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [round, setRound] = useState(1);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [score, setScore]           = useState(0);
+  const [round, setRound]           = useState(1);
   const [flashIndex, setFlashIndex] = useState<number | null>(null);
+
+  const endedRef   = useRef(false);
+  const timersRef  = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const schedule = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(() => {
+      timersRef.current = timersRef.current.filter(x => x !== id);
+      if (!endedRef.current) fn();
+    }, delay);
+    timersRef.current.push(id);
+    return id;
+  }, []);
+
+  const clearAll = useCallback(() => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+  }, []);
 
   const getColorCount = useCallback((seqLen: number): number => {
     const max = Math.min(config.colors, COLOR_DATA.length);
@@ -55,142 +71,129 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
 
   const colorCount = getColorCount(sequence.length);
 
-  const endedRef = useRef(false);
-  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const finishGame = useCallback((finalScore: number, rounds: number, perfect: boolean) => {
+    if (endedRef.current) return;
+    endedRef.current = true;
+    clearAll();
+    const ratio = rounds / config.maxRounds;
+    const stars  = perfect ? 3 : ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
+    let summary  = perfect
+      ? `Perfect! All ${config.maxRounds} rounds complete! 🏆`
+      : `You completed ${rounds} round${rounds !== 1 ? 's' : ''}! `;
+    if (!perfect) {
+      if (stars === 3) summary += 'Amazing pattern memory!';
+      else if (stars === 2) summary += 'Good work — keep practising both modes!';
+      else summary += 'Keep going! Watch the full sequence before tapping.';
+    }
+    onEnd({ score: finalScore, stars, summary });
+  }, [config.maxRounds, clearAll, onEnd]);
 
-  const schedule = useCallback((fn: () => void, delay: number) => {
-    const id = setTimeout(() => {
-      timeoutsRef.current = timeoutsRef.current.filter(x => x !== id);
-      if (!endedRef.current) fn();
-    }, delay);
-    timeoutsRef.current.push(id);
-    return id;
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      endedRef.current = true;
-      timeoutsRef.current.forEach(clearTimeout);
-    };
-  }, []);
-
-  const generateSequence = useCallback((length: number, count: number) => {
-    return Array.from({ length }, () => Math.floor(Math.random() * count));
-  }, []);
-
-  const playSequence = useCallback((seq: number[]) => {
+  const playSequence = useCallback((seq: number[], m: Mode, roundNum: number) => {
     if (endedRef.current) return;
     setPhase('watching');
-    onMessage('👀 Watch the pattern...');
     setPlayerIndex(0);
+    onMessage(m === 'copy' ? '👀 Watch the pattern...' : '👀 Watch — then REVERSE it...');
 
     seq.forEach((colorIdx, i) => {
       schedule(() => {
-        setActiveIndex(colorIdx);
         setFlashIndex(colorIdx);
-        schedule(() => {
-          setActiveIndex(null);
-          setFlashIndex(null);
-        }, config.speed * 0.4);
+        schedule(() => setFlashIndex(null), config.speed * 0.4);
       }, i * config.speed);
     });
 
     schedule(() => {
       setPhase('playing');
-      onMessage('🖐️ Your turn! Repeat it!');
+      onMessage(m === 'copy' ? '🐱 Copy it!' : '🔄 Tap in REVERSE order!');
     }, seq.length * config.speed);
-  }, [config.speed, onMessage, schedule]);
+
+    onProgress((roundNum - 1) / config.maxRounds);
+  }, [config.speed, config.maxRounds, schedule, onMessage, onProgress]);
+
+  const startRound = useCallback((seq: number[], m: Mode, roundNum: number) => {
+    setPhase('announce');
+    setMode(m);
+    setSequence(seq);
+    setPlayerIndex(0);
+    schedule(() => playSequence(seq, m, roundNum), 900);
+  }, [schedule, playSequence]);
 
   const startGame = useCallback(() => {
-    const initialCount = getColorCount(config.startLength);
-    const seq = generateSequence(config.startLength, initialCount);
-    setSequence(seq);
+    endedRef.current = false;
+    clearAll();
+    const count = getColorCount(config.startLength);
+    const seq   = Array.from({ length: config.startLength }, () => Math.floor(Math.random() * count));
     setScore(0);
     setRound(1);
-    setPlayerIndex(0);
-    schedule(() => playSequence(seq), 500);
-  }, [config.startLength, getColorCount, generateSequence, playSequence, schedule]);
+    startRound(seq, 'copy', 1);
+  }, [config.startLength, getColorCount, clearAll, startRound]);
 
-  const finishGame = useCallback((finalScore: number, rounds: number, perfect: boolean) => {
-    if (endedRef.current) return;
-    endedRef.current = true;
-    const ratio = rounds / config.maxRounds;
-    const stars = perfect ? 3 : ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
-    let summary = `You completed ${rounds} round${rounds !== 1 ? 's' : ''}! `;
-    if (perfect) summary = `Perfect! All ${config.maxRounds} rounds! 🏆`;
-    else if (stars === 3) summary += 'Almost perfect! 🌟';
-    else if (stars === 2) summary += 'Good job! Try saying the colors out loud.';
-    else summary += 'Keep practicing! Focus on the first few colors.';
-    onEnd({ score: finalScore, stars, summary });
-  }, [config.maxRounds, onEnd]);
-
-  const handleTap = useCallback((index: number) => {
+  const handleTap = useCallback((tapIndex: number) => {
     if (phase !== 'playing') return;
 
-    setActiveIndex(index);
-    setFlashIndex(index);
-    schedule(() => {
-      setActiveIndex(null);
-      setFlashIndex(null);
-    }, 150);
+    setFlashIndex(tapIndex);
+    schedule(() => setFlashIndex(null), 180);
 
-    if (index !== sequence[playerIndex]) {
+    const expectedIndex = mode === 'copy'
+      ? playerIndex
+      : sequence.length - 1 - playerIndex;
+
+    if (tapIndex !== sequence[expectedIndex]) {
       setPhase('done');
-      const rounds = sequence.length - config.startLength;
+      const rounds = round - 1;
       finishGame(score, rounds, false);
       return;
     }
 
-    const newScore = score + 15;
-    setScore(newScore);
-    onScore(15);
+    const pts = mode === 'copy' ? 15 : 20;
+    const newScore = score + pts;
     const newPlayerIndex = playerIndex + 1;
+    setScore(newScore);
     setPlayerIndex(newPlayerIndex);
+    onScore(pts);
 
     if (newPlayerIndex >= sequence.length) {
-      const currentRound = sequence.length - config.startLength + 1;
-      if (currentRound >= config.maxRounds) {
+      if (round >= config.maxRounds) {
         setPhase('done');
         onProgress(1);
-        finishGame(newScore + 100, currentRound, true);
+        finishGame(newScore + 100, round, true);
       } else {
-        onMessage('✨ Perfect! Get ready for more...');
+        onMessage('✨ Next round...');
+        const nextRound = round + 1;
+        setRound(nextRound);
+        const nextMode: Mode = mode === 'copy' ? 'reverse' : 'copy';
         const nextCount = getColorCount(sequence.length + 1);
-        const newSeq = [...sequence, Math.floor(Math.random() * nextCount)];
-        setSequence(newSeq);
-        setRound(currentRound + 1);
-        setPlayerIndex(0);
-        onProgress(currentRound / config.maxRounds);
-        schedule(() => playSequence(newSeq), 700);
+        const newSeq    = [...sequence, Math.floor(Math.random() * nextCount)];
+        schedule(() => startRound(newSeq, nextMode, nextRound), 600);
       }
     }
-  }, [phase, sequence, playerIndex, score, config, getColorCount, onScore, onProgress, onMessage, playSequence, schedule, finishGame]);
+  }, [phase, mode, sequence, playerIndex, round, score, config.maxRounds,
+      getColorCount, onScore, onProgress, onMessage, schedule, startRound, finishGame]);
 
+  // ── Intro ────────────────────────────────────────────────────────────────
   if (phase === 'intro') {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center gap-4">
         <div className="text-6xl">🐱</div>
         <h2 className="text-2xl font-bold text-accent">Copy Cat</h2>
-        <p className="text-text-dim max-w-xs">Watch the pattern light up, then repeat it in the same order!</p>
+        <p className="text-text-dim max-w-xs">Watch the pattern light up, then tap it — sometimes forwards, sometimes backwards!</p>
 
-        <div className="bg-card rounded-xl p-4 max-w-xs w-full">
-          <div className="text-warning font-bold mb-2">Up to {config.maxRounds} rounds</div>
-          <div className="flex gap-2 justify-center flex-wrap mb-2">
-            {COLOR_DATA.slice(0, 4).map((c, i) => (
-              <div key={i} className="w-9 h-9 rounded-lg text-xl flex items-center justify-center" style={{ background: c.color }}>
-                {c.emoji}
-              </div>
-            ))}
+        <div className="bg-card rounded-2xl p-4 max-w-xs w-full space-y-3">
+          <div className="flex items-center justify-around text-sm">
+            <div className="text-center">
+              <div className="text-xl font-bold text-cyan-400 mb-1">🐱 Copy</div>
+              <div className="text-text-muted text-xs">Tap same order</div>
+              <div className="mt-1 text-base">🔴🟢🔵 → 🔴🟢🔵</div>
+            </div>
+            <div className="w-px h-12 bg-white/10" />
+            <div className="text-center">
+              <div className="text-xl font-bold text-orange-400 mb-1">🔄 Reverse</div>
+              <div className="text-text-muted text-xs">Tap backwards</div>
+              <div className="mt-1 text-base">🔴🟢🔵 → 🔵🟢🔴</div>
+            </div>
           </div>
-          <div className="text-text-muted text-sm">More colors unlock as rounds progress!</div>
-        </div>
-
-        <div className="flex items-center gap-3 text-sm text-text-dim">
-          <span>👀 Watch</span>
-          <span className="text-accent">→</span>
-          <span>🖐️ Repeat</span>
-          <span className="text-accent">→</span>
-          <span>🎉 Level up!</span>
+          <div className="text-xs text-text-muted border-t border-white/5 pt-3">
+            The mode alternates each round — up to {config.maxRounds} rounds total
+          </div>
         </div>
 
         <button
@@ -203,40 +206,73 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     );
   }
 
-  const cols = colorCount <= 4 ? 2 : colorCount <= 6 ? 3 : colorCount <= 8 ? 4 : 5;
+  // ── Announce mode for this round ─────────────────────────────────────────
+  if (phase === 'announce') {
+    const isCopy = mode === 'copy';
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-5 text-center p-6">
+        <div className="text-sm text-text-muted font-semibold">Round {round} / {config.maxRounds}</div>
+        <div className={`rounded-3xl px-8 py-5 border ${
+          isCopy
+            ? 'bg-cyan-500/12 border-cyan-500/30'
+            : 'bg-orange-500/12 border-orange-500/30'
+        }`}>
+          <div className="text-5xl mb-2">{isCopy ? '🐱' : '🔄'}</div>
+          <div className={`text-2xl font-black ${isCopy ? 'text-cyan-300' : 'text-orange-300'}`}>
+            {isCopy ? 'Copy Round' : 'Reverse Round'}
+          </div>
+          <div className="text-text-muted text-sm mt-1">
+            {isCopy ? 'Tap in the same order' : 'Tap in the opposite order'}
+          </div>
+        </div>
+        <div className="text-text-muted text-xs animate-pulse">Get ready...</div>
+      </div>
+    );
+  }
 
-  const progressDots = Array.from({ length: sequence.length }, (_, i) => ({
-    filled: i < playerIndex,
-    active: i === playerIndex && phase === 'playing',
-  }));
+  // ── Game board ───────────────────────────────────────────────────────────
+  const cols = colorCount <= 4 ? 2 : colorCount <= 6 ? 3 : colorCount <= 8 ? 4 : 5;
+  const isCopy = mode === 'copy';
+
+  const progressDots = Array.from({ length: sequence.length }, (_, i) => {
+    const tappedIndex = mode === 'copy' ? i : sequence.length - 1 - i;
+    const isDone  = i < playerIndex;
+    const isNext  = i === playerIndex && phase === 'playing';
+    return { isDone, isNext, tappedIndex };
+  });
 
   return (
     <div className="h-full flex flex-col items-center p-4 gap-3">
-      <div className="flex gap-4 bg-card rounded-xl px-4 py-2">
-        <span className="text-warning font-bold">Round {round}/{config.maxRounds}</span>
-        <span className="text-accent">Score: {score}</span>
-        <span className="text-cyan-400 text-sm">
-          {phase === 'watching' ? '👀 Watch' : '🖐️ Tap!'}
+      {/* Header */}
+      <div className="flex gap-3 bg-card rounded-xl px-4 py-2 items-center">
+        <span className="text-warning font-bold text-sm">Round {round}/{config.maxRounds}</span>
+        <span className="text-accent text-sm">Score: {score}</span>
+        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+          isCopy
+            ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-300'
+            : 'bg-orange-500/15 border-orange-500/30 text-orange-300'
+        }`}>
+          {isCopy ? '🐱 Copy' : '🔄 Reverse'}
         </span>
       </div>
 
+      {/* Progress dots */}
       <div className="flex gap-1.5 items-center min-h-[20px]">
         {progressDots.map((dot, i) => (
           <div
             key={i}
             className="rounded-full transition-all duration-150"
             style={{
-              width: dot.active ? 14 : 10,
-              height: dot.active ? 14 : 10,
-              background: dot.filled ? '#4ade80'
-                : dot.active ? '#fbbf24'
-                : 'rgba(255,255,255,0.15)',
-              boxShadow: dot.active ? '0 0 8px #fbbf24' : dot.filled ? '0 0 6px #4ade80' : 'none',
+              width:  dot.isNext ? 14 : 10,
+              height: dot.isNext ? 14 : 10,
+              background: dot.isDone ? '#4ade80' : dot.isNext ? '#fbbf24' : 'rgba(255,255,255,0.15)',
+              boxShadow:  dot.isNext ? '0 0 8px #fbbf24' : dot.isDone ? '0 0 6px #4ade80' : 'none',
             }}
           />
         ))}
       </div>
 
+      {/* Colour grid */}
       <div
         className="grid gap-2 p-4 bg-card rounded-2xl shadow-lg"
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
@@ -249,7 +285,7 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
             className="w-16 h-16 rounded-xl text-2xl transition-all duration-100 disabled:cursor-default select-none"
             style={{
               background: c.color,
-              opacity: flashIndex === i ? 1 : phase === 'watching' ? 0.4 : 0.65,
+              opacity:   flashIndex === i ? 1 : phase === 'watching' ? 0.4 : 0.7,
               transform: flashIndex === i ? 'scale(0.88)' : 'scale(1)',
               boxShadow: flashIndex === i
                 ? `0 0 28px ${c.color}, 0 0 10px ${c.color}99`
@@ -262,11 +298,13 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
       </div>
 
       <div className="text-text-muted text-xs text-center min-h-[16px]">
-        {phase === 'playing' && playerIndex < sequence.length
-          ? `${playerIndex}/${sequence.length} tapped`
+        {phase === 'playing'
+          ? isCopy
+            ? `Tap ${playerIndex + 1} of ${sequence.length}`
+            : `Reverse tap ${playerIndex + 1} of ${sequence.length}`
           : phase === 'watching'
-            ? 'Memorize the order...'
-            : ''}
+          ? 'Memorise the order...'
+          : ''}
       </div>
     </div>
   );

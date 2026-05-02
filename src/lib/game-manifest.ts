@@ -44,11 +44,7 @@ reg('number-ninja', {
   category: 'memory', stages: 99,
 }, () => import('@/games/number-ninja'));
 
-reg('reverse-cat', {
-  name: 'Reverse Cat', emoji: '🔄',
-  description: 'Watch the pattern, then repeat it BACKWARDS!',
-  category: 'memory', stages: 99,
-}, () => import('@/games/reverse-cat'));
+registerAlias('reverse-cat', 'copy-cat');
 
 reg('echo-tap', {
   name: 'Echo Tap', emoji: '🥁',
