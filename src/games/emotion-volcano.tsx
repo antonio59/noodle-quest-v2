@@ -64,12 +64,12 @@ const allScenarios: Record<number, { trigger: string; emoji: string; heat: numbe
 };
 
 const coolingStrategies = [
-  { name: 'Deep Breaths', emoji: '🌬️', power: 20, tip: 'Breathe in for 4, hold for 4, out for 4' },
-  { name: 'Count to 10', emoji: '🔢', power: 15, tip: 'Slowly count and feel calmer with each number' },
-  { name: 'Walk Away', emoji: '🚶', power: 25, tip: 'Take a break and come back when calm' },
-  { name: 'Squeeze & Release', emoji: '✊', power: 18, tip: 'Squeeze your fists tight, then relax them' },
+  { name: 'Deep Breaths', emoji: '🌬️', power: 20, tip: 'Breathe in 4, hold 4, out 4' },
+  { name: 'Count to 10', emoji: '🔢', power: 15, tip: 'Slowly count, feel calmer with each' },
+  { name: 'Walk Away', emoji: '🚶', power: 25, tip: 'Take a break, come back when calm' },
+  { name: 'Squeeze & Release', emoji: '✊', power: 18, tip: 'Squeeze fists tight, then relax them' },
   { name: 'Talk It Out', emoji: '💬', power: 22, tip: 'Tell someone how you feel' },
-  { name: 'Think Happy Thoughts', emoji: '🌈', power: 15, tip: 'Remember something that makes you smile' },
+  { name: 'Happy Thoughts', emoji: '🌈', power: 15, tip: 'Remember something that makes you smile' },
   { name: 'Drink Water', emoji: '💧', power: 12, tip: 'A cool drink can help you cool down!' },
   { name: 'Move Your Body', emoji: '🏃', power: 20, tip: 'Jump, stretch, or dance it out!' },
 ];
@@ -79,15 +79,16 @@ const tips = [
   '💡 Noticing your feelings getting big is the FIRST step to cooling down.',
   '💡 Different strategies work for different people. Find YOUR favorites!',
   "💡 It's okay to feel angry. It's NOT okay to hurt others.",
-  '💡 Cooling down takes practice. You\'re getting better every time!',
+  "💡 Cooling down takes practice. You're getting better every time!",
 ];
 
 type Phase = 'intro' | 'playing' | 'cooldown' | 'done';
 
-function getHeatDisplay(heat: number) {
-  if (heat >= 60) return { text: '🔥 Still hot! Keep going!', color: '#ff6e6c' };
-  if (heat >= 30) return { text: '🌡️ Getting better...', color: '#fbbf24' };
-  return { text: '❄️ Cooled down!', color: '#4ade80' };
+function getHeatStyle(heat: number): { text: string; color: string; lava: string; glow: string } {
+  if (heat >= 80) return { text: '🌋 Eruption warning!', color: '#ff6e6c', lava: 'linear-gradient(180deg, #ff4444, #dc2626)', glow: '#ff6e6c' };
+  if (heat >= 60) return { text: '🔥 Getting very hot!', color: '#f97316', lava: 'linear-gradient(180deg, #fb923c, #dc2626)', glow: '#f97316' };
+  if (heat >= 30) return { text: '🌡️ Getting warmer...', color: '#fbbf24', lava: 'linear-gradient(180deg, #fbbf24, #f97316)', glow: '#fbbf24' };
+  return { text: '❄️ Almost cooled down!', color: '#4ade80', lava: 'linear-gradient(180deg, #4ade80, #16a34a)', glow: '#4ade80' };
 }
 
 function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
@@ -98,7 +99,6 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [currentScenario, setCurrentScenario] = useState(0);
   const [heat, setHeat] = useState(0);
   const [feedback, setFeedback] = useState('');
-  const [feedbackColor, setFeedbackColor] = useState('#67e8f9');
   const [usedStrategies, setUsedStrategies] = useState<Set<number>>(new Set());
   const [strategies, setStrategies] = useState<typeof coolingStrategies>([]);
   const [tip] = useState(() => tips[Math.floor(Math.random() * tips.length)]);
@@ -118,22 +118,16 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, []);
 
   const cleanup = useCallback(() => {
-    if (heatIntervalRef.current) {
-      clearInterval(heatIntervalRef.current);
-      heatIntervalRef.current = null;
-    }
+    if (heatIntervalRef.current) { clearInterval(heatIntervalRef.current); heatIntervalRef.current = null; }
   }, []);
 
   useEffect(() => {
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);
-      if (heatIntervalRef.current) {
-        clearInterval(heatIntervalRef.current);
-        heatIntervalRef.current = null;
-      }
+      cleanup();
     };
-  }, []);
+  }, [cleanup]);
 
   const advanceScenario = useCallback((currentScore: number) => {
     cleanup();
@@ -145,8 +139,8 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       setPhase('done');
       const stars = currentScore >= 200 ? 3 : currentScore >= 120 ? 2 : 1;
       let summary = 'You practiced cooling down your volcano! ';
-      if (stars === 3) summary += 'Amazing emotional regulation! You know lots of ways to calm big feelings. Use these in real life too! 🌟';
-      else if (stars === 2) summary += 'Good work! Remember these strategies when you feel your volcano heating up in real life!';
+      if (stars === 3) summary += 'Amazing emotional regulation! You know lots of ways to calm big feelings. 🌟';
+      else if (stars === 2) summary += 'Good work! Remember these strategies when your volcano heats up in real life!';
       else summary += 'Keep practicing! The more you use calming strategies, the easier they become!';
       onEnd({ score: currentScore, stars, summary });
     } else {
@@ -154,7 +148,6 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       const scenario = scenarios[next];
       setHeat(scenario.heat);
       setFeedback('');
-      setFeedbackColor('#67e8f9');
       setUsedStrategies(new Set());
       setStrategies([...coolingStrategies].sort(() => Math.random() - 0.5).slice(0, 4));
     }
@@ -165,13 +158,11 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const scenario = scenarios[idx];
     setHeat(scenario.heat);
     setFeedback('');
-    setFeedbackColor('#67e8f9');
     setUsedStrategies(new Set());
     setStrategies([...coolingStrategies].sort(() => Math.random() - 0.5).slice(0, 4));
     setPhase('playing');
   }, [scenarios, cleanup]);
 
-  // Auto-heat increase
   useEffect(() => {
     if (phase !== 'playing') return;
     const heatIntervalMs = Math.max(400, 1500 - (stage - 1) * 20);
@@ -180,8 +171,7 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         const next = Math.min(100, prev + 2);
         if (next >= 100) {
           cleanup();
-          setFeedback("When feelings get too big, we might say or do things we regret. Next time, start cooling sooner!");
-          setFeedbackColor('#fbbf24');
+          setFeedback("Feelings got too big! Next time, start cooling sooner!");
           setPhase('cooldown');
           schedule(() => advanceScenario(scoreRef.current), 3000);
         }
@@ -189,11 +179,10 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       });
     }, heatIntervalMs);
     return cleanup;
-  }, [phase, cleanup, advanceScenario, schedule]);
+  }, [phase, stage, cleanup, advanceScenario, schedule]);
 
   const handleStrategy = useCallback((strat: typeof coolingStrategies[number], idx: number) => {
     if (phase !== 'playing' || usedStrategies.has(idx)) return;
-
     setUsedStrategies(prev => new Set(prev).add(idx));
     setHeat(prev => {
       const next = Math.max(0, prev - strat.power);
@@ -210,36 +199,39 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setScore(scoreRef.current);
     onScore(10);
     setFeedback(`${strat.emoji} ${strat.tip}`);
-    setFeedbackColor('#4ade80');
   }, [phase, usedStrategies, onScore, cleanup, advanceScenario, schedule]);
 
-  // Derive heat display at render time
-  const heatDisplay = getHeatDisplay(heat);
+  const heatStyle = getHeatStyle(heat);
 
   if (phase === 'intro') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
-        <div className="text-6xl mb-4">🌋</div>
-        <h2 className="text-2xl font-bold text-[#ff6e6c] mb-2">Emotion Volcano</h2>
-        <p className="text-[#fca5a5] mb-4 max-w-xs">Keep your volcano from erupting using calming strategies!</p>
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
-          <div className="text-[#fbbf24] mb-2">When something frustrating happens...</div>
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="w-10 h-[60px] bg-gradient-to-b from-[#ff6e6c] to-[#dc2626]" style={{ clipPath: 'polygon(20% 100%, 80% 100%, 100% 60%, 90% 30%, 70% 0%, 30% 0%, 10% 30%, 0% 60%)' }} />
-            <span className="text-[#ff6e6c] text-2xl">→</span>
-            <div className="flex gap-1">
-              <span className="text-2xl">🌬️</span>
-              <span className="text-2xl">🔢</span>
-              <span className="text-2xl">🚶</span>
+        <div className="text-6xl mb-3">🌋</div>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--color-danger, #ff6e6c)' }}>Emotion Volcano</h2>
+        <p className="text-text-muted mb-4 max-w-xs text-sm">Keep your volcano from erupting using calming strategies!</p>
+        <div className="bg-card rounded-2xl p-4 mb-4 max-w-xs w-full">
+          <div className="text-warning text-sm mb-3">When something frustrating happens...</div>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="text-center">
+              <div className="text-3xl mb-1">😤</div>
+              <div className="text-xs text-red-400">Heat rises</div>
             </div>
-            <span className="text-[#4ade80] text-2xl">→</span>
-            <div className="w-10 h-[60px] bg-gradient-to-b from-[#4ade80] to-[#166534]" style={{ clipPath: 'polygon(20% 100%, 80% 100%, 100% 60%, 90% 30%, 70% 0%, 30% 0%, 10% 30%, 0% 60%)' }} />
+            <div className="text-text-muted text-xl">→</div>
+            <div className="text-center">
+              <div className="text-lg">🌬️🔢🚶</div>
+              <div className="text-xs text-cyan-400">Cool down</div>
+            </div>
+            <div className="text-text-muted text-xl">→</div>
+            <div className="text-center">
+              <div className="text-3xl mb-1">😌</div>
+              <div className="text-xs text-green-400">Calm!</div>
+            </div>
           </div>
-          <div className="text-[#4ade80]">...use strategies to cool down! ❄️</div>
+          <div className="text-success text-sm">Tap strategies to cool down below 30%!</div>
         </div>
-        <p className="text-[#67e8f9] text-sm mb-5 max-w-xs">{tip}</p>
+        <p className="text-text-muted text-xs mb-4 max-w-xs">{tip}</p>
         <button
-          onClick={() => { startScenario(0); }}
+          onClick={() => startScenario(0)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
         >
           Start Cooling! ❄️
@@ -249,43 +241,68 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }
 
   const scenario = scenarios[currentScenario];
-  const lavaHeight = `${heat}%`;
 
   return (
-    <div className="flex flex-col h-full min-h-[350px] items-center p-3">
-      <div className="flex gap-4 px-3 py-1.5 bg-[#232146] rounded-lg mb-2">
-        <span className="text-[#ff6e6c] font-bold">Situation {currentScenario + 1}/{scenarios.length}</span>
-        <span className="text-[#fbbf24]">Score: {score}</span>
+    <div className="flex flex-col h-full min-h-[350px] items-center p-3 gap-2">
+      <div className="flex gap-4 px-3 py-1.5 bg-card rounded-xl">
+        <span className="text-danger font-bold text-sm">Situation {currentScenario + 1}/{scenarios.length}</span>
+        <span className="text-warning text-sm font-bold">Score: {score}</span>
       </div>
 
-      <div className="bg-[#2d1f1f] rounded-xl p-3 text-center w-full max-w-xs mb-2">
+      <div className="bg-card rounded-xl p-3 text-center w-full max-w-xs">
         <div className="text-3xl mb-1">{scenario.emoji}</div>
-        <div className="text-white text-[0.95rem]">{scenario.trigger}</div>
+        <div className="text-text text-sm">{scenario.trigger}</div>
       </div>
 
-      <div className="flex items-center gap-3 mb-2">
-        <div className="relative w-[60px] h-[100px]">
-          <div
-            className="absolute bottom-0 w-full h-full bg-[#333]"
-            style={{ clipPath: 'polygon(20% 100%, 80% 100%, 100% 60%, 90% 30%, 70% 0%, 30% 0%, 10% 30%, 0% 60%)' }}
-          />
-          <div
-            className="absolute bottom-0 w-full transition-[height] duration-300"
-            style={{
-              height: lavaHeight,
-              background: 'linear-gradient(180deg,#ff6e6c,#dc2626)',
-              clipPath: 'polygon(20% 100%, 80% 100%, 100% 60%, 90% 30%, 70% 0%, 30% 0%, 10% 30%, 0% 60%)',
-            }}
-          />
+      <div className="flex items-center gap-4 w-full max-w-xs">
+        {/* Volcano visual */}
+        <div className="relative w-[72px] h-[110px] flex-shrink-0">
+          <svg viewBox="0 0 72 110" className="absolute inset-0 w-full h-full">
+            <defs>
+              <clipPath id="volcano-clip">
+                <polygon points="14,110 58,110 72,66 64,33 50,0 22,0 8,33 0,66" />
+              </clipPath>
+            </defs>
+            <polygon points="14,110 58,110 72,66 64,33 50,0 22,0 8,33 0,66"
+              fill="#2d2a50" stroke="#a78bfa" strokeWidth="1" />
+            <rect
+              x="0" y={110 - heat * 1.1} width="72" height={heat * 1.1}
+              fill="url(#lava-grad)"
+              clipPath="url(#volcano-clip)"
+              style={{ transition: 'y 0.3s, height 0.3s' }}
+            />
+            <defs>
+              <linearGradient id="lava-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={heatStyle.glow} />
+                <stop offset="100%" stopColor="#dc2626" />
+              </linearGradient>
+            </defs>
+          </svg>
+          {heat >= 80 && (
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-lg animate-bounce">💨</div>
+          )}
         </div>
-        <div className="text-left">
-          <div className="text-2xl font-bold" style={{ color: heatDisplay.color }}>{heat}%</div>
-          <div className="text-[#a78bfa] text-xs">Frustration Level</div>
-          <div className="text-sm mt-1" style={{ color: heatDisplay.color }}>{heatDisplay.text}</div>
+
+        {/* Heat meter */}
+        <div className="flex-1">
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-text-muted">Heat</span>
+            <span className="font-bold" style={{ color: heatStyle.color }}>{heat}%</span>
+          </div>
+          <div className="h-4 bg-surface rounded-full overflow-hidden mb-1">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${heat}%`,
+                background: heatStyle.lava,
+                boxShadow: `0 0 8px ${heatStyle.glow}`,
+              }}
+            />
+          </div>
+          <div className="text-xs font-medium" style={{ color: heatStyle.color }}>{heatStyle.text}</div>
+          <div className="text-xs text-text-muted mt-1">Cool below 30% to pass!</div>
         </div>
       </div>
-
-      <div className="text-[#67e8f9] text-xs mb-1.5">Tap strategies to cool down below 30%:</div>
 
       <div className="grid grid-cols-2 gap-1.5 w-full max-w-xs">
         {strategies.map((strat, idx) => {
@@ -295,23 +312,27 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               key={idx}
               onClick={() => handleStrategy(strat, idx)}
               disabled={used || phase !== 'playing'}
-              className="border-2 border-[#67e8f9] text-white p-2.5 rounded-lg text-sm flex flex-col items-center gap-0.5 transition-all"
+              className="p-2.5 rounded-xl text-sm flex flex-col items-center gap-0.5 transition-all active:scale-95"
               style={{
-                background: used ? '#166534' : '#232146',
-                borderColor: used ? '#4ade80' : '#67e8f9',
-                opacity: used ? 0.7 : 1,
+                background: used ? '#16534440' : 'var(--color-card, #232146)',
+                border: `2px solid ${used ? '#4ade80' : 'var(--color-accent, #a78bfa)'}`,
+                opacity: used ? 0.65 : 1,
               }}
             >
               <span className="text-2xl">{strat.emoji}</span>
-              <span>{strat.name}</span>
+              <span className="text-text text-xs font-medium">{strat.name}</span>
+              <span className="text-green-400 text-xs">-{strat.power}%</span>
             </button>
           );
         })}
       </div>
 
-      <div className="text-sm min-h-[40px] text-center p-2 max-w-xs mt-1" style={{ color: feedbackColor }}>
-        {feedback}
-      </div>
+      {feedback && (
+        <div className="text-success text-sm text-center max-w-xs min-h-[20px]">{feedback}</div>
+      )}
+      {phase === 'cooldown' && (
+        <div className="text-accent text-sm text-center">❄️ Cooled down! Next situation...</div>
+      )}
     </div>
   );
 }

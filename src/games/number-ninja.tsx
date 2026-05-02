@@ -15,30 +15,31 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
   10: { minLen: 8, maxLen: 10, showTime: 4500, maxRounds: 5 },
 };
 
-type Phase = 'memorize' | 'input' | 'result' | 'done';
+const DIGIT_COLORS = ['#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24', '#ff6e6c', '#a78bfa', '#34d399', '#f472b6', '#60a5fa'];
 
-function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
+type Phase = 'ready' | 'memorize' | 'input' | 'result' | 'done';
+
+function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const config = useMemo(() => scaleFromLast(stage, CONFIG, {
     minLen: 0.1, maxLen: 0.08, showTime: -0.1, maxRounds: 0.05,
   }, {
     minLen: 12, maxLen: 16, showTime: 1500, maxRounds: 8,
   }), [stage]);
 
-  const [phase, setPhase] = useState<Phase>('memorize');
+  const [phase, setPhase] = useState<Phase>('ready');
   const [round, setRound] = useState(1);
   const [score, setScore] = useState(0);
   const [sequence, setSequence] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState('');
   const [feedbackColor, setFeedbackColor] = useState('#a78bfa');
-  const [message, setMessage] = useState('🧠 Memorize!');
+  const [message, setMessage] = useState('');
   const [messageColor, setMessageColor] = useState('#67e8f9');
-  const [displayColor, setDisplayColor] = useState('#ff6e6c');
   const [timeLeft, setTimeLeft] = useState(0);
   const [memorizeDuration, setMemorizeDuration] = useState(0);
+  const [inputCorrectMask, setInputCorrectMask] = useState<boolean[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
-
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
@@ -66,18 +67,18 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     return Array.from({ length: len }, () => Math.floor(Math.random() * 10)).join('');
   }, [config]);
 
-  const showNextSequence = useCallback(() => {
-    const seq = generateSequence(round);
+  const showNextSequence = useCallback((roundNum: number) => {
+    const seq = generateSequence(roundNum);
     setSequence(seq);
     setInputValue('');
-    setDisplayColor('#ff6e6c');
+    setInputCorrectMask([]);
     setMessage('🧠 Memorize!');
     setMessageColor('#67e8f9');
-    setFeedback(`${seq.length} digits — group them in pairs!`);
+    setFeedback(`${seq.length} digits — try grouping in pairs!`);
     setFeedbackColor('#a78bfa');
     setPhase('memorize');
 
-    const showDuration = config.showTime + (round * 150);
+    const showDuration = config.showTime + (roundNum * 150);
     setMemorizeDuration(showDuration);
     setTimeLeft(showDuration);
 
@@ -98,133 +99,164 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
       clearInterval(timer);
       intervalsRef.current = intervalsRef.current.filter(x => x !== timer);
       setPhase('input');
-      setDisplayColor('#6b7280');
-      setMessage('⌨️ Type the numbers!');
+      setMessage('⌨️ Type what you remember!');
       setMessageColor('#4ade80');
       setFeedback('');
       schedule(() => inputRef.current?.focus(), 50);
     }, showDuration);
-  }, [round, generateSequence, config.showTime, schedule]);
+  }, [generateSequence, config.showTime, schedule]);
 
-  const startGame = useCallback(() => {
-    setScore(0);
-    setRound(1);
-    setPhase('memorize');
-    schedule(showNextSequence, 600);
-  }, [showNextSequence, schedule]);
-
-  const didStartRef = useRef(false);
-  useEffect(() => {
-    if (didStartRef.current) return;
-    didStartRef.current = true;
-    startGame();
-  }, [startGame]);
-
-  // Reset sequence when round changes during gameplay
-  useEffect(() => {
-    if (phase !== 'done' && round > 1) {
-      showNextSequence();
-    }
-  }, [round]);
-
-  const checkAnswer = useCallback(() => {
+  const checkAnswer = useCallback((seq: string, input: string, currentScore: number, currentRound: number) => {
     if (phase === 'done') return;
-    const answer = inputValue.trim();
-    setDisplayColor('#ff6e6c');
+    const answer = input.trim();
 
-    if (answer === sequence) {
-      const points = 20 + (sequence.length * 5);
-      const newScore = score + points;
+    const mask = seq.split('').map((ch, i) => answer[i] === ch);
+    setInputCorrectMask(mask);
+
+    if (answer === seq) {
+      const points = 20 + (seq.length * 5);
+      const newScore = currentScore + points;
       setScore(newScore);
       onScore(points);
-      setDisplayColor('#4ade80');
       setMessage('✅ Correct!');
       setMessageColor('#4ade80');
-      setFeedback(`+${points} points!`);
+      setFeedback(`+${points} points! 🌟`);
       setFeedbackColor('#4ade80');
 
-      if (round >= config.maxRounds) {
-        schedule(() => {
-          setPhase('done');
-          const ratio = round / config.maxRounds;
-          const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
-          if (endedRef.current) return;
-          endedRef.current = true;
-          onEnd({
-            score: newScore + 50,
-            stars,
-            summary: `Number Ninja Master! You completed all ${config.maxRounds} rounds! Your number memory is incredible! 🏆`,
-          });
-        }, 1200);
+      if (currentRound >= config.maxRounds) {
+        setPhase('done');
+        const stars = 3;
+        if (endedRef.current) return;
+        endedRef.current = true;
+        onEnd({
+          score: newScore + 50,
+          stars,
+          summary: `Number Ninja Master! You completed all ${config.maxRounds} rounds! Your memory is incredible! 🏆`,
+        });
       } else {
-        onProgress(round / config.maxRounds);
-        schedule(() => setRound(r => r + 1), 1500);
+        onProgress(currentRound / config.maxRounds);
+        schedule(() => {
+          setRound(r => {
+            const next = r + 1;
+            showNextSequence(next);
+            return next;
+          });
+        }, 1600);
       }
     } else {
-      setDisplayColor('#ff6e6c');
       setMessage('❌ Not quite!');
       setMessageColor('#ff6e6c');
 
       let wrongIdx = -1;
-      for (let i = 0; i < Math.max(answer.length, sequence.length); i++) {
-        if (answer[i] !== sequence[i]) {
-          wrongIdx = i;
-          break;
-        }
+      for (let i = 0; i < Math.max(answer.length, seq.length); i++) {
+        if (answer[i] !== seq[i]) { wrongIdx = i; break; }
       }
 
       if (wrongIdx >= 0) {
-        setFeedback(`Mistake at position ${wrongIdx + 1}. You typed "${answer[wrongIdx] || '?'}" instead of "${sequence[wrongIdx]}"`);
+        setFeedback(`Position ${wrongIdx + 1}: you typed "${answer[wrongIdx] || '?'}", correct is "${seq[wrongIdx]}"`);
       } else {
-        setFeedback(`The sequence was: ${sequence}`);
+        setFeedback(`The sequence was: ${seq}`);
       }
       setFeedbackColor('#ff6e6c');
 
       schedule(() => {
         setPhase('done');
-        const ratio = round / config.maxRounds;
+        const ratio = currentRound / config.maxRounds;
         const stars = ratio >= 0.75 ? 3 : ratio >= 0.4 ? 2 : 1;
-        let summary = `You made it to round ${round}! `;
+        let summary = `You made it to round ${currentRound}! `;
         if (stars === 3) summary += 'So close to perfect! Your number memory is great!';
         else if (stars === 2) summary += 'Good effort! Try grouping numbers in pairs to remember better.';
         else summary += 'Keep practicing! Say the numbers out loud as you memorize.';
         if (endedRef.current) return;
         endedRef.current = true;
-        onEnd({ score, stars, summary });
-      }, 2500);
+        onEnd({ score: currentScore, stars, summary });
+      }, 3000);
     }
-  }, [phase, inputValue, sequence, score, round, config, onScore, onProgress, onEnd, schedule]);
+  }, [phase, config, onScore, onProgress, onEnd, schedule, showNextSequence]);
+
+  const handleSubmit = useCallback(() => {
+    checkAnswer(sequence, inputValue, score, round);
+  }, [checkAnswer, sequence, inputValue, score, round]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') checkAnswer();
-  }, [checkAnswer]);
+    if (e.key === 'Enter') handleSubmit();
+  }, [handleSubmit]);
+
+  if (phase === 'ready') {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-5 p-6 text-center">
+        <div className="text-6xl">🥷</div>
+        <h2 className="text-2xl font-bold text-accent">Number Ninja</h2>
+        <div className="bg-card rounded-2xl p-4 max-w-xs w-full space-y-2 text-sm text-text-muted">
+          <p>👁️ <span className="text-text">See</span> the number sequence</p>
+          <p>🧠 <span className="text-text">Memorize</span> as fast as you can</p>
+          <p>⌨️ <span className="text-text">Type</span> it from memory!</p>
+        </div>
+        <div className="text-text-muted text-sm">{config.maxRounds} rounds · Stage {stage} · up to {config.maxLen} digits</div>
+        <button
+          onClick={() => { setRound(1); setScore(0); schedule(() => showNextSequence(1), 300); }}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start! 🥷
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4">
-      <div className="flex gap-4 mb-4 bg-card rounded-xl px-4 py-2">
-        <span className="text-warning font-bold">Round: {round}/{config.maxRounds}</span>
-        <span className="text-accent">Score: {score}</span>
+    <div className="h-full flex flex-col items-center justify-center p-4 gap-4">
+      <div className="flex gap-4 bg-card rounded-xl px-4 py-2">
+        <span className="text-warning font-bold text-sm">Round {round}/{config.maxRounds}</span>
+        <span className="text-accent text-sm font-bold">{score} pts</span>
       </div>
 
-      <div
-        className="text-4xl font-bold font-mono mb-4 tracking-widest min-h-[4.5rem] flex items-center justify-center"
-        style={{ color: displayColor }}
-      >
-        {phase === 'memorize' && sequence.split('').join(' ')}
-        {(phase === 'input' || phase === 'result') && '? '.repeat(sequence.length).trim()}
-      </div>
-
-      {phase === 'memorize' && memorizeDuration > 0 && (
-        <div className="mb-4 flex flex-col items-center gap-2">
-          <div className="w-32 h-1.5 bg-card rounded-full overflow-hidden">
-            <div
-              className="h-full bg-accent transition-all"
-              style={{ width: `${Math.max(0, Math.min(100, (timeLeft / memorizeDuration) * 100))}%` }}
-            />
+      {/* Sequence display */}
+      <div className="bg-card rounded-2xl px-6 py-5 w-full max-w-xs text-center min-h-[90px] flex flex-col items-center justify-center">
+        {phase === 'memorize' && (
+          <>
+            <div className="flex gap-2 justify-center flex-wrap">
+              {sequence.split('').map((digit, i) => (
+                <span
+                  key={i}
+                  className="text-3xl font-bold font-mono w-9 h-9 rounded-lg flex items-center justify-center"
+                  style={{
+                    color: DIGIT_COLORS[parseInt(digit)],
+                    background: `${DIGIT_COLORS[parseInt(digit)]}18`,
+                    boxShadow: `0 0 8px ${DIGIT_COLORS[parseInt(digit)]}40`,
+                  }}
+                >
+                  {digit}
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 w-32 h-1.5 bg-surface rounded-full overflow-hidden">
+              <div
+                className="h-full bg-accent transition-none"
+                style={{ width: `${Math.max(0, Math.min(100, (timeLeft / memorizeDuration) * 100))}%`, transition: 'width 0.05s linear' }}
+              />
+            </div>
+          </>
+        )}
+        {phase === 'input' && (
+          <div className="flex gap-2 justify-center flex-wrap">
+            {Array.from({ length: sequence.length }, (_, i) => (
+              <span
+                key={i}
+                className="text-3xl font-bold font-mono w-9 h-9 rounded-lg flex items-center justify-center text-text-muted"
+                style={{ background: '#232146', border: '2px dashed #a78bfa40' }}
+              >
+                {inputValue[i] !== undefined
+                  ? <span style={{ color: inputCorrectMask[i] !== undefined ? (inputCorrectMask[i] ? '#4ade80' : '#ff6e6c') : '#fff' }}>{inputValue[i]}</span>
+                  : '?'}
+              </span>
+            ))}
           </div>
-          <span className="text-text-muted text-xs">Memorize quickly!</span>
-        </div>
-      )}
+        )}
+      </div>
+
+      <div className="text-center font-semibold" style={{ color: messageColor }}>
+        {message}
+      </div>
 
       {phase === 'input' && (
         <div className="flex flex-col items-center gap-3 w-full max-w-xs">
@@ -235,31 +267,23 @@ function NumberNinjaGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
             autoComplete="off"
             pattern="[0-9]*"
             value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
+            onChange={e => setInputValue(e.target.value.replace(/\D/g, '').slice(0, sequence.length))}
             onKeyDown={handleKeyDown}
-            placeholder="Type numbers..."
-            className="w-full px-4 py-3 text-2xl text-center bg-card border-2 border-accent rounded-xl text-white font-mono tracking-wider"
+            placeholder="Type numbers here..."
+            className="w-full px-4 py-3 text-xl text-center bg-card border-2 border-accent rounded-xl text-white font-mono tracking-widest"
           />
           <button
-            onClick={checkAnswer}
-            className="bg-success text-bg font-bold px-8 py-3 rounded-xl hover:opacity-90 active:scale-95"
+            onClick={handleSubmit}
+            disabled={inputValue.length === 0}
+            className="bg-success text-bg font-bold px-8 py-3 rounded-xl hover:opacity-90 active:scale-95 disabled:opacity-40"
           >
             Submit! ✓
           </button>
         </div>
       )}
 
-      <div
-        className="text-lg mt-3 min-h-[28px] text-center"
-        style={{ color: messageColor }}
-      >
-        {message}
-      </div>
       {feedback && (
-        <div
-          className="text-sm mt-1 min-h-[22px]"
-          style={{ color: feedbackColor }}
-        >
+        <div className="text-sm text-center max-w-xs" style={{ color: feedbackColor }}>
           {feedback}
         </div>
       )}

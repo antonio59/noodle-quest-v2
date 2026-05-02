@@ -2,16 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { Clock, Heart, Brain, Shield } from 'lucide-react';
 
-// Box Breathing: inhale 4s, hold 4s, exhale 4s, hold 4s
-// Stages increase number of rounds
-
 type Phase = 'inhale' | 'hold1' | 'exhale' | 'hold2' | 'idle' | 'info' | 'done';
 
 const BENEFITS = [
   { icon: Brain, label: 'Reduces stress & anxiety', color: 'text-accent' },
-  { icon: Heart, label: 'Lowers heart rate & blood pressure', color: 'text-danger' },
-  { icon: Shield, label: 'Improves emotional regulation', color: 'text-success' },
-  { icon: Clock, label: 'Used by Navy SEALs for calm under pressure', color: 'text-warning' },
+  { icon: Heart, label: 'Lowers heart rate & blood pressure', color: 'text-red-400' },
+  { icon: Shield, label: 'Improves emotional regulation', color: 'text-green-400' },
+  { icon: Clock, label: 'Used by Navy SEALs for calm under pressure', color: 'text-yellow-400' },
 ];
 
 const BEST_FOR = [
@@ -20,6 +17,13 @@ const BEST_FOR = [
   'To improve focus before work or study',
   'As a daily mindfulness practice',
 ];
+
+const PHASE_META: Record<string, { label: string; instruction: string; color: string; glow: string }> = {
+  inhale: { label: 'Breathe In',  instruction: 'Fill your lungs slowly...',    color: '#a78bfa', glow: '#a78bfa60' },
+  hold1:  { label: 'Hold',        instruction: 'Hold still, stay calm...',     color: '#fbbf24', glow: '#fbbf2460' },
+  exhale: { label: 'Breathe Out', instruction: 'Release slowly and fully...',  color: '#4ade80', glow: '#4ade8060' },
+  hold2:  { label: 'Hold',        instruction: 'Empty lungs, stay steady...', color: '#67e8f9', glow: '#67e8f960' },
+};
 
 function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const totalRounds = 3 + stage;
@@ -39,33 +43,16 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
     };
   }, []);
 
-  const phaseLabels: Record<string, string> = {
-    inhale: 'Breathe In...',
-    hold1: 'Hold...',
-    exhale: 'Breathe Out...',
-    hold2: 'Hold...',
-  };
-
-  const phaseColors: Record<string, string> = {
-    inhale: 'bg-accent/30',
-    hold1: 'bg-warning/30',
-    exhale: 'bg-success/30',
-    hold2: 'bg-primary/30',
-  };
-
   const phaseDurations: Record<string, number> = {
-    inhale: 4,
-    hold1: 4,
-    exhale: 4,
-    hold2: 4,
+    inhale: 4, hold1: 4, exhale: 4, hold2: 4,
   };
 
   const nextPhase = useCallback((current: Phase): Phase => {
     switch (current) {
       case 'inhale': return 'hold1';
-      case 'hold1': return 'exhale';
+      case 'hold1':  return 'exhale';
       case 'exhale': return 'hold2';
-      case 'hold2': return 'inhale';
+      case 'hold2':  return 'inhale';
       default: return 'inhale';
     }
   }, []);
@@ -104,7 +91,12 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
               if (timerRef.current) clearInterval(timerRef.current);
               if (!endedRef.current) {
                 endedRef.current = true;
-                onEnd({ score: totalRounds * 10, stars: totalRounds >= 10 ? 3 : totalRounds >= 6 ? 2 : 1, summary: `Completed ${totalRounds} rounds of box breathing!` });
+                const stars = totalRounds >= 10 ? 3 : totalRounds >= 6 ? 2 : 1;
+                onEnd({
+                  score: totalRounds * 10,
+                  stars,
+                  summary: `You completed ${totalRounds} rounds of box breathing! Your nervous system is calmer now. 🌿`,
+                });
               }
               return 0;
             }
@@ -133,55 +125,55 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
           <div className="text-center mb-6">
             <div className="text-6xl mb-3">📦</div>
             <h2 className="text-2xl font-bold text-accent">Box Breathing</h2>
-            <p className="text-text-dim text-sm mt-1">4-4-4-4 breathing pattern</p>
+            <p className="text-text-muted text-sm mt-1">The 4-4-4-4 calm-down technique</p>
           </div>
 
-          {/* Pattern visualization */}
           <div className="bg-card rounded-2xl p-4 mb-5">
-            <div className="text-xs font-semibold text-text-muted mb-3 text-center">THE PATTERN</div>
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <span className="bg-accent/20 text-accent px-3 py-1.5 rounded-lg font-semibold">In 4s</span>
-              <span className="text-text-muted">→</span>
-              <span className="bg-warning/20 text-warning px-3 py-1.5 rounded-lg font-semibold">Hold 4s</span>
-              <span className="text-text-muted">→</span>
-              <span className="bg-success/20 text-success px-3 py-1.5 rounded-lg font-semibold">Out 4s</span>
-              <span className="text-text-muted">→</span>
-              <span className="bg-primary/20 text-primary px-3 py-1.5 rounded-lg font-semibold">Hold 4s</span>
+            <div className="text-xs font-semibold text-text-muted mb-3 text-center uppercase tracking-wide">The Pattern</div>
+            <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
+              {[
+                { label: 'In', sub: '4s',   color: 'bg-accent/20 text-accent' },
+                { label: 'Hold', sub: '4s', color: 'bg-yellow-500/20 text-yellow-400' },
+                { label: 'Out', sub: '4s',  color: 'bg-green-500/20 text-green-400' },
+                { label: 'Hold', sub: '4s', color: 'bg-cyan-500/20 text-cyan-400' },
+              ].map((p, i) => (
+                <div key={i} className={`${p.color} rounded-xl py-2.5 font-bold`}>
+                  <div>{p.label}</div>
+                  <div className="opacity-70">{p.sub}</div>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Session info */}
           <div className="bg-card rounded-2xl p-4 mb-5">
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex justify-between text-sm mb-2">
               <span className="text-text-muted">Rounds</span>
-              <span className="font-semibold text-text">{totalRounds}</span>
+              <span className="font-bold text-text">{totalRounds}</span>
             </div>
-            <div className="flex items-center justify-between text-sm mt-2">
+            <div className="flex justify-between text-sm mb-2">
               <span className="text-text-muted">Estimated time</span>
-              <span className="font-semibold text-text">~{estimatedMinutes} min</span>
+              <span className="font-bold text-text">~{estimatedMinutes} min</span>
             </div>
-            <div className="flex items-center justify-between text-sm mt-2">
+            <div className="flex justify-between text-sm">
               <span className="text-text-muted">Stage</span>
-              <span className="font-semibold text-accent">{stage}/10</span>
+              <span className="font-bold text-accent">{stage}</span>
             </div>
           </div>
 
-          {/* Benefits */}
           <div className="mb-5">
-            <h3 className="text-sm font-bold text-text-dim mb-3">Benefits</h3>
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-3">Benefits</h3>
             <div className="space-y-2">
               {BENEFITS.map((b, i) => (
                 <div key={i} className="flex items-center gap-3 bg-card rounded-xl p-3">
-                  <b.icon size={18} className={b.color} />
+                  <b.icon size={16} className={b.color} />
                   <span className="text-sm text-text">{b.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Best for */}
           <div className="mb-6">
-            <h3 className="text-sm font-bold text-text-dim mb-3">Best For</h3>
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-3">Best For</h3>
             <div className="space-y-2">
               {BEST_FOR.map((item, i) => (
                 <div key={i} className="flex items-start gap-2 bg-card rounded-xl p-3">
@@ -194,9 +186,9 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
 
           <button
             onClick={startCycle}
-            className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+            className="w-full bg-accent text-bg font-bold py-3.5 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
           >
-            Start Session
+            Begin Session
           </button>
         </div>
       </div>
@@ -208,15 +200,7 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">📦</div>
         <h2 className="text-2xl font-bold text-accent mb-2">Box Breathing</h2>
-        <p className="text-text-dim mb-4 max-w-xs">
-          Inhale 4s → Hold 4s → Exhale 4s → Hold 4s. Repeat {totalRounds} rounds.
-        </p>
-        <div className="text-text-muted text-sm mb-2">
-          ~{estimatedMinutes} min · Stage {stage}/10
-        </div>
-        <div className="text-text-muted text-sm mb-6">
-          Calms the nervous system and improves focus.
-        </div>
+        <p className="text-text-muted mb-6 max-w-xs">4-4-4-4: In → Hold → Out → Hold. {totalRounds} rounds.</p>
         <button
           onClick={startCycle}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
@@ -230,12 +214,13 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
   if (phase === 'done') {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4 animate-[celebrate_0.4s_ease]">🧘</div>
-        <h2 className="text-2xl font-bold mb-2">Well Done</h2>
-        <p className="text-text-muted mb-6">{totalRounds} rounds completed</p>
+        <div className="text-7xl mb-4">🧘</div>
+        <h2 className="text-2xl font-bold mb-2 text-accent">Session Complete</h2>
+        <p className="text-text-muted mb-2">{totalRounds} rounds finished</p>
+        <p className="text-text-muted text-sm mb-6 max-w-xs">Your nervous system has been reset. Enjoy this calm feeling.</p>
         <button
-          onClick={() => { setPhase('idle'); setRound(0); }}
-          className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl"
+          onClick={() => { setPhase('idle'); setRound(0); endedRef.current = false; }}
+          className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90"
         >
           Again
         </button>
@@ -243,36 +228,84 @@ function BoxBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: Game
     );
   }
 
-  const totalPhaseTime = 4;
+  const meta = PHASE_META[phase] || PHASE_META.inhale;
+  const totalPhaseTime = phaseDurations[phase] || 4;
   const elapsed = totalPhaseTime - secondsLeft;
-  const pct = (elapsed / totalPhaseTime) * 100;
+  const pct = Math.min(1, elapsed / totalPhaseTime);
+
+  // Circle scale: inhale = grow 0.3→1, exhale = shrink 1→0.3, holds = static
+  const circleScale = phase === 'inhale'
+    ? 0.3 + pct * 0.7
+    : phase === 'exhale'
+      ? 1 - pct * 0.7
+      : phase === 'hold1' ? 1 : 0.3;
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-6">
-      <div className="text-sm text-text-muted mb-4">Round {round}/{totalRounds}</div>
-      <div className="relative w-48 h-48 mb-6">
+    <div className="h-full flex flex-col items-center justify-center p-6 gap-6">
+      <div className="text-sm text-text-muted">Round {round}/{totalRounds}</div>
+
+      <div className="relative flex items-center justify-center" style={{ width: 200, height: 200 }}>
+        {/* Outer glow ring */}
         <div
-          className={`absolute inset-0 rounded-full transition-all duration-1000 ${phaseColors[phase]}`}
+          className="absolute rounded-full transition-all duration-1000"
           style={{
-            transform: phase === 'inhale'
-              ? `scale(${0.5 + (pct / 100) * 0.5})`
-              : phase === 'exhale'
-                ? `scale(${1 - (pct / 100) * 0.5})`
-                : phase === 'hold1' ? 'scale(1)' : 'scale(0.5)',
-            opacity: 0.8,
+            width: 200,
+            height: 200,
+            background: 'transparent',
+            boxShadow: `0 0 ${30 + circleScale * 40}px ${meta.glow}, 0 0 ${60 + circleScale * 60}px ${meta.glow}40`,
+            borderRadius: '50%',
+            opacity: 0.6,
           }}
         />
-        <div className="absolute inset-0 flex items-center justify-center flex-col">
-          <div className="text-3xl font-bold text-text">{secondsLeft}</div>
-          <div className="text-sm text-text-muted mt-1">{phaseLabels[phase]}</div>
+        {/* Animated circle */}
+        <div
+          className="rounded-full transition-all duration-1000"
+          style={{
+            width: 160,
+            height: 160,
+            transform: `scale(${circleScale})`,
+            background: `radial-gradient(circle at 35% 35%, ${meta.color}80, ${meta.color}30)`,
+            boxShadow: `0 0 30px ${meta.glow}`,
+            border: `3px solid ${meta.color}60`,
+          }}
+        />
+        {/* Center text */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-4xl font-black text-white">{secondsLeft}</div>
+          <div className="text-sm font-semibold mt-1" style={{ color: meta.color }}>{meta.label}</div>
         </div>
       </div>
 
-      <div className="flex gap-1 flex-wrap justify-center max-w-xs">
+      <div className="text-center">
+        <p className="text-text-muted text-sm italic">{meta.instruction}</p>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex gap-1.5 flex-wrap justify-center max-w-xs">
         {Array.from({ length: totalRounds }, (_, i) => (
           <div
             key={i}
-            className={`w-2 h-2 rounded-full ${i < round - 1 ? 'bg-accent' : i === round - 1 ? 'bg-accent animate-pulse' : 'bg-card-hover'}`}
+            className="rounded-full transition-all duration-500"
+            style={{
+              width: i < round - 1 ? 10 : 8,
+              height: i < round - 1 ? 10 : 8,
+              background: i < round - 1 ? meta.color : i === round - 1 ? meta.color + '80' : '#ffffff15',
+              boxShadow: i === round - 1 ? `0 0 8px ${meta.color}` : 'none',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Phase indicator strip */}
+      <div className="flex gap-1 w-full max-w-xs">
+        {(['inhale', 'hold1', 'exhale', 'hold2'] as Phase[]).map(p => (
+          <div
+            key={p}
+            className="flex-1 h-1.5 rounded-full transition-all duration-500"
+            style={{
+              background: phase === p ? PHASE_META[p].color : `${PHASE_META[p].color}25`,
+              boxShadow: phase === p ? `0 0 6px ${PHASE_META[p].color}` : 'none',
+            }}
           />
         ))}
       </div>

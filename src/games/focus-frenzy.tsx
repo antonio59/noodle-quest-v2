@@ -30,7 +30,7 @@ const CONFIG: Record<number, { spawnRate: number; duration: number; distractors:
   10: { spawnRate: 600, duration: 45000, distractors: 0.65, fadeTime: 600, speed: 1.8 },
 };
 
-const FEEDBACKS = ["Nice focus! 🎯", "Great eyes! 👀", "You're on fire! 🔥", "Keep it up! ⭐"];
+const FEEDBACKS = ['Nice focus! 🎯', 'Great eyes! 👀', "You're on fire! 🔥", 'Keep it up! ⭐'];
 
 let orbIdCounter = 0;
 
@@ -40,12 +40,15 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, {
     spawnRate: 300, duration: 70000, distractors: 0.9, fadeTime: 300, speed: 3,
   }), [stage]);
+
   const [phase, setPhase] = useState<Phase>('ready');
   const [orbs, setOrbs] = useState<Orb[]>([]);
   const [score, setScore] = useState(0);
   const [targetsHit, setTargetsHit] = useState(0);
-  const totalTargetsRef = useRef(0);
   const [feedback, setFeedback] = useState('');
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  const totalTargetsRef = useRef(0);
   const gameAreaRef = useRef<HTMLDivElement>(null);
   const gameActiveRef = useRef(false);
   const scoreRef = useRef(0);
@@ -62,9 +65,7 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const y = Math.random() * maxY;
     const id = ++orbIdCounter;
 
-    if (isTarget) {
-      totalTargetsRef.current++;
-    }
+    if (isTarget) totalTargetsRef.current++;
 
     const orb: Orb = { id, x, y, size, isTarget, fading: false, hit: false, burst: false, burstX: 0, burstY: 0 };
     setOrbs(prev => [...prev, orb]);
@@ -102,7 +103,7 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     } else {
       scoreRef.current = Math.max(0, scoreRef.current - 5);
       setScore(scoreRef.current);
-      setFeedback('💡 That was a distraction! Look for the pink glow.');
+      setFeedback('💡 Distraction! Tap pink/purple only.');
       setTimeout(() => setFeedback(''), 2000);
     }
 
@@ -121,23 +122,22 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setTargetsHit(0);
     setOrbs([]);
     setFeedback('');
-  }, []);
-
-  const handleStart = useCallback(() => {
-    startGame();
-  }, [startGame]);
+    setTimeLeft(Math.ceil(config.duration / 1000));
+  }, [config.duration]);
 
   useEffect(() => {
     if (phase !== 'playing') return;
 
     const spawnTimer = setInterval(spawnOrb, config.spawnRate);
     const startedAt = Date.now();
+
     const progressTimer = setInterval(() => {
       if (gameActiveRef.current) {
         const elapsed = (Date.now() - startedAt) / config.duration;
         onProgress(Math.min(elapsed, 1));
+        setTimeLeft(Math.max(0, Math.ceil((config.duration - (Date.now() - startedAt)) / 1000)));
       }
-    }, 250);
+    }, 200);
 
     const gameTimer = setTimeout(() => {
       gameActiveRef.current = false;
@@ -150,7 +150,7 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       let summary = `You zapped ${targetsHitRef.current} orbs with ${Math.round(accuracy * 100)}% accuracy! `;
       if (accuracy > 0.75) summary += 'Amazing focus! Your brain is getting great at filtering distractions! 🌟';
       else if (accuracy > 0.5) summary += 'Good job! Try focusing on one area at a time to catch more targets.';
-      else summary += 'Keep practicing! Remember: pink/purple = tap, blue = ignore!';
+      else summary += 'Keep practicing! Pink/purple glow = tap, blue = ignore!';
 
       setPhase('done');
       onEnd({ score: scoreRef.current, stars, summary });
@@ -164,20 +164,31 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     };
   }, [phase, config, spawnOrb, onProgress, onEnd]);
 
+  const totalDuration = Math.ceil(config.duration / 1000);
+  const timerPct = timeLeft / totalDuration;
+  const timerColor = timerPct > 0.5 ? '#4ade80' : timerPct > 0.25 ? '#fbbf24' : '#ff6e6c';
+
   if (phase === 'ready') {
     return (
-      <div className="flex flex-col h-full min-h-[350px] items-center justify-center gap-4">
+      <div className="flex flex-col h-full min-h-[350px] items-center justify-center gap-5 p-6 text-center">
         <div className="text-6xl">🔮</div>
-        <h2 className="text-xl font-bold text-text">Focus Frenzy</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">
-          Tap the <span className="text-pink-400">pink/purple</span> orbs.<br />
-          Ignore the blue distractions!
-        </p>
+        <h2 className="text-2xl font-bold text-accent">Focus Frenzy</h2>
+        <div className="bg-card rounded-2xl p-4 max-w-xs w-full space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: 'radial-gradient(circle, #ff6e6c, #c084fc)', boxShadow: '0 0 16px #ff6e6c, 0 0 32px #c084fc' }} />
+            <span className="text-sm text-text"><span className="text-pink-400 font-bold">Pink/purple glow</span> = Tap! +10</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: 'radial-gradient(circle, #67e8f9, #232146)', boxShadow: '0 0 8px #67e8f9' }} />
+            <span className="text-sm text-text"><span className="text-cyan-400 font-bold">Blue</span> = Distraction! -5</span>
+          </div>
+        </div>
+        <div className="text-text-muted text-sm">Time limit: {Math.ceil(config.duration / 1000)}s · Stage {stage}</div>
         <button
-          onClick={handleStart}
+          onClick={startGame}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
         >
-          Start Game
+          Start Game 🔮
         </button>
       </div>
     );
@@ -185,9 +196,18 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl">
-        <div className="text-purple-400 font-bold">Score: {score}</div>
-        <div className="text-cyan-300 text-sm">🎯 {targetsHit} hits</div>
+      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl gap-2">
+        <div className="text-purple-400 font-bold">⚡ {score}</div>
+        <div className="flex items-center gap-2 flex-1 mx-2">
+          <div className="flex-1 h-1.5 bg-[#1a1833] rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-200"
+              style={{ width: `${timerPct * 100}%`, background: timerColor, boxShadow: `0 0 6px ${timerColor}` }}
+            />
+          </div>
+          <span className="text-xs font-bold" style={{ color: timerColor }}>{timeLeft}s</span>
+        </div>
+        <div className="text-cyan-300 text-sm">🎯 {targetsHit}</div>
       </div>
 
       <div
@@ -209,8 +229,15 @@ function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               transform: orb.hit ? 'scale(1.5)' : 'scale(1)',
               transition: 'transform 0.1s, opacity 0.2s',
               ...(orb.isTarget
-                ? { background: 'radial-gradient(circle at 30% 30%, #ff6e6c, #c084fc)', boxShadow: '0 0 20px #ff6e6c, 0 0 40px #c084fc' }
-                : { background: 'radial-gradient(circle at 30% 30%, #67e8f9, #232146)', boxShadow: '0 0 10px #67e8f9', opacity: Math.min(0.8, orb.fading ? 0.4 : 0.8) }),
+                ? {
+                    background: 'radial-gradient(circle at 30% 30%, #ff6e6c, #c084fc)',
+                    boxShadow: '0 0 20px #ff6e6c, 0 0 40px #c084fc',
+                  }
+                : {
+                    background: 'radial-gradient(circle at 30% 30%, #67e8f9, #232146)',
+                    boxShadow: '0 0 8px #67e8f9',
+                    opacity: orb.fading ? 0.4 : 0.75,
+                  }),
             }}
           />
         ) : (

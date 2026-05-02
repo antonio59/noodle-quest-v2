@@ -36,15 +36,14 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const [foundSet, setFoundSet] = useState<Set<number>>(new Set());
   const [cellStates, setCellStates] = useState<Record<number, CellState>>({});
   const [feedback, setFeedback] = useState('');
-  const [feedbackColor, setFeedbackColor] = useState('#a78bfa');
-  const [statusText, setStatusText] = useState('👀 Memorize both grids!');
-  const [statusColor, setStatusColor] = useState('#67e8f9');
+  const [feedbackColor, setFeedbackColor] = useState('var(--color-accent)');
+  const [memorizeProgress, setMemorizeProgress] = useState(100);
 
   const currentScoreRef = useRef(0);
   const roundRef = useRef(0);
-
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const memorizeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const schedule = useCallback((fn: () => void, delay: number) => {
     const id = setTimeout(() => {
@@ -59,6 +58,7 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     return () => {
       endedRef.current = true;
       timeoutsRef.current.forEach(clearTimeout);
+      if (memorizeIntervalRef.current) clearInterval(memorizeIntervalRef.current);
     };
   }, []);
 
@@ -98,15 +98,30 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
     setFoundSet(new Set());
     setCellStates({});
     setFeedback('');
-    setFeedbackColor('#a78bfa');
-    setStatusText('👀 Memorize both grids!');
-    setStatusColor('#67e8f9');
+    setMemorizeProgress(100);
     setPhase('memorize');
 
+    if (memorizeIntervalRef.current) clearInterval(memorizeIntervalRef.current);
+    const startTime = Date.now();
+    memorizeIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.max(0, 100 - (elapsed / config.showTime) * 100);
+      setMemorizeProgress(pct);
+      if (pct <= 0 && memorizeIntervalRef.current) {
+        clearInterval(memorizeIntervalRef.current);
+        memorizeIntervalRef.current = null;
+      }
+    }, 50);
+
     schedule(() => {
+      if (memorizeIntervalRef.current) {
+        clearInterval(memorizeIntervalRef.current);
+        memorizeIntervalRef.current = null;
+      }
+      setMemorizeProgress(0);
       setPhase('find');
-      setStatusText('🫣 Grid A vanished! Find the differences in Grid B!');
-      setStatusColor('#fbbf24');
+      setFeedback(`Find ${diffSet.size} difference${diffSet.size > 1 ? 's' : ''} in Grid B!`);
+      setFeedbackColor('#fbbf24');
     }, config.showTime);
   }, [generateRound, config.showTime, schedule]);
 
@@ -189,28 +204,51 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
   const gs = config.gridSize;
   const cellSize = gs >= 5 ? 38 : gs >= 4 ? 44 : 52;
   const fontSize = cellSize >= 44 ? '1.4rem' : '1.1rem';
+  const isMemorize = phase === 'memorize';
 
   return (
     <div className="h-full flex flex-col items-center p-4">
       <div className="flex gap-4 mb-2 bg-card rounded-xl px-4 py-2">
         <span className="text-warning font-bold">Round: {roundNum}/{config.rounds}</span>
         <span className="text-accent">Score: {score}</span>
-        <span className="text-success">Found: {foundSet.size}/{config.diffs}</span>
+        <span className="text-success">Found: {foundSet.size}/{differences.size}</span>
       </div>
 
-      <div className="text-sm py-2 min-h-[30px]" style={{ color: statusColor }}>
-        {statusText}
-      </div>
+      {isMemorize ? (
+        <div className="w-full max-w-xs mb-2">
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-cyan-400 font-bold">👀 Memorize both grids!</span>
+            <span className="text-text-muted">{Math.ceil((memorizeProgress / 100) * config.showTime / 1000)}s</span>
+          </div>
+          <div className="w-full h-2.5 bg-surface rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-none"
+              style={{
+                width: `${memorizeProgress}%`,
+                background: memorizeProgress > 50
+                  ? 'linear-gradient(90deg, #67e8f9, #a78bfa)'
+                  : memorizeProgress > 20
+                    ? 'linear-gradient(90deg, #fbbf24, #fb923c)'
+                    : 'linear-gradient(90deg, #ef4444, #ff6e6c)',
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="text-sm py-2 min-h-[30px]" style={{ color: feedbackColor }}>
+          {phase === 'find' && `🫣 Grid A vanished! ${feedback}`}
+        </div>
+      )}
 
       <div className="flex gap-4 items-start p-2">
         <div className="text-center">
-          <div className="text-xs text-text-dim mb-1.5">Grid A</div>
+          <div className="text-xs text-text-dim mb-1.5 font-bold">Grid A</div>
           <div
-            className="grid gap-0.5 bg-card p-2.5 rounded-xl transition-all duration-300"
+            className="grid gap-0.5 bg-card p-2.5 rounded-xl transition-all duration-500"
             style={{
               gridTemplateColumns: `repeat(${gs}, ${cellSize}px)`,
-              opacity: phase === 'memorize' ? 1 : 0.15,
-              filter: phase === 'memorize' ? 'none' : 'blur(4px)',
+              opacity: isMemorize ? 1 : 0.08,
+              filter: isMemorize ? 'none' : 'blur(6px)',
             }}
           >
             {gridA.map((emoji, i) => (
@@ -228,7 +266,7 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
         <div className="text-2xl text-accent self-center">↔</div>
 
         <div className="text-center">
-          <div className="text-xs text-text-dim mb-1.5">Grid B</div>
+          <div className="text-xs text-text-dim mb-1.5 font-bold">Grid B</div>
           <div
             className="grid gap-0.5 bg-card p-2.5 rounded-xl"
             style={{ gridTemplateColumns: `repeat(${gs}, ${cellSize}px)` }}
@@ -238,13 +276,12 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
               let bg = '#1a1833';
               let border = 'none';
               let transform = 'scale(1)';
-              let cursor = phase === 'find' ? 'pointer' : 'default';
+              const cursor = phase === 'find' ? 'pointer' : 'default';
 
               if (state === 'correct') {
                 bg = 'rgba(74, 222, 128, 0.3)';
                 border = '2px solid #4ade80';
                 transform = 'scale(1.1)';
-                cursor = 'default';
               } else if (state === 'wrong') {
                 bg = 'rgba(239, 68, 68, 0.3)';
                 border = '2px solid #ef4444';
@@ -274,7 +311,12 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
         </div>
       </div>
 
-      {feedback && (
+      {!isMemorize && feedback && phase !== 'find' && (
+        <div className="text-sm mt-2 text-center" style={{ color: feedbackColor }}>
+          {feedback}
+        </div>
+      )}
+      {phase === 'find' && feedback && (
         <div className="text-sm mt-2 text-center" style={{ color: feedbackColor }}>
           {feedback}
         </div>

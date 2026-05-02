@@ -6,7 +6,7 @@ interface Point { x: number; y: number }
 interface Checkpoint { x: number; y: number; collected: boolean }
 interface Obstacle { x: number; y: number; radius: number; dx: number; dy: number }
 
-type Phase = 'playing' | 'done';
+type Phase = 'intro' | 'playing' | 'done';
 type EndReason = 'wall' | 'obstacle' | 'finish' | null;
 
 const CONFIG: Record<number, { pathWidth: number; obstacles: boolean; checkpointCount: number }> = {
@@ -30,7 +30,8 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   }, {
     pathWidth: 12, checkpointCount: 10,
   }), [stage]);
-  const [phase, setPhase] = useState<Phase>('playing');
+
+  const [phase, setPhase] = useState<Phase>('intro');
   const [score, setScore] = useState(0);
   const [collected, setCollected] = useState(0);
   const [feedback, setFeedback] = useState('Drag to move the ball!');
@@ -47,8 +48,6 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const ballRef = useRef<Point>({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const animFrameRef = useRef<number>(0);
-  const moveTimeRef = useRef(0);
-
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const intervalsRef = useRef<ReturnType<typeof setInterval>[]>([]);
@@ -134,11 +133,10 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const checkpoints = checkpointsRef.current;
     const obstacles = obstaclesRef.current;
 
-    ctx.fillStyle = '#1a1833';
+    ctx.fillStyle = '#0f0d1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw path
-    ctx.strokeStyle = '#c084fc';
+    ctx.strokeStyle = '#a78bfa55';
     ctx.lineWidth = config.pathWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -149,19 +147,27 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     });
     ctx.stroke();
 
-    // Path border
-    ctx.strokeStyle = 'rgba(15,14,23,0.5)';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 8]);
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 10]);
+    ctx.beginPath();
+    path.forEach((p, i) => {
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Draw checkpoints
     checkpoints.forEach((cp) => {
+      if (!cp.collected) {
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 12;
+      }
       ctx.fillStyle = cp.collected ? '#4ade80' : '#fbbf24';
       ctx.beginPath();
       ctx.arc(cp.x, cp.y, 14, 0, Math.PI * 2);
       ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'center';
@@ -169,13 +175,15 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       ctx.fillText(cp.collected ? '✓' : '⭐', cp.x, cp.y);
     });
 
-    // Draw obstacles
     if (config.obstacles) {
       obstacles.forEach(obs => {
+        ctx.shadowColor = '#ff6e6c';
+        ctx.shadowBlur = 10;
         ctx.fillStyle = '#ff6e6c';
         ctx.beginPath();
         ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.fillStyle = '#fff';
         ctx.font = '16px sans-serif';
         ctx.textAlign = 'center';
@@ -184,12 +192,14 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       });
     }
 
-    // Draw finish
     const end = path[path.length - 1];
+    ctx.shadowColor = '#4ade80';
+    ctx.shadowBlur = 16;
     ctx.fillStyle = '#4ade80';
     ctx.beginPath();
     ctx.arc(end.x, end.y, 18, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
@@ -203,17 +213,11 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     scoreRef.current = 0;
     collectedRef.current = 0;
     isDraggingRef.current = false;
-    moveTimeRef.current = 0;
     setScore(0);
     setCollected(0);
     setFeedback('Drag to move the ball!');
   }, []);
 
-  useEffect(() => {
-    startGame();
-  }, [startGame]);
-
-  // Resize canvas and generate path
   useEffect(() => {
     if (phase !== 'playing') return;
 
@@ -232,7 +236,6 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     return () => window.removeEventListener('resize', resize);
   }, [phase, draw]);
 
-  // Game loop
   useEffect(() => {
     if (phase !== 'playing') return;
 
@@ -271,7 +274,6 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const gameLoop = () => {
       if (!gameActiveRef.current) return;
 
-      // Update obstacles
       if (config.obstacles) {
         const canvas = canvasRef.current;
         if (canvas) {
@@ -286,7 +288,6 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
       draw();
 
-      // Check collisions
       const ball = ballRef.current;
       const distToPath = getDistanceToPath(ball.x, ball.y);
 
@@ -325,10 +326,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     };
 
     animFrameRef.current = requestAnimationFrame(gameLoop);
-
-    return () => {
-      cancelAnimationFrame(animFrameRef.current);
-    };
+    return () => { cancelAnimationFrame(animFrameRef.current); };
   }, [phase, config, draw, onScore, onProgress]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -357,17 +355,60 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     isDraggingRef.current = false;
   }, []);
 
+  if (phase === 'intro') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] p-6 text-center gap-4">
+        <div className="text-6xl">🎯</div>
+        <h2 className="text-2xl font-bold text-accent">Steady Hands</h2>
+        <p className="text-text-dim max-w-xs">Drag the ball along the path to reach the finish — without touching the walls!</p>
+
+        <div className="bg-card rounded-xl p-4 max-w-xs w-full">
+          <div className="flex justify-around text-sm">
+            <div className="text-center">
+              <div className="text-2xl mb-1">⭐</div>
+              <div className="text-warning font-bold">{config.checkpointCount}</div>
+              <div className="text-text-muted text-xs">Stars</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-1">{config.obstacles ? '☠️' : '✅'}</div>
+              <div className="text-accent font-bold">{config.obstacles ? 'On' : 'Off'}</div>
+              <div className="text-text-muted text-xs">Obstacles</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-1">📏</div>
+              <div className="text-cyan-400 font-bold">{config.pathWidth}px</div>
+              <div className="text-text-muted text-xs">Path width</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-surface rounded-lg p-3 max-w-xs w-full text-sm text-text-dim">
+          💡 Go slowly — rushing causes wall collisions! Collect ⭐ stars for bonus points.
+          {config.obstacles && ' Avoid the ☠️ obstacles!'}
+        </div>
+
+        <button
+          onClick={startGame}
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
+        >
+          Start! 🎯
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full min-h-[350px]">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl">
-        <span className="text-yellow-400 font-bold">⭐ {collected}/{config.checkpointCount}</span>
-        <span className="text-purple-400">Score: {score}</span>
+      <div className="flex justify-between items-center px-4 py-2 bg-card rounded-t-xl">
+        <span className="text-warning font-bold">⭐ {collected}/{config.checkpointCount}</span>
+        <span className="text-accent">Score: {score}</span>
+        {config.obstacles && <span className="text-danger text-xs">Dodge ☠️</span>}
       </div>
 
       <div
         ref={gameAreaRef}
-        className="flex-1 min-h-[280px] relative overflow-hidden"
-        style={{ background: '#232146', touchAction: 'none' }}
+        className="flex-1 min-h-[280px] relative overflow-hidden rounded-b-xl"
+        style={{ background: '#0f0d1a', touchAction: 'none' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -378,14 +419,16 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           className="absolute w-[18px] h-[18px] rounded-full pointer-events-none z-10"
           style={{
             background: '#ff6e6c',
-            boxShadow: '0 0 12px #ff6e6c',
+            boxShadow: '0 0 14px #ff6e6c, 0 0 6px #ff6e6c',
             left: ballPos.x - 9,
             top: ballPos.y - 9,
           }}
         />
       </div>
 
-      <div className="text-center py-2 text-cyan-300 text-sm min-h-[24px]">{feedback}</div>
+      <div className="text-center py-2 text-cyan-300 text-sm min-h-[28px] bg-surface">
+        {feedback}
+      </div>
     </div>
   );
 }

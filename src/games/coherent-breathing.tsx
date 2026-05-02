@@ -2,16 +2,16 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 import { Waves, Heart, Battery, Activity } from 'lucide-react';
 
-// Coherent/Resonance Breathing: inhale 5s, exhale 5s (5.5 breaths/min)
+// Coherent/Resonance Breathing: inhale Ns, exhale Ns (~5.5 breaths/min)
 // Activates parasympathetic nervous system
 
 type Phase = 'inhale' | 'exhale' | 'idle' | 'info' | 'done';
 
 const BENEFITS = [
-  { icon: Heart, label: 'Syncs heart rate variability (HRV)', color: 'text-danger' },
-  { icon: Waves, label: 'Activates parasympathetic nervous system', color: 'text-accent' },
-  { icon: Battery, label: 'Increases energy and reduces fatigue', color: 'text-success' },
-  { icon: Activity, label: 'Lowers blood pressure naturally', color: 'text-warning' },
+  { icon: Heart,    label: 'Syncs heart rate variability (HRV)',         color: 'text-danger'  },
+  { icon: Waves,    label: 'Activates parasympathetic nervous system',    color: 'text-accent'  },
+  { icon: Battery,  label: 'Increases energy and reduces fatigue',        color: 'text-success' },
+  { icon: Activity, label: 'Lowers blood pressure naturally',             color: 'text-warning' },
 ];
 
 const BEST_FOR = [
@@ -21,13 +21,17 @@ const BEST_FOR = [
   'Recovery after exercise or stress',
 ];
 
+const PHASE_META = {
+  inhale: { label: 'Breathe In',  instruction: 'Slow, smooth inhale through your nose...', color: '#a78bfa', glow: '#a78bfa60' },
+  exhale: { label: 'Breathe Out', instruction: 'Long, steady exhale through your mouth...', color: '#4ade80', glow: '#4ade8060' },
+};
+
 function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps) {
   const breathLen = Math.min(5 + Math.floor(stage / 3), 10);
   const totalRounds = 2 + stage;
   const [phase, setPhase] = useState<Phase>('info');
   const [round, setRound] = useState(0);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseRef = useRef<Phase>('info');
   const roundRef = useRef(0);
   const endedRef = useRef(false);
@@ -68,11 +72,14 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
             if (newRound > totalRounds) {
               setPhase('done');
               phaseRef.current = 'done';
-              if (timerRef.current) clearInterval(timerRef.current);
               if (!endedRef.current) {
                 endedRef.current = true;
                 const stars = totalRounds >= 8 ? 3 : totalRounds >= 4 ? 2 : 1;
-                onEnd({ score: totalRounds * 12, stars, summary: `${totalRounds} rounds of coherent breathing!` });
+                onEnd({
+                  score: totalRounds * 12,
+                  stars,
+                  summary: `${totalRounds} rounds of coherent breathing! Your heart and breath are in perfect sync. 💚`,
+                });
               }
               return 0;
             }
@@ -85,7 +92,6 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
         return prev - 1;
       });
     }, 1000);
-    timerRef.current = id;
     intervalsRef.current.push(id);
     return () => {
       clearInterval(id);
@@ -95,6 +101,12 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
 
   const breathsPerMin = Math.round(60 / (breathLen * 2) * 10) / 10;
   const estimatedMinutes = Math.ceil(totalRounds * (breathLen * 2) / 60);
+  const phaseProgress = (breathLen - secondsLeft) / breathLen;
+  const circleScale = phase === 'inhale'
+    ? 0.6 + phaseProgress * 0.5
+    : phase === 'exhale'
+    ? 1.1 - phaseProgress * 0.5
+    : 0.6;
 
   if (phase === 'info') {
     return (
@@ -103,46 +115,36 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
           <div className="text-center mb-6">
             <div className="text-6xl mb-3">☯️</div>
             <h2 className="text-2xl font-bold text-accent">Coherent Breathing</h2>
-            <p className="text-text-dim text-sm mt-1">Heart-breath synchronization at ~{breathsPerMin} breaths/min</p>
+            <p className="text-text-muted text-sm mt-1">Heart-breath synchronization at ~{breathsPerMin} breaths/min</p>
           </div>
 
           <div className="bg-card rounded-2xl p-4 mb-5">
-            <div className="text-xs font-semibold text-text-muted mb-3 text-center">THE PATTERN</div>
+            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3 text-center">The Pattern</div>
             <div className="flex items-center justify-center gap-2 text-sm">
-              <span className="bg-accent/20 text-accent px-3 py-1.5 rounded-lg font-semibold">Inhale {breathLen}s</span>
+              <div className="bg-accent/20 text-accent px-3 py-2 rounded-xl font-bold text-center">
+                <div>Inhale</div><div className="text-xs opacity-70">{breathLen}s</div>
+              </div>
               <span className="text-text-muted">→</span>
-              <span className="bg-success/20 text-success px-3 py-1.5 rounded-lg font-semibold">Exhale {breathLen}s</span>
+              <div className="bg-green-500/20 text-green-400 px-3 py-2 rounded-xl font-bold text-center">
+                <div>Exhale</div><div className="text-xs opacity-70">{breathLen}s</div>
+              </div>
             </div>
-            <div className="text-center text-xs text-text-muted mt-2">
-              ~{breathsPerMin} breaths per minute (optimal HRV zone)
-            </div>
+            <div className="text-center text-xs text-text-muted mt-2">~{breathsPerMin} breaths/min (optimal HRV zone)</div>
           </div>
 
-          <div className="bg-card rounded-2xl p-4 mb-5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-text-muted">Rounds</span>
-              <span className="font-semibold text-text">{totalRounds}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-text-muted">Breath length</span>
-              <span className="font-semibold text-text">{breathLen}s in, {breathLen}s out</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-text-muted">Estimated time</span>
-              <span className="font-semibold text-text">~{estimatedMinutes} min</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-text-muted">Stage</span>
-              <span className="font-semibold text-accent">{stage}/10</span>
-            </div>
+          <div className="bg-card rounded-2xl p-4 mb-5 space-y-2 text-sm">
+            <div className="flex justify-between"><span className="text-text-muted">Rounds</span><span className="font-bold text-text">{totalRounds}</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">Breath length</span><span className="font-bold text-text">{breathLen}s each</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">Estimated time</span><span className="font-bold text-text">~{estimatedMinutes} min</span></div>
+            <div className="flex justify-between"><span className="text-text-muted">Stage</span><span className="font-bold text-accent">{stage}</span></div>
           </div>
 
           <div className="mb-5">
-            <h3 className="text-sm font-bold text-text-dim mb-3">Benefits</h3>
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-3">Benefits</h3>
             <div className="space-y-2">
               {BENEFITS.map((b, i) => (
                 <div key={i} className="flex items-center gap-3 bg-card rounded-xl p-3">
-                  <b.icon size={18} className={b.color} />
+                  <b.icon size={16} className={b.color} />
                   <span className="text-sm text-text">{b.label}</span>
                 </div>
               ))}
@@ -150,7 +152,7 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
           </div>
 
           <div className="mb-6">
-            <h3 className="text-sm font-bold text-text-dim mb-3">Best For</h3>
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-3">Best For</h3>
             <div className="space-y-2">
               {BEST_FOR.map((item, i) => (
                 <div key={i} className="flex items-start gap-2 bg-card rounded-xl p-3">
@@ -163,7 +165,7 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
 
           <button
             onClick={startCycle}
-            className="w-full bg-accent text-bg font-bold py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+            className="w-full bg-accent text-bg font-bold py-3.5 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
           >
             Start Session
           </button>
@@ -177,13 +179,10 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
         <div className="text-6xl mb-4">☯️</div>
         <h2 className="text-2xl font-bold text-accent mb-2">Coherent Breathing</h2>
-        <p className="text-text-dim mb-4 max-w-xs">
-          Inhale {breathLen}s, exhale {breathLen}s. ~{breathsPerMin} breaths/min.
+        <p className="text-text-muted mb-6 max-w-xs">
+          Inhale {breathLen}s, Exhale {breathLen}s. ~{breathsPerMin} breaths/min.
           Syncs heart rate and breath for maximum calm.
         </p>
-        <div className="text-text-muted text-sm mb-2">
-          ~{estimatedMinutes} min · {totalRounds} rounds · Stage {stage}/10
-        </div>
         <button onClick={startCycle} className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95">
           Begin
         </button>
@@ -194,52 +193,81 @@ function CoherentBreathingGame({ stage, onScore, onProgress, onMessage, onEnd }:
   if (phase === 'done') {
     return (
       <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4 animate-[celebrate_0.4s_ease]">☮️</div>
-        <h2 className="text-2xl font-bold mb-2">In Sync</h2>
-        <p className="text-text-muted mb-6">{totalRounds} rounds completed</p>
-        <button onClick={() => { setPhase('idle'); setRound(0); }} className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl">Again</button>
+        <div className="text-7xl mb-4">☮️</div>
+        <h2 className="text-2xl font-bold mb-2 text-accent">In Sync</h2>
+        <p className="text-text-muted mb-2">{totalRounds} rounds completed</p>
+        <p className="text-text-muted text-sm mb-6 max-w-xs">Your heart and breath are now in harmonious rhythm.</p>
+        <button onClick={() => { setPhase('idle'); setRound(0); endedRef.current = false; }} className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90">Again</button>
       </div>
     );
   }
 
-  const pct = ((breathLen - secondsLeft) / breathLen) * 100;
+  const meta = PHASE_META[phase as 'inhale' | 'exhale'] || PHASE_META.inhale;
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-6">
-      <div className="text-sm text-text-muted mb-4">Round {round}/{totalRounds}</div>
-      <div className="relative w-56 h-32 mb-6">
-        <svg viewBox="0 0 220 100" className="w-full h-full">
-          <defs>
-            <linearGradient id="breathGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.3" />
-              <stop offset="50%" stopColor="#818cf8" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.3" />
-            </linearGradient>
-          </defs>
-          <path
-            d={phase === 'inhale'
-              ? `M 10,80 Q ${10 + pct * 2},80 ${20 + pct * 0.8},${80 - (pct / 100) * 60} T 210,80`
-              : `M 10,80 Q ${10 + (100 - pct) * 2},80 ${20 + (100 - pct) * 0.8},${20 + (pct / 100) * 60} T 210,80`}
-            fill="none"
-            stroke="url(#breathGrad)"
-            strokeWidth="4"
-            strokeLinecap="round"
-          />
-          <circle
-            cx={110}
-            cy={phase === 'inhale' ? 80 - (pct / 100) * 60 : 20 + (pct / 100) * 60}
-            r="6"
-            fill="#a78bfa"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-4xl font-bold text-text">{secondsLeft}</div>
+    <div className="h-full flex flex-col items-center justify-center p-6 gap-5">
+      <div className="text-sm text-text-muted">Round {round}/{totalRounds} · {breathLen}s per phase</div>
+
+      {/* Glowing animated circle */}
+      <div className="relative flex items-center justify-center" style={{ width: 180, height: 180 }}>
+        {/* Outer glow ring */}
+        <div
+          className="absolute inset-0 rounded-full transition-all duration-1000"
+          style={{
+            background: `radial-gradient(circle, ${meta.glow} 0%, transparent 70%)`,
+            transform: `scale(${circleScale + 0.3})`,
+          }}
+        />
+        {/* Main circle */}
+        <div
+          className="absolute inset-0 rounded-full transition-all duration-1000"
+          style={{
+            border: `4px solid ${meta.color}`,
+            boxShadow: `0 0 30px ${meta.color}70, 0 0 60px ${meta.color}30`,
+            transform: `scale(${circleScale})`,
+            background: `${meta.color}12`,
+          }}
+        />
+        {/* Countdown */}
+        <div className="relative text-center z-10">
+          <div className="text-5xl font-black text-white">{secondsLeft}</div>
         </div>
       </div>
-      <div className="text-lg font-semibold text-accent">
-        {phase === 'inhale' ? 'Inhale' : 'Exhale'}
+
+      {/* Phase label */}
+      <div className="text-center">
+        <div className="text-xl font-bold" style={{ color: meta.color }}>{meta.label}</div>
+        <div className="text-text-muted text-sm mt-1 italic">{meta.instruction}</div>
       </div>
-      <div className="text-xs text-text-muted mt-1">{breathLen}s per breath</div>
+
+      {/* Phase indicator strip */}
+      <div className="flex gap-1 w-full max-w-xs">
+        {(['inhale', 'exhale'] as const).map(p => (
+          <div
+            key={p}
+            className="flex-1 h-1.5 rounded-full transition-all duration-500"
+            style={{
+              background: phase === p ? PHASE_META[p].color : `${PHASE_META[p].color}25`,
+              boxShadow: phase === p ? `0 0 8px ${PHASE_META[p].color}` : 'none',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Round dots */}
+      <div className="flex gap-1.5 justify-center flex-wrap max-w-xs">
+        {Array.from({ length: totalRounds }, (_, i) => (
+          <div
+            key={i}
+            className="rounded-full transition-all duration-500"
+            style={{
+              width: 8, height: 8,
+              background: i < round - 1 ? meta.color : i === round - 1 ? `${meta.color}80` : '#ffffff15',
+              boxShadow: i === round - 1 ? `0 0 8px ${meta.color}` : 'none',
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

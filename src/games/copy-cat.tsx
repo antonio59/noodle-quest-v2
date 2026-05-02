@@ -43,8 +43,8 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
   const [score, setScore] = useState(0);
   const [round, setRound] = useState(1);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState('');
   const [colorCount, setColorCount] = useState(4);
+  const [flashIndex, setFlashIndex] = useState<number | null>(null);
 
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -73,20 +73,22 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     if (endedRef.current) return;
     setPhase('watching');
     onMessage('👀 Watch the pattern...');
-    setFeedback('');
     setPlayerIndex(0);
 
     seq.forEach((colorIdx, i) => {
       schedule(() => {
         setActiveIndex(colorIdx);
-        schedule(() => setActiveIndex(null), config.speed * 0.4);
+        setFlashIndex(colorIdx);
+        schedule(() => {
+          setActiveIndex(null);
+          setFlashIndex(null);
+        }, config.speed * 0.4);
       }, i * config.speed);
     });
 
     schedule(() => {
       setPhase('playing');
       onMessage('🖐️ Your turn! Repeat it!');
-      setFeedback(`Tap ${seq.length} colors in the same order`);
     }, seq.length * config.speed);
   }, [config.speed, onMessage, schedule]);
 
@@ -119,7 +121,11 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     if (phase !== 'playing') return;
 
     setActiveIndex(index);
-    schedule(() => setActiveIndex(null), 150);
+    setFlashIndex(index);
+    schedule(() => {
+      setActiveIndex(null);
+      setFlashIndex(null);
+    }, 150);
 
     if (index !== sequence[playerIndex]) {
       setPhase('done');
@@ -133,7 +139,6 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
     onScore(15);
     const newPlayerIndex = playerIndex + 1;
     setPlayerIndex(newPlayerIndex);
-    setFeedback(`✓ ${newPlayerIndex}/${sequence.length} correct`);
 
     if (newPlayerIndex >= sequence.length) {
       const currentRound = sequence.length - config.startLength + 1;
@@ -143,7 +148,6 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         finishGame(newScore + 100, currentRound, true);
       } else {
         onMessage('✨ Perfect! Get ready for more...');
-        setFeedback('+1 color coming up!');
         const newSeq = [...sequence, Math.floor(Math.random() * colorCount)];
         setSequence(newSeq);
         setRound(currentRound + 1);
@@ -156,19 +160,34 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
 
   if (phase === 'intro') {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6 text-center">
-        <div className="text-6xl mb-4">🐱</div>
-        <h2 className="text-2xl font-bold text-accent mb-2">Copy Cat</h2>
-        <p className="text-text-dim mb-6 max-w-xs">Watch the pattern light up, then repeat it!</p>
-        <div className="flex gap-2 mb-6">
-          {COLOR_DATA.slice(0, colorCount).map((c, i) => (
-            <div key={i} className="w-8 h-8 rounded-lg" style={{ background: c.color }} />
-          ))}
+      <div className="h-full flex flex-col items-center justify-center p-6 text-center gap-4">
+        <div className="text-6xl">🐱</div>
+        <h2 className="text-2xl font-bold text-accent">Copy Cat</h2>
+        <p className="text-text-dim max-w-xs">Watch the pattern light up, then repeat it in the same order!</p>
+
+        <div className="bg-card rounded-xl p-4 max-w-xs w-full">
+          <div className="text-warning font-bold mb-2">Up to {config.maxRounds} rounds</div>
+          <div className="flex gap-2 justify-center flex-wrap mb-2">
+            {COLOR_DATA.slice(0, 4).map((c, i) => (
+              <div key={i} className="w-9 h-9 rounded-lg text-xl flex items-center justify-center" style={{ background: c.color }}>
+                {c.emoji}
+              </div>
+            ))}
+          </div>
+          <div className="text-text-muted text-sm">More colors unlock as rounds progress!</div>
         </div>
-        <p className="text-text-muted text-sm mb-6">👀 Watch → 🖐️ Repeat → 🎉 Next round!</p>
+
+        <div className="flex items-center gap-3 text-sm text-text-dim">
+          <span>👀 Watch</span>
+          <span className="text-accent">→</span>
+          <span>🖐️ Repeat</span>
+          <span className="text-accent">→</span>
+          <span>🎉 Level up!</span>
+        </div>
+
         <button
           onClick={startGame}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95"
+          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
         >
           Start! 🐱
         </button>
@@ -178,32 +197,55 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
 
   const cols = colorCount <= 4 ? 2 : colorCount <= 6 ? 3 : colorCount <= 8 ? 4 : 5;
 
+  const progressDots = Array.from({ length: sequence.length }, (_, i) => ({
+    filled: i < playerIndex,
+    active: i === playerIndex && phase === 'playing',
+  }));
+
   return (
-    <div className="h-full flex flex-col items-center p-4">
-      <div className="flex gap-4 mb-3 bg-card rounded-xl px-4 py-2">
-        <span className="text-warning font-bold">Round: {round}</span>
+    <div className="h-full flex flex-col items-center p-4 gap-3">
+      <div className="flex gap-4 bg-card rounded-xl px-4 py-2">
+        <span className="text-warning font-bold">Round {round}/{config.maxRounds}</span>
         <span className="text-accent">Score: {score}</span>
+        <span className="text-cyan-400 text-sm">
+          {phase === 'watching' ? '👀 Watch' : '🖐️ Tap!'}
+        </span>
       </div>
 
-      <div className="text-text-dim text-sm mb-3 min-h-[24px]">
-        {phase === 'watching' && '👀 Watch the pattern...'}
-        {phase === 'playing' && '🖐️ Your turn!'}
+      <div className="flex gap-1.5 items-center min-h-[20px]">
+        {progressDots.map((dot, i) => (
+          <div
+            key={i}
+            className="rounded-full transition-all duration-150"
+            style={{
+              width: dot.active ? 14 : 10,
+              height: dot.active ? 14 : 10,
+              background: dot.filled ? '#4ade80'
+                : dot.active ? '#fbbf24'
+                : 'rgba(255,255,255,0.15)',
+              boxShadow: dot.active ? '0 0 8px #fbbf24' : dot.filled ? '0 0 6px #4ade80' : 'none',
+            }}
+          />
+        ))}
       </div>
 
       <div
-        className="grid gap-2 p-4 bg-card rounded-2xl"
+        className="grid gap-2 p-4 bg-card rounded-2xl shadow-lg"
         style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
       >
         {COLOR_DATA.slice(0, colorCount).map((c, i) => (
           <button
             key={i}
             onPointerDown={() => handleTap(i)}
-            className="w-16 h-16 rounded-xl text-2xl transition-all duration-150 active:scale-90"
+            disabled={phase !== 'playing'}
+            className="w-16 h-16 rounded-xl text-2xl transition-all duration-100 disabled:cursor-default select-none"
             style={{
               background: c.color,
-              opacity: activeIndex === i ? 1 : 0.5,
-              transform: activeIndex === i ? 'scale(0.92)' : 'scale(1)',
-              boxShadow: activeIndex === i ? `0 0 25px ${c.color}` : '0 4px 0 rgba(0,0,0,0.3)',
+              opacity: flashIndex === i ? 1 : phase === 'watching' ? 0.4 : 0.65,
+              transform: flashIndex === i ? 'scale(0.88)' : 'scale(1)',
+              boxShadow: flashIndex === i
+                ? `0 0 28px ${c.color}, 0 0 10px ${c.color}99`
+                : '0 4px 0 rgba(0,0,0,0.3)',
             }}
           >
             {c.emoji}
@@ -211,9 +253,13 @@ function CopyCatGame({ stage, onScore, onProgress, onMessage, onEnd }: GameProps
         ))}
       </div>
 
-      {feedback && (
-        <div className="text-text-dim text-sm mt-3 text-center">{feedback}</div>
-      )}
+      <div className="text-text-muted text-xs text-center min-h-[16px]">
+        {phase === 'playing' && playerIndex < sequence.length
+          ? `${playerIndex}/${sequence.length} tapped`
+          : phase === 'watching'
+            ? 'Memorize the order...'
+            : ''}
+      </div>
     </div>
   );
 }
