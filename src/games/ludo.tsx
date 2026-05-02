@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
 
-const C = 26; // cell size px
+const C = 26;
 const N = 15;
 const W = C * N;
 
-// Full 52-square outer track (clockwise from Red entry)
 const TRACK: [number, number][] = [
   [6,1],[6,2],[6,3],[6,4],[6,5],
   [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
@@ -21,19 +20,26 @@ const TRACK: [number, number][] = [
   [7,0],
 ];
 
-const RED_STRETCH: [number, number][] = [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]];
-const BLUE_STRETCH: [number, number][] = [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]];
-const GREEN_STRETCH: [number, number][] = [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]];
+const RED_STRETCH:    [number, number][] = [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]];
+const BLUE_STRETCH:   [number, number][] = [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]];
+const GREEN_STRETCH:  [number, number][] = [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]];
 const YELLOW_STRETCH: [number, number][] = [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]];
 
-// Safe squares on the main track (entry squares + star squares)
+// 4 parking circles per base (col, row)
+const RED_SPOTS:  [number, number][] = [[1.7,1.7],[3.3,1.7],[1.7,3.3],[3.3,3.3]];
+const BLUE_SPOTS: [number, number][] = [[10.7,10.7],[12.3,10.7],[10.7,12.3],[12.3,12.3]];
+
 const SAFE_POSITIONS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+const BLUE_ENTRY = 26;
 
 const DIFF_CFG = {
   easy:   { enter: 0.3,  home: 0.35, cap: 0.25 },
   medium: { enter: 0.7,  home: 0.8,  cap: 0.7  },
   hard:   { enter: 1.0,  home: 1.0,  cap: 1.0  },
 };
+
+// Small px offsets when multiple pieces share one track square
+const STACK_OFF: [number, number][] = [[-4,-4],[4,-4],[-4,4],[4,4]];
 
 function rollDie(): number { return Math.floor(Math.random() * 6) + 1; }
 
@@ -44,24 +50,66 @@ function posCoord(pos: number, stretch: [number, number][]): [number, number] {
   return [7, 7];
 }
 
-function advance(pos: number, steps: number): number {
+// Red/player advance: enters at 0, home stretch wraps to 52+
+function advanceRed(pos: number, steps: number): number {
   if (pos === -1) return steps === 6 ? 0 : -1;
   const next = pos + steps;
-  return next > 58 ? pos : next;
+  return next > 58 ? pos : next; // can't overshoot home
 }
 
-function aiRoll(pPos: number, aPos: number, diff: 'easy' | 'medium' | 'hard'): number {
-  const cfg = DIFF_CFG[diff];
-  if (aPos === -1 && Math.random() < cfg.enter) return 6;
-  if (aPos >= 0 && Math.random() < cfg.home) {
-    const gap = 58 - aPos;
-    if (gap > 0 && gap <= 6) return gap;
+// Blue/AI advance: enters at BLUE_ENTRY, home stretch separately
+function advanceBlue(pos: number, steps: number): number {
+  if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
+  const next = pos + steps;
+  if (pos < 52 && next >= 52) {
+    const over = next - 52;
+    return over <= 6 ? 52 + over : pos;
   }
-  if (aPos >= 0 && aPos < 52 && pPos >= 0 && pPos < 52 && Math.random() < cfg.cap) {
-    const gap = ((pPos - aPos) + 52) % 52;
-    if (gap > 0 && gap <= 6) return gap;
+  if (pos >= 52) return next > 58 ? pos : next;
+  return next % 52;
+}
+
+function getMovableIndices(pieces: number[], d: number, isBlue: boolean): number[] {
+  const adv = isBlue ? advanceBlue : advanceRed;
+  const result: number[] = [];
+  for (let i = 0; i < pieces.length; i++) {
+    const pos = pieces[i];
+    if (pos >= 58) continue; // already home
+    const np = adv(pos, d);
+    if (np === pos) continue; // no movement (overshoot or no 6)
+    if (np === -1) continue;  // stayed at base (no 6)
+    result.push(i);
+  }
+  return result;
+}
+
+function aiRollMulti(pPieces: number[], aPieces: number[], diff: 'easy'|'medium'|'hard'): number {
+  const cfg = DIFF_CFG[diff];
+  if (aPieces.some(p => p === -1) && Math.random() < cfg.enter) return 6;
+  for (const ap of aPieces) {
+    if (ap >= 0 && ap < 58 && Math.random() < cfg.home) {
+      const gap = 58 - ap;
+      if (gap > 0 && gap <= 6) return gap;
+    }
+  }
+  for (const ap of aPieces) {
+    for (const pp of pPieces) {
+      if (ap >= 0 && ap < 52 && pp >= 0 && pp < 52 && !SAFE_POSITIONS.has(pp) && Math.random() < cfg.cap) {
+        const gap = ((pp - ap + 52) % 52);
+        if (gap > 0 && gap <= 6) return gap;
+      }
+    }
   }
   return rollDie();
+}
+
+function scoreMove(np: number, pPieces: number[]): number {
+  if (np >= 58) return 1000;
+  let score = np >= 52 ? 200 + np : np;
+  for (const pp of pPieces) {
+    if (np === pp && np >= 0 && np < 52 && !SAFE_POSITIONS.has(np)) score += 500;
+  }
+  return score;
 }
 
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
@@ -69,24 +117,29 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   const mySide: 'red' | 'blue' = isOnline
     ? (multiplayerState.playerNumber === 1 ? 'red' : 'blue')
     : 'red';
-  const oppSide: 'red' | 'blue' = mySide === 'red' ? 'blue' : 'red';
-  const myStretch   = mySide === 'red' ? RED_STRETCH  : BLUE_STRETCH;
-  const oppStretch  = mySide === 'red' ? BLUE_STRETCH : RED_STRETCH;
-  const myColor     = mySide === 'red' ? '#ef4444' : '#3b82f6';
-  const oppColor    = mySide === 'red' ? '#3b82f6' : '#ef4444';
+  const myStretch  = mySide === 'red' ? RED_STRETCH  : BLUE_STRETCH;
+  const oppStretch = mySide === 'red' ? BLUE_STRETCH : RED_STRETCH;
+  const myColor    = mySide === 'red' ? '#ef4444' : '#3b82f6';
+  const oppColor   = mySide === 'red' ? '#3b82f6' : '#ef4444';
+  const mySpots    = mySide === 'red' ? RED_SPOTS  : BLUE_SPOTS;
+  const oppSpots   = mySide === 'red' ? BLUE_SPOTS : RED_SPOTS;
+  const myLight    = mySide === 'red' ? '#fca5a5' : '#93c5fd';
+  const oppLight   = mySide === 'red' ? '#93c5fd' : '#fca5a5';
+  const myAdv      = mySide === 'red' ? advanceRed : advanceBlue;
+  const oppAdv     = mySide === 'red' ? advanceBlue : advanceRed;
 
-  const [pPos, setPPos] = useState(-1);
-  const [aPos, setAPos] = useState(-1);
-  const [turn, setTurn] = useState<'p' | 'a'>('p');
-  const [dice, setDice] = useState<number | null>(null);
-  const [over, setOver] = useState(false);
+  const [pPieces, setPPieces] = useState<number[]>([-1,-1,-1,-1]);
+  const [aPieces, setAPieces] = useState<number[]>([-1,-1,-1,-1]);
+  const [turn, setTurn]       = useState<'p'|'a'>('p');
+  const [dice, setDice]       = useState<number|null>(null);
+  const [pendingDice, setPendingDice] = useState<number|null>(null);
+  const [movable, setMovable] = useState<number[]>([]);
+  const [over, setOver]       = useState(false);
   const [started, setStarted] = useState(false);
   const diff = aiDifficulty || 'medium';
 
-  const BLUE_ENTRY = 26;
-
-  const pPosRef  = useRef(-1);
-  const aPosRef  = useRef(-1);
+  const pRef     = useRef<number[]>([-1,-1,-1,-1]);
+  const aRef     = useRef<number[]>([-1,-1,-1,-1]);
   const overRef  = useRef(false);
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -101,195 +154,193 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   }, []);
 
   useEffect(() => {
-    return () => {
-      endedRef.current = true;
-      timeoutsRef.current.forEach(clearTimeout);
-    };
+    return () => { endedRef.current = true; timeoutsRef.current.forEach(clearTimeout); };
   }, []);
 
   useEffect(() => {
-    onMessage(isOnline ? 'Online Ludo — roll a 6 to enter!' : 'Roll a 6 to enter the track!');
-  }, [onMessage, isOnline]);
+    onMessage('Roll a 6 to enter! Tap a glowing piece to move it.');
+  }, [onMessage]);
 
-  useEffect(() => {
-    if (!isOnline || !multiplayerState) return;
-    const bs = multiplayerState.boardState as { redPos?: number; bluePos?: number; lastRoll?: number } | null | undefined;
-    if (!bs) return;
-    const redPos  = typeof bs.redPos  === 'number' ? bs.redPos  : -1;
-    const bluePos = typeof bs.bluePos === 'number' ? bs.bluePos : -1;
-    const myPos   = mySide === 'red' ? redPos  : bluePos;
-    const oppPos  = mySide === 'red' ? bluePos : redPos;
-    pPosRef.current = myPos;
-    aPosRef.current = oppPos;
-    setPPos(myPos);
-    setAPos(oppPos);
-    if (typeof bs.lastRoll === 'number') setDice(bs.lastRoll);
-    setTurn(multiplayerState.currentPlayer === multiplayerState.playerNumber ? 'p' : 'a');
-    if ((redPos >= 58 || bluePos >= 58) && !endedRef.current) {
-      endedRef.current = true;
-      const iWon = myPos >= 58;
-      onEnd({ score: iWon ? 100 : 0, stars: iWon ? 3 : 1, summary: iWon ? 'You won online Ludo!' : 'Opponent reached home first.' });
-    }
-  }, [isOnline, multiplayerState, mySide, onEnd]);
-
-  const updatePPos = (v: number) => { pPosRef.current = v; setPPos(v); };
-  const updateAPos = (v: number) => { aPosRef.current = v; setAPos(v); };
-  const updateOver = (v: boolean) => { overRef.current = v; setOver(v); };
-
-  const advanceAI = (pos: number, steps: number): number => {
-    if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
-    const next = pos + steps;
-    if (pos < 52 && next >= 52) {
-      const overTrack = next - 52;
-      if (overTrack <= 6) return 52 + overTrack;
-      return pos;
-    }
-    if (pos >= 52) {
-      const nextStretch = pos + steps;
-      return nextStretch > 58 ? pos : nextStretch;
-    }
-    return next % 52;
-  };
-
-  const doAi = () => {
+  // ── AI turn ──────────────────────────────────────────────────────────────
+  const doAi = useCallback(() => {
     if (endedRef.current || overRef.current) return;
-    const curP = pPosRef.current, curA = aPosRef.current;
-    const d = aiRoll(curP, curA, diff);
+    const d = aiRollMulti(pRef.current, aRef.current, diff);
     setDice(d);
-    const np = advanceAI(curA, d);
-    if (np === curA && curA !== -1) { onMessage(`AI rolled ${d} — can't move.`); setTurn('p'); return; }
-    if (np === -1)                   { onMessage(`AI rolled ${d} — needs a 6.`); setTurn('p'); return; }
-    updateAPos(np);
-    if (np >= 0 && np < 52 && np === curP) {
-      updatePPos(-1);
-      onMessage(`AI rolled ${d} — captured you!`);
-    } else if (np >= 58) {
-      updateOver(true);
-      onMessage('AI reached home! 💔');
-      endedRef.current = true;
-      schedule(() => onEnd({ score: 10, stars: 1, summary: 'The AI got home first. Better luck next time!' }), 1500);
+
+    const mv = getMovableIndices(aRef.current, d, mySide !== 'red');
+
+    if (mv.length === 0) {
+      onMessage(`AI rolled ${d} — no piece can move.`);
+      setTurn('p');
       return;
+    }
+
+    // Pick best piece
+    let bestIdx = mv[0], bestScore = -Infinity;
+    for (const i of mv) {
+      const np = oppAdv(aRef.current[i], d);
+      const s  = scoreMove(np, pRef.current);
+      if (s > bestScore) { bestScore = s; bestIdx = i; }
+    }
+
+    const apieces = [...aRef.current];
+    const np = oppAdv(apieces[bestIdx], d);
+    apieces[bestIdx] = np;
+    aRef.current = apieces;
+    setAPieces([...apieces]);
+
+    // Capture check
+    const ppieces = [...pRef.current];
+    let captured = false;
+    if (np >= 0 && np < 52 && !SAFE_POSITIONS.has(np)) {
+      for (let pi = 0; pi < 4; pi++) {
+        if (ppieces[pi] === np) { ppieces[pi] = -1; captured = true; }
+      }
+    }
+    if (captured) {
+      pRef.current = ppieces;
+      setPPieces([...ppieces]);
+      onMessage(`AI rolled ${d} — captured your piece!`);
+    } else if (np >= 58) {
+      const hc = apieces.filter(p => p >= 58).length;
+      onMessage(`AI piece reached home! (${hc}/4) 💙`);
     } else {
-      const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
+      const label = np >= 52 ? `home stretch ${np-51}/6` : `sq ${np}`;
       onMessage(`AI rolled ${d} → ${label}`);
     }
-    if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus roll!'); schedule(doAi, 700); return; }
-    setTurn('p');
-  };
 
-  const handleRoll = () => {
-    if (endedRef.current || overRef.current || turn !== 'p') return;
-    const curP = pPosRef.current, curA = aPosRef.current;
-    const d = rollDie();
-    setDice(d);
-
-    if (isOnline && multiplayerState && onMultiplayerMove) {
-      const myAdvance = mySide === 'red' ? advance : advanceAI;
-      const np = myAdvance(curP, d);
-      if (np === curP && curP !== -1) { onMessage(`Rolled ${d} — can't move.`); return; }
-      if (np === -1)                   { onMessage(`Rolled ${d} — need a 6.`); return; }
-      let newOpp = curA;
-      if (np >= 0 && np < 52 && np === curA) { newOpp = -1; onMessage(`Rolled ${d} — captured opponent!`); }
-      updatePPos(np);
-      if (newOpp !== curA) updateAPos(newOpp);
-      const redPos  = mySide === 'red' ? np : newOpp;
-      const bluePos = mySide === 'red' ? newOpp : np;
-      const iWon = np >= 58;
-      onMultiplayerMove({ boardState: { redPos, bluePos, lastRoll: d }, winner: iWon ? multiplayerState.playerNumber : undefined });
-      if (iWon) onScore(100);
+    // Win check
+    if (apieces.every(p => p >= 58)) {
+      overRef.current = true; setOver(true);
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 10, stars: 1, summary: 'AI got all 4 pieces home. Better luck next time!' }), 1500);
       return;
     }
 
-    const np = advance(curP, d);
-    if (np === curP && curP !== -1) { onMessage(`Rolled ${d} — can't overshoot!`); setTurn('a'); schedule(doAi, 800); return; }
-    if (np === -1)                   { onMessage(`Rolled ${d} — need a 6!`);        setTurn('a'); schedule(doAi, 800); return; }
-    updatePPos(np);
-    if (np >= 0 && np < 52 && np === curA) {
-      updateAPos(-1);
-      onMessage(`Rolled ${d} — captured AI!`);
+    if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus!'); schedule(doAi, 700); return; }
+    setTurn('p');
+  }, [diff, mySide, oppAdv, onMessage, onEnd, schedule]);
+
+  // ── Move a player piece ──────────────────────────────────────────────────
+  const movePiece = useCallback((idx: number, d: number) => {
+    const pieces = [...pRef.current];
+    const np = myAdv(pieces[idx], d);
+    pieces[idx] = np;
+    pRef.current = pieces;
+    setPPieces([...pieces]);
+
+    const apieces = [...aRef.current];
+    let captured = false;
+    if (np >= 0 && np < 52 && !SAFE_POSITIONS.has(np)) {
+      for (let ai = 0; ai < 4; ai++) {
+        if (apieces[ai] === np) { apieces[ai] = -1; captured = true; }
+      }
+    }
+    if (captured) {
+      aRef.current = apieces;
+      setAPieces([...apieces]);
+      onMessage(`Rolled ${d} — captured an AI piece! 🔴`);
     } else if (np >= 58) {
-      updateOver(true);
-      onMessage('You reached home! 🎉');
-      onScore(100);
-      onProgress(1);
-      endedRef.current = true;
-      schedule(() => onEnd({ score: 100, stars: 3, summary: 'You got your piece home first! Well done!' }), 1000);
-      return;
+      const hc = pieces.filter(p => p >= 58).length;
+      onMessage(`Piece ${hc}/4 home! 🎉`);
     } else {
-      const label = np >= 52 ? `home stretch ${np - 51}/6` : `square ${np}`;
+      const label = np >= 52 ? `home stretch ${np-51}/6` : `sq ${np}`;
       onMessage(`Rolled ${d} → ${label}`);
     }
+
+    if (pieces.every(p => p >= 58)) {
+      overRef.current = true; setOver(true);
+      onScore(100); onProgress(1);
+      endedRef.current = true;
+      schedule(() => onEnd({ score: 100, stars: 3, summary: 'All 4 pieces home! You win!' }), 1000);
+      return;
+    }
+
     if (d === 6 && !overRef.current) { onMessage('Rolled 6 — bonus roll!'); return; }
     setTurn('a');
     schedule(doAi, 800);
+  }, [myAdv, onMessage, onScore, onProgress, onEnd, schedule, doAi]);
+
+  // ── Roll handler ─────────────────────────────────────────────────────────
+  const handleRoll = () => {
+    if (endedRef.current || overRef.current || turn !== 'p' || pendingDice !== null) return;
+    const d = rollDie();
+    setDice(d);
+
+    const mv = getMovableIndices(pRef.current, d, mySide !== 'red');
+    if (mv.length === 0) {
+      onMessage(`Rolled ${d} — no piece can move!`);
+      setTurn('a');
+      schedule(doAi, 800);
+      return;
+    }
+    if (mv.length === 1) { movePiece(mv[0], d); return; }
+    setPendingDice(d);
+    setMovable(mv);
+    onMessage(`Rolled ${d} — tap a glowing piece to move!`);
   };
 
-  // SVG helpers
+  const handlePieceClick = (idx: number) => {
+    if (pendingDice === null || !movable.includes(idx)) return;
+    const d = pendingDice;
+    setPendingDice(null);
+    setMovable([]);
+    movePiece(idx, d);
+  };
+
+  // ── SVG helpers ──────────────────────────────────────────────────────────
   const cx = (col: number) => col * C + C / 2;
   const cy = (row: number) => row * C + C / 2;
 
+  // Offset position for stacked pieces sharing the same square
+  const stackedXY = (pos: number, stretch: [number, number][], pieceIdx: number, allPieces: number[]): [number, number] => {
+    const [row, col] = posCoord(pos, stretch);
+    const bx = cx(col), by = cy(row);
+    const rank = allPieces.slice(0, pieceIdx).filter(p => p === pos).length;
+    const [ox, oy] = STACK_OFF[rank % 4];
+    return [bx + (rank > 0 ? ox : 0), by + (rank > 0 ? oy : 0)];
+  };
+
+  // ── Board rendering ──────────────────────────────────────────────────────
   const renderBoard = () => {
     const el: React.ReactElement[] = [];
 
-    // ── Outer board frame ─────────────────────────────────────────────────
     el.push(
       <rect key="frame" x={0} y={0} width={W} height={W} fill="#0a0818" rx={10} />,
-      <rect key="bg" x={2} y={2} width={W - 4} height={W - 4} fill="#0e0c1f" rx={9} />,
+      <rect key="bg"    x={2} y={2} width={W-4} height={W-4} fill="#0e0c1f" rx={9} />,
     );
 
-    // ── Home bases ────────────────────────────────────────────────────────
+    // Home bases
     const bases = [
-      { key: 'rb', gx: 0, gy: 0,  color: '#ef4444', label: 'RED'    },
-      { key: 'gb', gx: 9, gy: 0,  color: '#22c55e', label: 'GREEN'  },
-      { key: 'yb', gx: 0, gy: 9,  color: '#eab308', label: 'YELLOW' },
-      { key: 'bb', gx: 9, gy: 9,  color: '#3b82f6', label: 'BLUE'   },
+      { key:'rb', gx:0, gy:0,  color:'#ef4444', label:'RED',    spots: RED_SPOTS  },
+      { key:'gb', gx:9, gy:0,  color:'#22c55e', label:'GREEN',  spots: [[10.7,1.7],[12.3,1.7],[10.7,3.3],[12.3,3.3]] as [number,number][] },
+      { key:'yb', gx:0, gy:9,  color:'#eab308', label:'YELLOW', spots: [[1.7,10.7],[3.3,10.7],[1.7,12.3],[3.3,12.3]] as [number,number][] },
+      { key:'bb', gx:9, gy:9,  color:'#3b82f6', label:'BLUE',   spots: BLUE_SPOTS },
     ];
-
     for (const b of bases) {
-      const bpx = b.gx * C, bpy = b.gy * C;
-      // Outer quadrant
+      const bpx = b.gx*C, bpy = b.gy*C;
       el.push(
-        <rect key={`${b.key}o`}
-          x={bpx + 3} y={bpy + 3} width={6*C - 6} height={6*C - 6}
-          fill={b.color} fillOpacity={0.12} rx={10}
-          stroke={b.color} strokeWidth={1.5} strokeOpacity={0.3} />,
+        <rect key={`${b.key}o`} x={bpx+3} y={bpy+3} width={6*C-6} height={6*C-6}
+          fill={b.color} fillOpacity={0.12} rx={10} stroke={b.color} strokeWidth={1.5} strokeOpacity={0.3} />,
+        <rect key={`${b.key}i`} x={(b.gx+1)*C+5} y={(b.gy+1)*C+5} width={4*C-10} height={4*C-10}
+          fill={b.color} fillOpacity={0.18} rx={8} stroke={b.color} strokeWidth={1.5} strokeOpacity={0.4} />,
       );
-      // Inner platform
-      el.push(
-        <rect key={`${b.key}i`}
-          x={(b.gx + 1)*C + 5} y={(b.gy + 1)*C + 5}
-          width={4*C - 10} height={4*C - 10}
-          fill={b.color} fillOpacity={0.18} rx={8}
-          stroke={b.color} strokeWidth={1.5} strokeOpacity={0.4} />,
-      );
-      // 4 piece-parking circles
-      const spots: [number, number][] = [
-        [b.gx + 1.7, b.gy + 1.7],
-        [b.gx + 3.3, b.gy + 1.7],
-        [b.gx + 1.7, b.gy + 3.3],
-        [b.gx + 3.3, b.gy + 3.3],
-      ];
-      for (let si = 0; si < spots.length; si++) {
-        const [sc, sr] = spots[si];
+      // 4 parking circles
+      for (let si = 0; si < 4; si++) {
+        const [sc, sr] = b.spots[si];
         el.push(
-          <circle key={`${b.key}sp${si}`}
-            cx={cx(sc)} cy={cy(sr)} r={C * 0.33}
-            fill="rgba(0,0,0,0.25)"
-            stroke={b.color} strokeWidth={1.5} strokeOpacity={0.5} />,
+          <circle key={`${b.key}sp${si}`} cx={cx(sc)} cy={cy(sr)} r={C*0.35}
+            fill="rgba(0,0,0,0.28)" stroke={b.color} strokeWidth={1.5} strokeOpacity={0.55} />,
         );
       }
-      // Label
       el.push(
-        <text key={`${b.key}l`}
-          x={cx(b.gx + 2.5)} y={cy(b.gy + 4.7)}
+        <text key={`${b.key}l`} x={cx(b.gx+2.5)} y={cy(b.gy+4.7)}
           textAnchor="middle" dominantBaseline="central"
-          fontSize={8} fill={b.color} fontWeight="bold" opacity={0.55}>
-          {b.label}
-        </text>,
+          fontSize={8} fill={b.color} fontWeight="bold" opacity={0.55}>{b.label}</text>,
       );
     }
 
-    // ── Cross arms ────────────────────────────────────────────────────────
+    // Cross arms
     el.push(
       <rect key="arm-t" x={6*C} y={0}    width={3*C} height={6*C} fill="#111827" />,
       <rect key="arm-l" x={0}   y={6*C}  width={6*C} height={3*C} fill="#111827" />,
@@ -298,160 +349,168 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       <rect key="arm-b" x={6*C} y={9*C}  width={3*C} height={6*C} fill="#111827" />,
     );
 
-    // ── Track squares ─────────────────────────────────────────────────────
+    // Track squares
     TRACK.forEach(([row, col], i) => {
-      const isSafe  = SAFE_POSITIONS.has(i);
-      const isRedEntry  = i === 0;
-      const isBlueEntry = i === BLUE_ENTRY;
-      const isGreenEntry = i === 13;
-      const isYellowEntry = i === 39;
-
-      let fill = '#182038';
-      let stroke = '#2a3a5a';
-      if (isRedEntry)    { fill = 'rgba(239,68,68,0.28)';   stroke = '#ef4444'; }
-      if (isBlueEntry)   { fill = 'rgba(59,130,246,0.28)';  stroke = '#3b82f6'; }
-      if (isGreenEntry)  { fill = 'rgba(34,197,94,0.28)';   stroke = '#22c55e'; }
-      if (isYellowEntry) { fill = 'rgba(234,179,8,0.28)';   stroke = '#eab308'; }
-
+      const isSafe = SAFE_POSITIONS.has(i);
+      let fill = '#182038', stroke = isSafe ? '#3b6aaa' : '#2a3a5a', sw = isSafe ? 0.9 : 0.5;
+      if (i === 0)         { fill = 'rgba(239,68,68,0.28)';  stroke = '#ef4444'; sw = 1; }
+      if (i === BLUE_ENTRY){ fill = 'rgba(59,130,246,0.28)'; stroke = '#3b82f6'; sw = 1; }
+      if (i === 13)        { fill = 'rgba(34,197,94,0.28)';  stroke = '#22c55e'; sw = 1; }
+      if (i === 39)        { fill = 'rgba(234,179,8,0.28)';  stroke = '#eab308'; sw = 1; }
       el.push(
-        <rect key={`t${i}`}
-          x={col*C + 1} y={row*C + 1} width={C - 2} height={C - 2}
-          fill={fill} stroke={stroke} strokeWidth={isSafe ? 0.8 : 0.5} rx={3} />,
+        <rect key={`t${i}`} x={col*C+1} y={row*C+1} width={C-2} height={C-2}
+          fill={fill} stroke={stroke} strokeWidth={sw} rx={3} />,
       );
-
-      // Star on safe squares (non-entry)
-      if (isSafe && !isRedEntry && !isBlueEntry && !isGreenEntry && !isYellowEntry) {
+      if (isSafe && i !== 0 && i !== BLUE_ENTRY && i !== 13 && i !== 39) {
         el.push(
-          <text key={`safe${i}`}
-            x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
-            fontSize={9} fill="rgba(255,255,255,0.35)" style={{ userSelect: 'none' }}>
-            ✦
-          </text>,
+          <text key={`sf${i}`} x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
+            fontSize={9} fill="rgba(255,255,255,0.32)" style={{ userSelect:'none' }}>✦</text>,
         );
       }
     });
 
-    // ── Home stretch lanes ────────────────────────────────────────────────
-    const stretchDefs = [
-      { data: RED_STRETCH,    color: '#ef4444', fillOpacity: 0.22 },
-      { data: BLUE_STRETCH,   color: '#3b82f6', fillOpacity: 0.22 },
-      { data: GREEN_STRETCH,  color: '#22c55e', fillOpacity: 0.18 },
-      { data: YELLOW_STRETCH, color: '#eab308', fillOpacity: 0.18 },
+    // Home stretch lanes
+    const stretches = [
+      { data: RED_STRETCH,    color: '#ef4444', op: 0.22 },
+      { data: BLUE_STRETCH,   color: '#3b82f6', op: 0.22 },
+      { data: GREEN_STRETCH,  color: '#22c55e', op: 0.18 },
+      { data: YELLOW_STRETCH, color: '#eab308', op: 0.18 },
     ];
-    for (const s of stretchDefs) {
+    for (const s of stretches) {
       s.data.forEach(([row, col], i) => {
         el.push(
-          <rect key={`sr-${s.color}-${i}`}
-            x={col*C + 1} y={row*C + 1} width={C - 2} height={C - 2}
-            fill={s.color} fillOpacity={s.fillOpacity}
-            stroke={s.color} strokeWidth={0.8} rx={3} />,
-          <text key={`sn-${s.color}-${i}`}
-            x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
-            fontSize={7} fill={s.color} fillOpacity={0.7} fontWeight="bold">
-            {i + 1}
-          </text>,
+          <rect key={`sr-${s.color}-${i}`} x={col*C+1} y={row*C+1} width={C-2} height={C-2}
+            fill={s.color} fillOpacity={s.op} stroke={s.color} strokeWidth={0.8} rx={3} />,
+          <text key={`sn-${s.color}-${i}`} x={cx(col)} y={cy(row)} textAnchor="middle" dominantBaseline="central"
+            fontSize={7} fill={s.color} fillOpacity={0.7} fontWeight="bold">{i+1}</text>,
         );
       });
     }
 
-    // ── Center home ────────────────────────────────────────────────────────
+    // Center home — 4 colored triangles + star
     const mx = 6*C, my = 6*C, ms = 3*C;
-    const hcx = mx + ms / 2, hcy = my + ms / 2;
-    // 4 colored triangles
+    const hcx = mx+ms/2, hcy = my+ms/2;
     const tris = [
-      { color: '#ef4444', pts: `${mx},${my} ${mx+ms},${my} ${hcx},${hcy}` },         // top → red
-      { color: '#22c55e', pts: `${mx+ms},${my} ${mx+ms},${my+ms} ${hcx},${hcy}` },   // right → green
-      { color: '#3b82f6', pts: `${mx},${my+ms} ${mx+ms},${my+ms} ${hcx},${hcy}` },   // bottom → blue
-      { color: '#eab308', pts: `${mx},${my} ${mx},${my+ms} ${hcx},${hcy}` },         // left → yellow
+      { color:'#ef4444', pts:`${mx},${my} ${mx+ms},${my} ${hcx},${hcy}` },
+      { color:'#22c55e', pts:`${mx+ms},${my} ${mx+ms},${my+ms} ${hcx},${hcy}` },
+      { color:'#3b82f6', pts:`${mx},${my+ms} ${mx+ms},${my+ms} ${hcx},${hcy}` },
+      { color:'#eab308', pts:`${mx},${my} ${mx},${my+ms} ${hcx},${hcy}` },
     ];
     for (const t of tris) {
-      el.push(<polygon key={`tri-${t.color}`} points={t.pts} fill={t.color} fillOpacity={0.25} />);
+      el.push(<polygon key={`tri-${t.color}`} points={t.pts} fill={t.color} fillOpacity={0.22} />);
     }
-    // Center circle
     el.push(
-      <circle key="home-ring" cx={hcx} cy={hcy} r={C * 0.95}
-        fill="#0e0c1f" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />,
-      <circle key="home-inner" cx={hcx} cy={hcy} r={C * 0.7}
-        fill="rgba(251,191,36,0.12)" stroke="#f59e0b" strokeWidth={1.2} />,
-      <text key="home-star" x={hcx} y={hcy + 1} textAnchor="middle" dominantBaseline="central"
-        fontSize={16} fill="#fbbf24">★</text>,
+      <circle key="home-ring"  cx={hcx} cy={hcy} r={C*0.95} fill="#0e0c1f" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />,
+      <circle key="home-inner" cx={hcx} cy={hcy} r={C*0.68} fill="rgba(251,191,36,0.1)" stroke="#f59e0b" strokeWidth={1.2} />,
+      <text   key="home-star"  x={hcx} y={hcy+1} textAnchor="middle" dominantBaseline="central" fontSize={16} fill="#fbbf24">★</text>,
     );
 
     return el;
   };
 
+  // ── Token rendering ──────────────────────────────────────────────────────
   const renderTokens = () => {
     const el: React.ReactElement[] = [];
-    const r = C * 0.42;
-    const pColor  = isOnline ? myColor  : '#ef4444';
-    const aColor  = isOnline ? oppColor : '#3b82f6';
-    const pLight  = isOnline ? (mySide === 'red' ? '#fca5a5' : '#93c5fd') : '#fca5a5';
-    const aLight  = isOnline ? (mySide === 'red' ? '#93c5fd' : '#fca5a5') : '#93c5fd';
-    const pStretch = isOnline ? myStretch  : RED_STRETCH;
-    const aStretch = isOnline ? oppStretch : BLUE_STRETCH;
+    const r = C * 0.37;
 
-    // Parking spot 0 for each base (matches the circles drawn in renderBoard)
-    // Red base: gx=0, gy=0 → col=1.7, row=1.7
-    // Blue base: gx=9, gy=9 → col=10.7, row=10.7
-    const pSpotCol = mySide === 'red' ? 1.7 : 10.7;
-    const pSpotRow = mySide === 'red' ? 1.7 : 10.7;
-    const aSpotCol = mySide === 'red' ? 10.7 : 1.7;
-    const aSpotRow = mySide === 'red' ? 10.7 : 1.7;
+    // Finished piece slots in the center home area
+    // Red: 2×2 grid in upper half; Blue: 2×2 in lower half
+    const homeX = 6*C + (3*C)/2;
+    const homeY = 6*C + (3*C)/2;
+    const redFin:  [number,number][] = [
+      [homeX - C*0.3, homeY - C*0.5],
+      [homeX + C*0.3, homeY - C*0.5],
+      [homeX - C*0.3, homeY - C*0.05],
+      [homeX + C*0.3, homeY - C*0.05],
+    ];
+    const blueFin: [number,number][] = [
+      [homeX - C*0.3, homeY + C*0.05],
+      [homeX + C*0.3, homeY + C*0.05],
+      [homeX - C*0.3, homeY + C*0.5],
+      [homeX + C*0.3, homeY + C*0.5],
+    ];
+    const myFin  = mySide === 'red' ? redFin  : blueFin;
+    const oppFin = mySide === 'red' ? blueFin : redFin;
 
-    // Center home pixel coords
-    const homeX = 6 * C + (3 * C) / 2;  // = 7.5 * C
-    const homeY = 6 * C + (3 * C) / 2;
-
-    const drawToken = (id: string, tx: number, ty: number, color: string, light: string, label: string, isActive: boolean, scale = 1) => {
+    const drawToken = (
+      id: string, tx: number, ty: number,
+      color: string, light: string, label: string,
+      isActive: boolean, isMovable: boolean,
+      scale = 1.0,
+      onClick?: () => void,
+    ) => {
       const tr = r * scale;
       return [
-        <circle key={`${id}-sh`} cx={tx + 1.5} cy={ty + 2.5} r={tr + 1}
-          fill="rgba(0,0,0,0.5)" />,
-        ...(isActive ? [
-          <circle key={`${id}-glow`} cx={tx} cy={ty} r={tr + 4}
-            fill="none" stroke={color} strokeWidth={2} opacity={0.55} />,
+        <circle key={`${id}-sh`} cx={tx+1} cy={ty+2} r={tr+1} fill="rgba(0,0,0,0.45)" style={{ pointerEvents:'none' }} />,
+        ...(isMovable ? [
+          <circle key={`${id}-pulse`} cx={tx} cy={ty} r={tr+5}
+            fill="none" stroke={color} strokeWidth={2.5} opacity={0.65}
+            style={{ animation:'ping 1s cubic-bezier(0,0,0.2,1) infinite', pointerEvents:'none' }} />,
+        ] : isActive ? [
+          <circle key={`${id}-glow`} cx={tx} cy={ty} r={tr+3.5}
+            fill="none" stroke={color} strokeWidth={1.5} opacity={0.4} style={{ pointerEvents:'none' }} />,
         ] : []),
         <circle key={`${id}-body`} cx={tx} cy={ty} r={tr}
-          fill={color} stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} />,
-        <circle key={`${id}-hl`} cx={tx - tr * 0.28} cy={ty - tr * 0.3} r={tr * 0.42}
-          fill={light} opacity={0.45} />,
-        <text key={`${id}-txt`} x={tx} y={ty + 1} textAnchor="middle" dominantBaseline="central"
-          fontSize={tr * 0.85} fill="white" fontWeight="bold">{label}</text>,
+          fill={color}
+          stroke={isMovable ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)'}
+          strokeWidth={isMovable ? 2.2 : 1.4}
+          style={{ cursor: onClick ? 'pointer' : 'default' }}
+          onClick={onClick} />,
+        <circle key={`${id}-hl`} cx={tx-tr*0.28} cy={ty-tr*0.3} r={tr*0.4}
+          fill={light} opacity={0.42} style={{ pointerEvents:'none' }} />,
+        <text key={`${id}-txt`} x={tx} y={ty+1} textAnchor="middle" dominantBaseline="central"
+          fontSize={tr*0.88} fill="white" fontWeight="bold" style={{ pointerEvents:'none' }}>
+          {label}
+        </text>,
       ];
     };
 
-    // ── Player token ──────────────────────────────────────────────────────
-    if (pPos === -1) {
-      // Sitting in parking spot 0 of their home base
-      el.push(...drawToken('p', cx(pSpotCol), cy(pSpotRow), pColor, pLight, 'P', turn === 'p'));
-    } else if (pPos >= 58) {
-      // Reached center home — show slightly offset from center, slightly smaller
-      el.push(...drawToken('p', homeX - C * 0.38, homeY - C * 0.38, pColor, pLight, '★', false, 0.88));
-    } else {
-      const [row, col] = posCoord(pPos, pStretch);
-      el.push(...drawToken('p', cx(col), cy(row), pColor, pLight, 'P', turn === 'p'));
-    }
+    // ── Player pieces ──────────────────────────────────────────────────────
+    let pFinCount = 0;
+    pPieces.forEach((pos, i) => {
+      const id  = `p${i}`;
+      const isM = movable.includes(i);
+      const onClick = isM ? () => handlePieceClick(i) : undefined;
 
-    // ── AI / opponent token ───────────────────────────────────────────────
-    if (aPos === -1) {
-      el.push(...drawToken('a', cx(aSpotCol), cy(aSpotRow), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
-    } else if (aPos >= 58) {
-      el.push(...drawToken('a', homeX + C * 0.38, homeY + C * 0.38, aColor, aLight, '★', false, 0.88));
-    } else {
-      const [row, col] = posCoord(aPos, aStretch);
-      el.push(...drawToken('a', cx(col), cy(row), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
-    }
+      if (pos === -1) {
+        const [sc, sr] = mySpots[i];
+        el.push(...drawToken(id, cx(sc), cy(sr), myColor, myLight, String(i+1), turn==='p', isM, 1, onClick));
+      } else if (pos >= 58) {
+        const [fx, fy] = myFin[pFinCount++];
+        el.push(...drawToken(id, fx, fy, myColor, myLight, '✓', false, false, 0.62));
+      } else {
+        const [tx, ty] = stackedXY(pos, myStretch, i, pPieces);
+        el.push(...drawToken(id, tx, ty, myColor, myLight, String(i+1), turn==='p', isM, 1, onClick));
+      }
+    });
+
+    // ── AI/opponent pieces ─────────────────────────────────────────────────
+    let aFinCount = 0;
+    aPieces.forEach((pos, i) => {
+      const id = `a${i}`;
+
+      if (pos === -1) {
+        const [sc, sr] = oppSpots[i];
+        el.push(...drawToken(id, cx(sc), cy(sr), oppColor, oppLight, String(i+1), turn==='a', false));
+      } else if (pos >= 58) {
+        const [fx, fy] = oppFin[aFinCount++];
+        el.push(...drawToken(id, fx, fy, oppColor, oppLight, '✓', false, false, 0.62));
+      } else {
+        const [tx, ty] = stackedXY(pos, oppStretch, i, aPieces);
+        el.push(...drawToken(id, tx, ty, oppColor, oppLight, String(i+1), turn==='a', false));
+      }
+    });
 
     return el;
   };
 
-  const posLabel = (pos: number) => {
-    if (pos === -1) return 'Base';
-    if (pos < 52) return `Track ${pos}`;
-    if (pos < 58) return `Stretch ${pos - 51}/6`;
-    return '🏠 HOME';
-  };
+  // ── Computed stats ───────────────────────────────────────────────────────
+  const pHome = pPieces.filter(p => p >= 58).length;
+  const aHome = aPieces.filter(p => p >= 58).length;
+  const pPct  = Math.round(pPieces.reduce((s,p) => s + (p<0?0:p>=58?58:p), 0) / (58*4) * 100);
+  const aPct  = Math.round(aPieces.reduce((s,p) => s + (p<0?0:p>=58?58:p), 0) / (58*4) * 100);
 
+  // ── Intro screen ─────────────────────────────────────────────────────────
   if (!started) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-5 p-6 text-center">
@@ -459,19 +518,19 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
         <div>
           <h2 className="text-2xl font-bold mb-1">Ludo</h2>
           <p className="text-text-muted text-sm max-w-xs">
-            Race your piece from base to the golden star home. Roll a 6 to enter the track!
+            Race all 4 red pieces to the golden star home before the AI does!
           </p>
         </div>
-        {/* Rules card */}
         <div className="bg-card rounded-xl p-4 text-left max-w-xs w-full text-xs space-y-2 text-text-muted">
           {[
-            ['🎲', 'Roll a 6 to leave base and enter the track'],
-            ['✦', 'Star squares are safe — you can\'t be captured there'],
-            ['💥', 'Land on opponent to send them back to base'],
-            ['🎁', 'Roll a 6 again for a bonus turn'],
-            ['🏠', 'Reach the star in the center to win!'],
-          ].map(([icon, rule], i) => (
-            <div key={i} className="flex items-start gap-2">
+            ['🎲','Roll a 6 to move a piece from base onto the track'],
+            ['🔢','Tap a glowing piece to move it when you have choices'],
+            ['✦', 'Star squares are safe — pieces can\'t be captured there'],
+            ['💥','Land on an opponent\'s piece to send it back to base'],
+            ['🎁','Roll a 6 again for a bonus turn'],
+            ['🏠','Get all 4 pieces to the center star to win!'],
+          ].map(([icon, rule], idx) => (
+            <div key={idx} className="flex items-start gap-2">
               <span className="flex-shrink-0 w-5 text-center">{icon}</span>
               <span>{rule}</span>
             </div>
@@ -487,98 +546,92 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     );
   }
 
-  const pPct = pPos < 0 ? 0 : pPos >= 58 ? 100 : Math.round((pPos / 58) * 100);
-  const aPct = aPos < 0 ? 0 : aPos >= 58 ? 100 : Math.round((aPos / 58) * 100);
-
+  // ── Game screen ───────────────────────────────────────────────────────────
   return (
-    <div className="h-full flex flex-col items-center p-2 gap-2">
+    <div className="h-full flex flex-col items-center p-2 gap-1.5">
       {/* Status bar */}
       <div className="w-full max-w-[400px] flex items-center justify-between gap-2 px-1">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: isOnline ? myColor : '#ef4444' }} />
-          <span className="text-xs font-bold" style={{ color: isOnline ? myColor : '#ef4444' }}>You</span>
-          <span className="text-[11px] text-text-muted">{posLabel(pPos)}</span>
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: myColor }} />
+          <span className="text-xs font-bold" style={{ color: myColor }}>You</span>
+          <span className="text-[11px] text-text-muted">{pHome}/4 home</span>
         </div>
         {/* Turn pill */}
-        <div className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${
-          turn === 'p'
-            ? 'bg-accent/20 text-accent ring-1 ring-accent/40'
-            : 'bg-card text-text-muted'
+        <div className={`flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold transition-all ${
+          pendingDice !== null
+            ? 'bg-yellow-400/20 text-yellow-300 ring-1 ring-yellow-400/40'
+            : turn === 'p'
+              ? 'bg-accent/20 text-accent ring-1 ring-accent/40'
+              : 'bg-card text-text-muted'
         }`}>
-          {turn === 'p' ? (
+          {pendingDice !== null ? (
+            <><span className="animate-bounce">👆</span> Pick a piece</>
+          ) : turn === 'p' ? (
             <><span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
             </span> Your turn</>
           ) : (
-            <><span className="animate-pulse">🤖</span> {isOnline ? 'Their turn' : 'AI rolling…'}</>
+            <><span className="animate-pulse">🤖</span> AI rolling…</>
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-text-muted">{posLabel(aPos)}</span>
-          <span className="text-xs font-bold" style={{ color: isOnline ? oppColor : '#3b82f6' }}>{isOnline ? (multiplayerState?.opponentName || 'Opp') : 'AI'}</span>
-          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: isOnline ? oppColor : '#3b82f6' }} />
+          <span className="text-[11px] text-text-muted">{aHome}/4 home</span>
+          <span className="text-xs font-bold" style={{ color: oppColor }}>AI</span>
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: oppColor }} />
         </div>
       </div>
 
       {/* Board */}
       <div className="flex-shrink-0 w-full flex justify-center">
         <svg viewBox={`0 0 ${W} ${W}`} className="rounded-xl w-full h-auto shadow-2xl"
-          style={{ maxWidth: 390, maxHeight: '55vh' }}>
+          style={{ maxWidth: 390, maxHeight: '52vh' }}>
           {renderBoard()}
           {renderTokens()}
         </svg>
       </div>
 
-      {/* Dice + Roll button */}
+      {/* Dice + Roll */}
       <div className="flex items-center gap-3">
         <DiceFace value={dice} highlight={dice === 6} />
         <button
           onClick={handleRoll}
-          disabled={over || turn !== 'p'}
+          disabled={over || turn !== 'p' || pendingDice !== null}
           className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl text-sm hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all shadow-lg shadow-accent/25"
         >
-          {turn === 'p' ? 'Roll!' : isOnline ? "Opponent's turn" : 'AI thinking\u2026'}
+          {pendingDice !== null ? 'Pick a piece ↑' : turn === 'p' ? 'Roll!' : 'AI thinking…'}
         </button>
       </div>
 
-      {/* Progress bars + home counter */}
-      {!isOnline && (
-        <div className="w-full max-w-[400px] flex flex-col gap-1.5 px-1">
-          {[
-            { label: 'You', pct: pPct, color: '#ef4444', pos: pPos, atHome: pPos >= 58 },
-            { label: 'AI',  pct: aPct, color: '#3b82f6', pos: aPos, atHome: aPos >= 58 },
-          ].map(bar => (
-            <div key={bar.label} className="flex items-center gap-2 text-xs">
-              <span className="font-bold w-5 text-right" style={{ color: bar.color }}>{bar.label}</span>
-              <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${bar.pct}%`, background: bar.color }} />
-              </div>
-              {/* Home reached badge */}
-              <div className="flex items-center gap-1 w-14 justify-end">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md transition-all ${
-                  bar.atHome
-                    ? 'bg-yellow-400/20 text-yellow-300 ring-1 ring-yellow-400/40'
-                    : 'text-text-muted'
-                }`}>
-                  {bar.atHome ? '★ Home' : bar.pos < 0 ? 'Base' : `${bar.pct}%`}
-                </span>
-              </div>
+      {/* Progress bars */}
+      <div className="w-full max-w-[400px] flex flex-col gap-1.5 px-1">
+        {[
+          { label:'You', pct:pPct, home:pHome, color: myColor  },
+          { label:'AI',  pct:aPct, home:aHome, color: oppColor },
+        ].map(bar => (
+          <div key={bar.label} className="flex items-center gap-2 text-xs">
+            <span className="font-bold w-5 text-right" style={{ color: bar.color }}>{bar.label}</span>
+            <div className="flex-1 h-2 bg-card rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${bar.pct}%`, background: bar.color }} />
             </div>
-          ))}
-          {/* Home tally */}
-          <div className="flex items-center justify-center gap-4 mt-0.5 text-[11px] text-text-muted">
-            <span>Pieces home:</span>
-            <span style={{ color: '#ef4444' }} className="font-bold">{pPos >= 58 ? 1 : 0}/1</span>
-            <span className="text-text-dim">vs</span>
-            <span style={{ color: '#3b82f6' }} className="font-bold">{aPos >= 58 ? 1 : 0}/1</span>
+            {/* Piece home dots */}
+            <div className="flex gap-0.5 w-14 justify-end">
+              {[0,1,2,3].map(j => (
+                <span key={j} className="w-3 h-3 rounded-full border transition-all"
+                  style={{
+                    background: j < bar.home ? bar.color : 'transparent',
+                    borderColor: bar.color,
+                    opacity: j < bar.home ? 1 : 0.3,
+                  }} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      <p className="text-[11px] text-text-muted text-center">
-        Roll 6 to enter · Land on opponent to capture · Reach ★ to win
+      <p className="text-[10px] text-text-muted text-center">
+        Roll 6 to enter · Tap glowing piece · Safe ✦ squares protect pieces · Get all 4 home to win
       </p>
     </div>
   );
@@ -586,19 +639,17 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
 
 function DiceFace({ value, highlight }: { value: number | null; highlight?: boolean }) {
   const pipLayouts: Record<number, [number, number][]> = {
-    1: [[50, 50]],
-    2: [[28, 28], [72, 72]],
-    3: [[28, 28], [50, 50], [72, 72]],
-    4: [[28, 28], [72, 28], [28, 72], [72, 72]],
-    5: [[28, 28], [72, 28], [50, 50], [28, 72], [72, 72]],
-    6: [[28, 22], [72, 22], [28, 50], [72, 50], [28, 78], [72, 78]],
+    1: [[50,50]],
+    2: [[28,28],[72,72]],
+    3: [[28,28],[50,50],[72,72]],
+    4: [[28,28],[72,28],[28,72],[72,72]],
+    5: [[28,28],[72,28],[50,50],[28,72],[72,72]],
+    6: [[28,22],[72,22],[28,50],[72,50],[28,78],[72,78]],
   };
   const pips = value !== null ? (pipLayouts[value] || []) : [];
   return (
     <div className={`w-14 h-14 rounded-xl flex items-center justify-center select-none border-2 transition-all shadow-md ${
-      highlight
-        ? 'bg-accent/20 border-accent shadow-accent/30'
-        : 'bg-card border-white/10'
+      highlight ? 'bg-accent/20 border-accent shadow-accent/30' : 'bg-card border-white/10'
     }`}>
       {value === null ? (
         <span className="text-3xl">🎲</span>
