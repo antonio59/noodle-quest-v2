@@ -925,10 +925,46 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
 
   if (!started && !isOnline) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
-        <div className="text-6xl">🅰️</div>
+      <div className="h-full flex flex-col items-center justify-center gap-3 p-4 overflow-y-auto">
+        <div className="text-5xl">🅰️</div>
         <h2 className="text-2xl font-bold">Scrabble</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Build words on the board using letter tiles. Highest score wins!</p>
+        <p className="text-text-muted text-sm text-center max-w-xs">
+          Build words on the board using letter tiles. First to reach{' '}
+          <span className="text-accent font-bold">{targetScore} pts</span> wins!
+        </p>
+        <div className="w-full max-w-xs bg-card rounded-2xl p-4 flex flex-col gap-2 ring-1 ring-white/10">
+          <span className="text-xs font-bold text-text-muted uppercase tracking-wide">How to play</span>
+          <div className="flex flex-col gap-1.5 text-xs text-text-muted">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-400 font-bold text-base leading-none mt-0.5">★</span>
+              <span>First word must cross the <span className="text-text font-semibold">center star</span></span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">🔗</span>
+              <span>Every word after must <span className="text-text font-semibold">connect</span> to an existing tile</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">🎯</span>
+              <span>Use all 7 tiles in one move for a <span className="text-text font-semibold">+50 Bingo bonus!</span></span>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-2 mt-1">
+            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide block mb-1.5">Bonus squares</span>
+            <div className="grid grid-cols-2 gap-1 text-[10px]">
+              {[
+                { label: 'TW', color: 'bg-red-700', desc: 'Triple Word' },
+                { label: 'DW', color: 'bg-rose-500', desc: 'Double Word' },
+                { label: 'TL', color: 'bg-blue-600', desc: 'Triple Letter' },
+                { label: 'DL', color: 'bg-sky-500', desc: 'Double Letter' },
+              ].map(b => (
+                <div key={b.label} className="flex items-center gap-1.5">
+                  <span className={`${b.color} text-white font-bold rounded px-1 py-0.5 text-[9px] min-w-[22px] text-center`}>{b.label}</span>
+                  <span className="text-text-muted">{b.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -967,12 +1003,28 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
               Round <span className="text-text font-bold">{Math.min(round + 1, maxRounds)}</span>/{maxRounds}
             </span>
             <span className="bg-card rounded-md px-1.5 py-0.5">
-              Target <span className="text-text font-bold">{targetScore}</span>
-            </span>
-            <span className="bg-card rounded-md px-1.5 py-0.5">
               Bag: <span className="text-text font-bold">{pool.length}</span>
             </span>
           </div>
+        </div>
+
+        {/* Score progress bars — race to targetScore */}
+        <div className="flex flex-col gap-0.5">
+          {scores.map((s, i) => {
+            const pct = Math.min(s / targetScore, 1);
+            return (
+              <div key={i} className="flex items-center gap-1.5">
+                <span className="text-[9px] text-text-muted w-6 text-right shrink-0">{i === 0 ? 'You' : `AI`}</span>
+                <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${i === 0 ? 'bg-accent' : 'bg-red-400'}`}
+                    style={{ width: `${pct * 100}%` }}
+                  />
+                </div>
+                <span className="text-[9px] text-text-muted w-8 shrink-0">{Math.round(pct * 100)}%</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Turn indicator + last move */}

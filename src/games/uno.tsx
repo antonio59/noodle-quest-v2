@@ -585,10 +585,42 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
   const isAdverseMessage = message.includes('skip') || (message.includes('draw') && message.includes('You'));
   if (!started && !isOnline) {
     return (
-      <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
-        <div className="text-6xl">🃏</div>
+      <div className="h-full flex flex-col items-center justify-center gap-3 p-4 overflow-y-auto">
+        <div className="text-5xl">🃏</div>
         <h2 className="text-2xl font-bold">UNO</h2>
-        <p className="text-text-muted text-sm text-center max-w-xs">Match colors and numbers. Play all your cards before the AI does!</p>
+        <p className="text-text-muted text-sm text-center max-w-xs">
+          Play all your cards before the AI does. First to win <span className="text-accent font-bold">{targetWins} round{targetWins !== 1 ? 's' : ''}</span> wins the match!
+        </p>
+        <div className="w-full max-w-xs bg-card rounded-2xl p-4 flex flex-col gap-2 ring-1 ring-white/10">
+          <span className="text-xs font-bold text-text-muted uppercase tracking-wide">How to play</span>
+          <div className="flex flex-col gap-1.5 text-xs text-text-muted">
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">🎨</span>
+              <span>Match the <span className="text-text font-semibold">color</span> or <span className="text-text font-semibold">number</span> of the top card to play</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">⊘</span>
+              <span><span className="text-text font-semibold">Skip / Reverse</span> skips the opponent's turn</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">+2</span>
+              <span><span className="text-text font-semibold">Draw 2</span> forces opponent to draw & lose their turn</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">🌟</span>
+              <span><span className="text-text font-semibold">Wild</span> lets you pick any color. Wild +4 also forces a draw!</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-base leading-none mt-0.5">🃏</span>
+              <span>No playable card? <span className="text-text font-semibold">Draw from the deck</span> — you can play it immediately if it matches</span>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-1">
+            {(['red','blue','green','yellow'] as UnoColor[]).map(c => (
+              <div key={c} className="flex-1 h-5 rounded-full" style={{ background: COLOR_HEX[c] }} />
+            ))}
+          </div>
+        </div>
         <button
           onClick={() => setStarted(true)}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -602,30 +634,91 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
 
   return (
     <div className="h-full flex flex-col items-center justify-between p-2 select-none overflow-hidden">
-      <div className="w-full flex justify-between items-center px-2 py-1 text-xs">
-        <span className="bg-card rounded-lg px-2 py-1">
-          {isOnline ? (multiplayerState?.opponentName || 'Opponent') : 'AI'}: {aiHand.length} card{aiHand.length !== 1 ? 's' : ''}
-        </span>
-        <span className="bg-card rounded-lg px-2 py-1 text-accent font-bold">
-          {roundWins}/{targetWins} wins
-        </span>
-        {losses > 0 && (
-          <span className="bg-card rounded-lg px-2 py-1 text-danger">
-            L: {losses}/{MAX_LOSSES}
-          </span>
-        )}
+      {/* ── Top HUD ── */}
+      <div className="w-full flex flex-col gap-1 flex-shrink-0">
+        {/* Row 1: AI card count + round progress + loss counter */}
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 bg-card rounded-lg px-2 py-1">
+            <span className="text-text-muted">{isOnline ? (multiplayerState?.opponentName || 'Opp') : 'AI'}:</span>
+            <span className="font-bold text-text">{aiHand.length}</span>
+            <span className="text-text-muted">card{aiHand.length !== 1 ? 's' : ''}</span>
+            {aiHand.length === 1 && (
+              <span className="text-[10px] font-black text-yellow-400 animate-bounce">UNO!</span>
+            )}
+          </div>
+          {/* Win progress dots */}
+          <div className="flex items-center gap-1">
+            {Array.from({ length: targetWins }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-3 h-3 rounded-full border-2 transition-all ${
+                  i < roundWins
+                    ? 'bg-accent border-accent shadow-[0_0_6px_rgba(167,139,250,0.7)]'
+                    : 'bg-transparent border-white/20'
+                }`}
+              />
+            ))}
+            <span className="text-[10px] text-text-muted ml-1">wins</span>
+          </div>
+          {/* Loss counter — always visible */}
+          <div className="flex items-center gap-1 bg-card rounded-lg px-2 py-1">
+            {Array.from({ length: MAX_LOSSES }).map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  i < losses ? 'bg-red-500' : 'bg-white/10'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Row 2: Turn indicator */}
+        <div className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold self-start ${
+          isPlayerTurn && phase === 'playing'
+            ? 'bg-accent/20 text-accent'
+            : 'bg-card text-text-muted'
+        }`}>
+          {isPlayerTurn && phase === 'playing' ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+              </span>
+              Your turn
+            </>
+          ) : (
+            <>
+              <span className="animate-pulse">🤖</span>
+              {aiThinking ? 'AI thinking...' : "AI's turn"}
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="flex gap-1 justify-center flex-wrap px-2 py-1 max-h-16 overflow-hidden">
-        {aiHand.map((_, i) => (
+      {/* ── AI face-down hand (stacked display) ── */}
+      <div className="relative flex items-center justify-center flex-shrink-0 h-16">
+        {Array.from({ length: Math.min(aiHand.length, 7) }).map((_, i, arr) => (
           <div
             key={i}
-            className="w-8 h-12 rounded-md flex items-center justify-center text-white text-[10px] font-bold shadow-md"
-            style={{ background: 'linear-gradient(135deg, #2d1b69, #1a1a2e)', border: '1px solid #4a3f8a' }}
-          >
-            UNO
-          </div>
+            className="absolute w-10 h-14 rounded-md shadow-md"
+            style={{
+              background: 'linear-gradient(135deg, #2d1b69, #1a1a2e)',
+              border: '1px solid #4a3f8a',
+              left: `calc(50% + ${(i - (arr.length - 1) / 2) * 14}px - 20px)`,
+              transform: `rotate(${(i - (arr.length - 1) / 2) * 3}deg)`,
+              zIndex: i,
+            }}
+          />
         ))}
+        {aiHand.length > 7 && (
+          <span
+            className="absolute text-[10px] text-white/60 font-bold"
+            style={{ zIndex: 10, bottom: 2, right: 'calc(50% - 40px)' }}
+          >
+            +{aiHand.length - 7}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 flex items-center justify-center gap-6 py-2">
@@ -687,39 +780,55 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
         </div>
       )}
 
-      <div className="w-full flex justify-center items-end gap-0.5 px-1 pb-4 overflow-x-auto max-h-36 py-2">
-        {playerHand.map(card => {
-          const playable = isPlayerTurn && phase === 'playing' && canPlay(card, topCard, currentColor);
-          const isHighlighted = highlightCard === card.id;
-          const isWild = card.type === 'wild' || card.type === 'wild4';
+      {/* UNO! alert when player has 1 card */}
+      {playerHand.length === 1 && phase === 'playing' && (
+        <div className="flex-shrink-0 text-center">
+          <span className="inline-block bg-yellow-400 text-black font-black text-xl px-4 py-1 rounded-full shadow-lg animate-bounce tracking-widest">
+            UNO!
+          </span>
+        </div>
+      )}
 
-          return (
-            <button
-              key={card.id}
-              onClick={() => handlePlayCard(card)}
-              disabled={!playable || aiThinking}
-              className="flex-shrink-0 w-12 h-18 sm:w-14 sm:h-20 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold transition-all border-2 relative"
-              style={{
-                background: isWild
-                  ? 'linear-gradient(135deg, #ef4444 25%, #3b82f6 25%, #3b82f6 50%, #22c55e 50%, #22c55e 75%, #eab308 75%)'
-                  : COLOR_HEX[card.color],
-                borderColor: playable ? '#fff' : 'rgba(255,255,255,0.15)',
-                opacity: playable ? 1 : 0.6,
-                transform: isHighlighted ? 'scale(1.1)' : playable ? 'translateY(-4px)' : 'none',
-                cursor: playable ? 'pointer' : 'not-allowed',
-              }}
-            >
-              <span className="text-base sm:text-lg drop-shadow-md leading-none">
-                {isWild ? (card.type === 'wild4' ? '+4' : '🌟') : SYMBOL_DISPLAY[card.symbol]}
-              </span>
-              {!isWild && card.type === 'action' && (
-                <span className="text-[8px] opacity-80 mt-0.5">
-                  {card.color.slice(0, 3)}
+      <div className="w-full flex flex-col items-center gap-1 flex-shrink-0">
+        <span className="text-[10px] text-text-muted">
+          Your hand · {playerHand.length} card{playerHand.length !== 1 ? 's' : ''}
+        </span>
+        <div className="w-full flex justify-center items-end gap-0.5 px-1 overflow-x-auto max-h-32 pb-1">
+          {playerHand.map(card => {
+            const playable = isPlayerTurn && phase === 'playing' && canPlay(card, topCard, currentColor);
+            const isHighlighted = highlightCard === card.id;
+            const isWild = card.type === 'wild' || card.type === 'wild4';
+
+            return (
+              <button
+                key={card.id}
+                onClick={() => handlePlayCard(card)}
+                disabled={!playable || aiThinking}
+                className="flex-shrink-0 w-11 rounded-lg shadow-md flex flex-col items-center justify-center text-white font-bold transition-all border-2 relative"
+                style={{
+                  height: 64,
+                  background: isWild
+                    ? 'linear-gradient(135deg, #ef4444 25%, #3b82f6 25%, #3b82f6 50%, #22c55e 50%, #22c55e 75%, #eab308 75%)'
+                    : COLOR_HEX[card.color],
+                  borderColor: playable ? '#fff' : 'rgba(255,255,255,0.15)',
+                  opacity: playable ? 1 : 0.55,
+                  transform: isHighlighted ? 'scale(1.12)' : playable ? 'translateY(-6px)' : 'none',
+                  cursor: playable ? 'pointer' : 'not-allowed',
+                  boxShadow: playable ? '0 0 8px rgba(255,255,255,0.35)' : undefined,
+                }}
+              >
+                <span className="text-base drop-shadow-md leading-none">
+                  {isWild ? (card.type === 'wild4' ? '+4' : '🌟') : SYMBOL_DISPLAY[card.symbol]}
                 </span>
-              )}
-            </button>
-          );
-        })}
+                {!isWild && card.type === 'action' && (
+                  <span className="text-[7px] opacity-80 mt-0.5">
+                    {card.color.slice(0, 3).toUpperCase()}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {!hasPlayableCard && isPlayerTurn && phase === 'playing' && !aiThinking && (
