@@ -390,45 +390,53 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     const pStretch = isOnline ? myStretch  : RED_STRETCH;
     const aStretch = isOnline ? oppStretch : BLUE_STRETCH;
 
-    // Base positions for tokens not yet on track
-    const pBaseC = mySide === 'red' ? 2.5 : 12.5;
-    const pBaseR = mySide === 'red' ? 2.5 : 12.5;
-    const aBaseC = mySide === 'red' ? 12.5 : 2.5;
-    const aBaseR = mySide === 'red' ? 12.5 : 2.5;
+    // Parking spot 0 for each base (matches the circles drawn in renderBoard)
+    // Red base: gx=0, gy=0 → col=1.7, row=1.7
+    // Blue base: gx=9, gy=9 → col=10.7, row=10.7
+    const pSpotCol = mySide === 'red' ? 1.7 : 10.7;
+    const pSpotRow = mySide === 'red' ? 1.7 : 10.7;
+    const aSpotCol = mySide === 'red' ? 10.7 : 1.7;
+    const aSpotRow = mySide === 'red' ? 10.7 : 1.7;
 
-    const drawToken = (id: string, tx: number, ty: number, color: string, light: string, label: string, isActive: boolean) => {
+    // Center home pixel coords
+    const homeX = 6 * C + (3 * C) / 2;  // = 7.5 * C
+    const homeY = 6 * C + (3 * C) / 2;
+
+    const drawToken = (id: string, tx: number, ty: number, color: string, light: string, label: string, isActive: boolean, scale = 1) => {
+      const tr = r * scale;
       return [
-        // Drop shadow
-        <circle key={`${id}-sh`} cx={tx + 1.5} cy={ty + 2.5} r={r + 1}
+        <circle key={`${id}-sh`} cx={tx + 1.5} cy={ty + 2.5} r={tr + 1}
           fill="rgba(0,0,0,0.5)" />,
-        // Glow ring when active
         ...(isActive ? [
-          <circle key={`${id}-glow`} cx={tx} cy={ty} r={r + 4}
-            fill="none" stroke={color} strokeWidth={2} opacity={0.5} />,
+          <circle key={`${id}-glow`} cx={tx} cy={ty} r={tr + 4}
+            fill="none" stroke={color} strokeWidth={2} opacity={0.55} />,
         ] : []),
-        // Main body
-        <circle key={`${id}-body`} cx={tx} cy={ty} r={r}
+        <circle key={`${id}-body`} cx={tx} cy={ty} r={tr}
           fill={color} stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} />,
-        // Top-left highlight
-        <circle key={`${id}-hl`} cx={tx - r * 0.28} cy={ty - r * 0.3} r={r * 0.42}
+        <circle key={`${id}-hl`} cx={tx - tr * 0.28} cy={ty - tr * 0.3} r={tr * 0.42}
           fill={light} opacity={0.45} />,
-        // Letter
         <text key={`${id}-txt`} x={tx} y={ty + 1} textAnchor="middle" dominantBaseline="central"
-          fontSize={r * 0.85} fill="white" fontWeight="bold">{label}</text>,
+          fontSize={tr * 0.85} fill="white" fontWeight="bold">{label}</text>,
       ];
     };
 
-    // Player token
+    // ── Player token ──────────────────────────────────────────────────────
     if (pPos === -1) {
-      el.push(...drawToken('p', cx(pBaseC), cy(pBaseR), pColor, pLight, 'P', turn === 'p'));
+      // Sitting in parking spot 0 of their home base
+      el.push(...drawToken('p', cx(pSpotCol), cy(pSpotRow), pColor, pLight, 'P', turn === 'p'));
+    } else if (pPos >= 58) {
+      // Reached center home — show slightly offset from center, slightly smaller
+      el.push(...drawToken('p', homeX - C * 0.38, homeY - C * 0.38, pColor, pLight, '★', false, 0.88));
     } else {
       const [row, col] = posCoord(pPos, pStretch);
       el.push(...drawToken('p', cx(col), cy(row), pColor, pLight, 'P', turn === 'p'));
     }
 
-    // AI / opponent token
+    // ── AI / opponent token ───────────────────────────────────────────────
     if (aPos === -1) {
-      el.push(...drawToken('a', cx(aBaseC), cy(aBaseR), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
+      el.push(...drawToken('a', cx(aSpotCol), cy(aSpotRow), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
+    } else if (aPos >= 58) {
+      el.push(...drawToken('a', homeX + C * 0.38, homeY + C * 0.38, aColor, aLight, '★', false, 0.88));
     } else {
       const [row, col] = posCoord(aPos, aStretch);
       el.push(...drawToken('a', cx(col), cy(row), aColor, aLight, isOnline ? 'O' : 'A', turn === 'a'));
@@ -534,12 +542,12 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
         </button>
       </div>
 
-      {/* Progress bars */}
+      {/* Progress bars + home counter */}
       {!isOnline && (
         <div className="w-full max-w-[400px] flex flex-col gap-1.5 px-1">
           {[
-            { label: 'You', pct: pPct, color: '#ef4444', pos: pPos },
-            { label: 'AI',  pct: aPct, color: '#3b82f6', pos: aPos },
+            { label: 'You', pct: pPct, color: '#ef4444', pos: pPos, atHome: pPos >= 58 },
+            { label: 'AI',  pct: aPct, color: '#3b82f6', pos: aPos, atHome: aPos >= 58 },
           ].map(bar => (
             <div key={bar.label} className="flex items-center gap-2 text-xs">
               <span className="font-bold w-5 text-right" style={{ color: bar.color }}>{bar.label}</span>
@@ -547,11 +555,25 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
                 <div className="h-full rounded-full transition-all duration-500"
                   style={{ width: `${bar.pct}%`, background: bar.color }} />
               </div>
-              <span className="text-text-muted w-10 text-right font-medium">
-                {bar.pos < 0 ? 'Base' : bar.pos >= 58 ? '🏠' : `${bar.pct}%`}
-              </span>
+              {/* Home reached badge */}
+              <div className="flex items-center gap-1 w-14 justify-end">
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md transition-all ${
+                  bar.atHome
+                    ? 'bg-yellow-400/20 text-yellow-300 ring-1 ring-yellow-400/40'
+                    : 'text-text-muted'
+                }`}>
+                  {bar.atHome ? '★ Home' : bar.pos < 0 ? 'Base' : `${bar.pct}%`}
+                </span>
+              </div>
             </div>
           ))}
+          {/* Home tally */}
+          <div className="flex items-center justify-center gap-4 mt-0.5 text-[11px] text-text-muted">
+            <span>Pieces home:</span>
+            <span style={{ color: '#ef4444' }} className="font-bold">{pPos >= 58 ? 1 : 0}/1</span>
+            <span className="text-text-dim">vs</span>
+            <span style={{ color: '#3b82f6' }} className="font-bold">{aPos >= 58 ? 1 : 0}/1</span>
+          </div>
         </div>
       )}
 
