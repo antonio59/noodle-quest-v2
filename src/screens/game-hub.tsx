@@ -311,20 +311,9 @@ export function GameHub() {
                     </button>
                   )}
 
-                  {/* Thumbnail or emoji */}
-                  {getGameImage(g.id) ? (
-                    <div className="w-full rounded-2xl overflow-hidden mt-7 mb-3 aspect-square group-hover:scale-105 transition-transform duration-300">
-                      <img
-                        src={getGameImage(g.id)}
-                        alt={g.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-5xl mt-7 mb-3 leading-none group-hover:scale-110 transition-transform duration-300">
-                      {g.emoji}
-                    </div>
-                  )}
+                  <div className="text-5xl mt-7 mb-3 leading-none group-hover:scale-110 transition-transform duration-300">
+                    {g.emoji}
+                  </div>
 
                   {/* Name + description */}
                   <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
@@ -399,14 +388,7 @@ export function GameHub() {
                       </span>
                     )}
 
-                    {/* Thumbnail or emoji */}
-                    {getGameImage(g.id) ? (
-                      <div className="w-full rounded-2xl overflow-hidden mt-2 mb-3 aspect-square group-hover:scale-105 transition-transform duration-300">
-                        <img src={getGameImage(g.id)} alt={g.name} className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="text-5xl mb-3 leading-none mt-2 group-hover:scale-110 transition-transform duration-300">{g.emoji}</div>
-                    )}
+                    <div className="text-5xl mb-3 leading-none mt-2 group-hover:scale-110 transition-transform duration-300">{g.emoji}</div>
 
                     {/* Name + description */}
                     <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
