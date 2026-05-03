@@ -127,7 +127,6 @@ export default function DualNBackGame({ stage, onScore, onProgress, onEnd, onMes
     }, SHOW_MS);
 
     return undefined;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, trialIdx]);
 
   const startGame = useCallback(() => {

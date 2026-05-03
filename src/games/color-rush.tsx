@@ -100,8 +100,8 @@ export default function ColorRushGame({ stage, onScore, onProgress, onEnd, onMes
     setChosen(name);
 
     const correct = name === q.color.name;
-    let pts = 0;
-    let msg = '';
+    let pts: number;
+    let msg: string;
 
     if (correct) {
       const speedBonus = elapsed < 600 ? 3 : elapsed < 1200 ? 2 : 1;

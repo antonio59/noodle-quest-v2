@@ -108,7 +108,6 @@ export function PlayGame() {
         setCreatingInvite(false);
       })
       .catch(() => setCreatingInvite(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMultiplayer, player?.playerId, gameId]);
 
   // Live lobby state — roster of players who've joined so far.

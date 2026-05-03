@@ -112,7 +112,6 @@ export default function GroundingGame({ onScore, onProgress, onEnd, onMessage }:
       timersRef.current.push(t1);
     };
     cycle();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [breathing]);
 
   const sense = SENSES[senseIdx];
