@@ -13,7 +13,6 @@ import empathyEngine from '@/assets/games/empathy-engine.png';
 import feelingsFaces from '@/assets/games/feelings-faces.png';
 import flexibilityFrames from '@/assets/games/flexibility-frames.png';
 import grounding from '@/assets/games/grounding.png';
-import justRight from '@/assets/games/just-right.png';
 import routineRoadmap from '@/assets/games/routine-roadmap.png';
 import squishLab from '@/assets/games/squish-lab.png';
 import triangleBreathing from '@/assets/games/triangle-breathing.png';
@@ -34,7 +33,6 @@ export const GAME_IMAGES: Record<string, string> = {
   'feelings-faces': feelingsFaces,
   'flexibility-frames': flexibilityFrames,
   'grounding': grounding,
-  'just-right': justRight,
   'routine-roadmap': routineRoadmap,
   'squish-lab': squishLab,
   'triangle-breathing': triangleBreathing,

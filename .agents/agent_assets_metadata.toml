@@ -5,7 +5,7 @@ outputs = []
 id = "Wlrr0mBycilG1iVAeJSNZ"
 uri = "file://src/assets/games/anagram.png"
 type = "image"
-title = "generated_image"
+title = "Anagram thumbnail"
 
 [[generated]]
 id = "VJhyeM8ns1OceG2LUHDwV"
@@ -23,7 +23,7 @@ title = "Breath Bubbles thumbnail"
 id = "gO9c--hqrUt2AmdMzroF7"
 uri = "file://src/assets/games/color-rush.png"
 type = "image"
-title = "generated_image"
+title = "Color Rush thumbnail"
 
 [[generated]]
 id = "TalbKWYYAQzEvQDHiBvaK"
@@ -95,7 +95,7 @@ title = "Coherent Breathing thumbnail"
 id = "UinY0wXuMrdTEUoGPnGe8"
 uri = "file://src/assets/games/grounding.png"
 type = "image"
-title = "Grounding Garden thumbnail"
+title = "Grounding thumbnail"
 
 [[generated]]
 id = "SdgqkZeDvtsGf7iOJQF3P"
