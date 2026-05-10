@@ -21,7 +21,7 @@ const GAME_IDS = [
   'calm-breathing', 'checkers', 'chess', 'coherent-breathing',
   'connect-four', 'copy-cat', 'crossword', 'echo-tap', 'emotion-volcano',
   'empathy-engine', 'feelings-faces', 'fill-blank', 'flag-match',
-  'flexibility-frames', 'focus-frenzy', 'just-right', 'ludo',
+  'flexibility-frames', 'focus-frenzy', 'just-right', 'ludo', 'map-quiz',
   'memory-match', 'mirror-match', 'mistake-master', 'number-ninja',
   'patience-pop', 'pattern-painter', 'pixel-paint', 'reverse-cat',
   'routine-roadmap', 'scrabble', 'snakes-ladders', 'squish-lab',

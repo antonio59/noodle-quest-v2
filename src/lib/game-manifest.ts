@@ -101,6 +101,12 @@ reg('flag-match', {
   category: 'memory', stages: 99,
 }, () => import('@/games/flag-match'));
 
+reg('map-quiz', {
+  name: 'Map Quiz', emoji: '🌍',
+  description: 'Type country and city names to fill in the map! World, Africa, Oceania, Antarctica, and UK packs.',
+  category: 'memory', stages: 5,
+}, () => import('@/games/map-quiz'));
+
 reg('flexibility-frames', {
   name: 'Flexibility Frames', emoji: '🔄',
   description: 'The rules keep changing! Stay flexible and adapt!',

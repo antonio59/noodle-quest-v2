@@ -1,5 +1,6 @@
-import { Home, Gamepad2, MessageCircle, Trophy, User } from 'lucide-react';
+import { Home, Gamepad2, MessageCircle, Trophy, User, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 
 const tabs = [
   { path: '/', icon: Home, label: 'Home' },
@@ -12,6 +13,12 @@ const tabs = [
 export function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+
+  const handleSwitchPlayer = () => {
+    logout();
+    navigate('/auth');
+  };
 
   return (
     <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface px-1">
@@ -34,6 +41,14 @@ export function NavBar() {
           </button>
         );
       })}
+      <button
+        onClick={handleSwitchPlayer}
+        className="flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 py-3 text-muted hover:text-accent transition-colors focus:outline-none border-l border-foreground/5"
+        title="Switch Player"
+      >
+        <Users size={20} strokeWidth={2} />
+        <span className="text-2xs font-semibold">Switch</span>
+      </button>
     </nav>
   );
 }

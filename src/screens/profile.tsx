@@ -4,11 +4,13 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { AVATARS } from '@/lib/avatars';
-import { LogOut, Star, Gamepad2, Trophy, Zap, AlertTriangle, Pencil, Check, ChevronRight } from 'lucide-react';
+import { LogOut, Star, Gamepad2, Trophy, Zap, AlertTriangle, Pencil, Check, ChevronRight, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getRankTier, RANK_TIERS } from '@/lib/rank-tiers';
 
 export function Profile() {
   const { player, logout, updateAvatar, updateName } = useAuth();
+  const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState(player?.name || '');
@@ -277,6 +279,14 @@ export function Profile() {
             </div>
           )}
         </div>
+
+        {/* ── Switch Player ─────────────────────────────────── */}
+        <button
+          onClick={() => { logout(); navigate('/auth'); }}
+          className="w-full flex items-center justify-center gap-2 bg-accent/10 hover:bg-accent/20 text-accent font-semibold py-3 px-6 rounded-2xl border border-accent/30 hover:border-accent/50 transition-all active:scale-[0.98]"
+        >
+          <Users size={16} /> Switch Player
+        </button>
 
         {/* ── Log Out ───────────────────────────────────────── */}
         <button
