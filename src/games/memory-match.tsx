@@ -64,10 +64,12 @@ function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const movesRef = useRef(moves);
   const scoreRef = useRef(score);
   const streakRef = useRef(streak);
+  const timeLeftRef = useRef(timeLeft);
   useEffect(() => { matchedRef.current = matched; }, [matched]);
   useEffect(() => { movesRef.current = moves; }, [moves]);
   useEffect(() => { scoreRef.current = score; }, [score]);
   useEffect(() => { streakRef.current = streak; }, [streak]);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
 
   useEffect(() => {
     if (phase !== 'playing' || config.time <= 0) return;
@@ -107,7 +109,7 @@ function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   useEffect(() => { startGame(); }, [startGame]);
 
-  const finishGame = useCallback((won: boolean, finalMatched: number, finalMoves: number, finalScore: number) => {
+  function finishGame(won: boolean, finalMatched: number, finalMoves: number, finalScore: number) {
     setPhase('done');
     const efficiency = config.pairs > 0 ? finalMoves / config.pairs : 99;
     let stars: number;
@@ -124,14 +126,14 @@ function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         stars = 1;
         summary = `You found all pairs in ${finalMoves} moves! Focus on one row at a time to remember better.`;
       }
-      const bonus = config.time > 0 ? timeLeft * 3 : 50;
+      const bonus = config.time > 0 ? timeLeftRef.current * 3 : 50;
       onEnd({ score: finalScore + bonus, stars, summary });
     } else {
       stars = 1;
       summary = `Time's up! You found ${finalMatched}/${config.pairs} pairs. Take a mental snapshot of each row!`;
       onEnd({ score: finalScore, stars, summary });
     }
-  }, [config, timeLeft, onEnd]);
+  }
 
   const flipCard = useCallback((index: number) => {
     if (phase !== 'playing' || checkingRef.current) return;

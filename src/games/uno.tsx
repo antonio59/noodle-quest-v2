@@ -170,13 +170,11 @@ function UnoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, m
   const oppSeat = isOnline ? (mySeat === 1 ? 2 : 1) : 2;
   const isHost = isOnline && multiplayerState.playerNumber === 1;
 
-  const initial = useRef(dealInitial()).current;
-
-  const [playerHand, setPlayerHand] = useState<UnoCard[]>(initial.pHand);
-  const [aiHand, setAiHand] = useState<UnoCard[]>(initial.aHand);
-  const [deck, setDeck] = useState<UnoCard[]>(initial.deck);
-  const [discardPile, setDiscardPile] = useState<UnoCard[]>(initial.discard);
-  const [currentColor, setCurrentColor] = useState<UnoColor>(initial.color);
+  const [playerHand, setPlayerHand] = useState<UnoCard[]>(() => dealInitial().pHand);
+  const [aiHand, setAiHand] = useState<UnoCard[]>(() => dealInitial().aHand);
+  const [deck, setDeck] = useState<UnoCard[]>(() => dealInitial().deck);
+  const [discardPile, setDiscardPile] = useState<UnoCard[]>(() => dealInitial().discard);
+  const [currentColor, setCurrentColor] = useState<UnoColor>(() => dealInitial().color);
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
   const [phase, setPhase] = useState<GamePhase>('playing');
   const [pendingCard, setPendingCard] = useState<UnoCard | null>(null);
