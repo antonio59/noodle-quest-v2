@@ -65,16 +65,16 @@ useEffect(() => {
 Add these to your Convex deployment:
 
 ```bash
-npx convex env set LINEAR_API_KEY "lin_api_..."
-npx convex env set LINEAR_TEAM_ID "your-team-id"
-npx convex env set LINEAR_PROJECT_ID "your-project-id"  # Optional
+pnpm exec convex env set LINEAR_API_KEY "lin_api_..."
+pnpm exec convex env set LINEAR_TEAM_ID "your-team-id"
+pnpm exec convex env set LINEAR_PROJECT_ID "your-project-id"  # Optional
 ```
 
 ## Migration Steps
 
 1. **Deploy Convex functions**:
    ```bash
-   npm run convex:deploy
+   pnpm run convex:deploy
    ```
 
 2. **Set Linear credentials** (if using Linear integration):
@@ -127,7 +127,7 @@ curl -X POST https://your-deployment.convex.site/webhook/report \
 Verify it was created:
 
 ```bash
-npx convex run reports:getRecentReports
+pnpm exec convex run reports:getRecentReports
 ```
 
 ## Breaking Changes

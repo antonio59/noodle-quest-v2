@@ -61,32 +61,32 @@ git clone https://github.com/antonio59/noodle-quest-v2
 cd noodle-quest-v2
 
 # Install
-npm install
+pnpm install
 
 # Set up environment
 echo "VITE_CONVEX_URL=your_convex_deployment_url" > .env
 
 # Start Convex backend
-npm run convex:dev
+pnpm run convex:dev
 
 # In another terminal, start frontend
-npm run dev
+pnpm run dev
 ```
 
 ### Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_CONVEX_URL` | Your Convex deployment URL (from `npx convex dev` output) |
+| `VITE_CONVEX_URL` | Your Convex deployment URL (from `pnpm exec convex dev` output) |
 
 ### Scripts
 
 ```bash
-npm run dev             # Start Vite dev server
-npm run build           # Production build (tsc + vite build)
-npm run preview         # Preview production build
-npm run convex:dev      # Start Convex dev (creates .env.local)
-npm run convex:deploy   # Deploy Convex functions to production
+pnpm run dev             # Start Vite dev server
+pnpm run build           # Production build (tsc + vite build)
+pnpm run preview         # Preview production build
+pnpm run convex:dev      # Start Convex dev (creates .env.local)
+pnpm run convex:deploy   # Deploy Convex functions to production
 ```
 
 ## Database Schema (Convex)
@@ -127,14 +127,14 @@ convex/
 Deployed on Netlify with SPA routing:
 
 ```bash
-npm run build
-npx netlify deploy --prod --dir=dist
+pnpm run build
+pnpm exec netlify deploy --prod --dir=dist
 ```
 
 Convex functions deploy separately:
 
 ```bash
-npm run convex:deploy
+pnpm run convex:deploy
 ```
 
 ## License
