@@ -382,6 +382,15 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     return el;
   };
 
+  // ── SVG click handler (event handler, not render) ────────────────────────
+  const handleSvgClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const target = e.target as SVGElement;
+    const idx = target.getAttribute('data-piece-idx');
+    if (idx !== null) {
+      handlePieceClick(Number(idx));
+    }
+  }, [handlePieceClick]);
+
   // ── Token rendering ──────────────────────────────────────────────────────
   const renderTokens = () => {
     const el: React.ReactElement[] = [];
@@ -411,9 +420,10 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
       color: string, light: string, label: string,
       isActive: boolean, isMovable: boolean,
       scale = 1.0,
-      onClick?: () => void,
+      pieceIdx?: number,
     ) => {
       const tr = r * scale;
+      const clickable = pieceIdx !== undefined;
       return [
         <circle key={`${id}-sh`} cx={tx+1} cy={ty+2} r={tr+1} fill="rgba(0,0,0,0.45)" style={{ pointerEvents:'none' }} />,
         ...(isMovable ? [
@@ -428,8 +438,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
           fill={color}
           stroke={isMovable ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)'}
           strokeWidth={isMovable ? 2.2 : 1.4}
-          style={{ cursor: onClick ? 'pointer' : 'default' }}
-          onClick={onClick} />,
+          style={{ cursor: clickable ? 'pointer' : 'default' }}
+          {...(clickable ? { 'data-piece-idx': pieceIdx } : {})} />,
         <circle key={`${id}-hl`} cx={tx-tr*0.28} cy={ty-tr*0.3} r={tr*0.4}
           fill={light} opacity={0.42} style={{ pointerEvents:'none' }} />,
         <text key={`${id}-txt`} x={tx} y={ty+1} textAnchor="middle" dominantBaseline="central"
@@ -444,17 +454,16 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     pPieces.forEach((pos, i) => {
       const id  = `p${i}`;
       const isM = movable.includes(i);
-      const onClick = isM ? () => handlePieceClick(i) : undefined;
 
       if (pos === -1) {
         const [sc, sr] = mySpots[i];
-        el.push(...drawToken(id, cx(sc), cy(sr), myColor, myLight, String(i+1), turn==='p', isM, 1, onClick));
+        el.push(...drawToken(id, cx(sc), cy(sr), myColor, myLight, String(i+1), turn==='p', isM, 1, isM ? i : undefined));
       } else if (pos >= 58) {
         const [fx, fy] = myFin[pFinCount++];
         el.push(...drawToken(id, fx, fy, myColor, myLight, '✓', false, false, 0.62));
       } else {
         const [tx, ty] = stackedXY(pos, myStretch, i, pPieces);
-        el.push(...drawToken(id, tx, ty, myColor, myLight, String(i+1), turn==='p', isM, 1, onClick));
+        el.push(...drawToken(id, tx, ty, myColor, myLight, String(i+1), turn==='p', isM, 1, isM ? i : undefined));
       }
     });
 
@@ -559,7 +568,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
       {/* Board */}
       <div className="flex-shrink-0 w-full flex justify-center">
         <svg viewBox={`0 0 ${W} ${W}`} className="rounded-xl w-full h-auto shadow-2xl"
-          style={{ maxWidth: 390, maxHeight: '52vh' }}>
+          style={{ maxWidth: 390, maxHeight: '52vh' }} onClick={handleSvgClick}>
           {renderBoard()}
           {renderTokens()}
         </svg>
