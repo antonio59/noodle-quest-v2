@@ -1,0 +1,9 @@
+packages:
+  - .
+allowBuilds:
+  esbuild: set this to true or false
+pnpm:
+  legacyPeerDeps: true
+  allowBuilds:
+    esbuild: true
+  packageImportMethod: clone-or-copy
