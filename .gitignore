@@ -27,3 +27,20 @@ dist-ssr
 .netlify
 .claude/worktrees/
 .gstack/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Replit
+.replit
+replit.nix
+replit.md
+
+# OpenClaw
+OPENCLAW_INTEGRATION.md
+*openclaw*
+
+# Agent metadata
+.agents/
