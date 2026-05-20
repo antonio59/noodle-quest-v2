@@ -60,9 +60,28 @@ export default defineSchema({
     stage: v.optional(v.number()),
     stars: v.optional(v.number()),
     createdAt: v.number(),
+    // Reply-to-message (WhatsApp-style). We snapshot the quoted text so
+    // deleting/editing the original message doesn't break old quotes.
+    replyToId: v.optional(v.id("feed")),
+    replyToAuthorName: v.optional(v.string()),
+    replyToContent: v.optional(v.string()),
+    replyToType: v.optional(v.string()),
   })
     .index("by_time", ["createdAt"])
     .index("by_type_time", ["type", "createdAt"]),
+
+  // Emoji reactions on feed posts. One row per (post, player, emoji)
+  // — a player can react with multiple distinct emojis, but the same
+  // emoji from the same player on the same post is deduped at write time.
+  reactions: defineTable({
+    postId: v.id("feed"),
+    playerId: v.id("players"),
+    playerName: v.string(),
+    emoji: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_post", ["postId"])
+    .index("by_post_player", ["postId", "playerId"]),
 
   favorites: defineTable({
     playerId: v.id("players"),

@@ -1,6 +1,9 @@
 [build]
   publish = "dist"
-  command = "npm run lint && npm run build"
+  # Deploy the Convex backend first (using CONVEX_DEPLOY_KEY from env),
+  # then build the frontend so the two stay in sync. `npm run build`
+  # already runs typecheck + lint + vite build, so no need to repeat lint.
+  command = "npx convex deploy --cmd 'npm run build'"
 
 [[redirects]]
   from = "/*"
