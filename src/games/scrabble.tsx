@@ -723,7 +723,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
       word = wordCells.map(([r, c]) => board[r][c]).join('');
     }
     if (word.length < 2) return { valid: false, word: '', cells: [], score: 0, reason: 'Word must be at least 2 letters' };
-    if (!VALID_WORDS.has(word)) return { valid: false, word, cells: wordCells, score: 0, reason: `"${word}" is not in the dictionary` };
+    if (!ACTIVE_WORD_SET.has(word)) return { valid: false, word, cells: wordCells, score: 0, reason: `"${word}" is not in the dictionary` };
 
     // First move must touch center
     if (isFirstMove && !wordCells.some(([r, c]) => r === CENTER && c === CENTER)) {
