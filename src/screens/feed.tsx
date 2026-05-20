@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Smile, Image, AtSign, X, Search, MessageCircle, Zap } from 'lucide-react';
+import { Send, Smile, Image, AtSign, X, Search, MessageCircle, Zap, Reply } from 'lucide-react';
 import { getGameName } from '@/lib/game-registry';
 
 const GIPHY_API_KEY = import.meta.env.VITE_GIPHY_API_KEY as string | undefined;
@@ -58,6 +58,9 @@ const QUICK_EMOJIS = [
   '👍','👎','🤝','✌️','🫡','💀','😭','🫠',
 ];
 
+// WhatsApp-style default reaction row.
+const REACTION_QUICK = ['👍','❤️','😂','😮','😢','🔥'];
+
 const LEGACY_STICKER_MAP: Record<string, string> = {
   happy: '🎉', gg: '🎮', fire: '🔥', clap: '👏',
   lol: '😂', love: '❤️', cool: '😎', sad: '😢',
@@ -100,6 +103,33 @@ function authorColor(name: string) {
   return AUTHOR_PALETTE[h % AUTHOR_PALETTE.length];
 }
 
+// One-line summary of a quoted message — used both inside reply quote
+// strips on rendered bubbles and in the compose-bar reply preview.
+function quotedPreview(type: string | undefined, content: string | undefined): string {
+  if (!content) return '';
+  if (type === 'gif_url') return '🖼️ GIF';
+  if (type === 'gif') return '🖼️ Sticker';
+  const trimmed = content.trim();
+  return trimmed.length > 80 ? trimmed.slice(0, 80) + '…' : trimmed;
+}
+
+interface Reaction { id: string; playerId: string; playerName: string; emoji: string; }
+
+// Group reactions by emoji and compute count + whether the current viewer
+// is one of the reactors (so we can highlight their chip).
+function groupReactions(reactions: Reaction[] | undefined, viewerId: string | undefined) {
+  if (!reactions || reactions.length === 0) return [];
+  const map = new Map<string, { emoji: string; count: number; mine: boolean; names: string[] }>();
+  for (const r of reactions) {
+    const cur = map.get(r.emoji) ?? { emoji: r.emoji, count: 0, mine: false, names: [] };
+    cur.count += 1;
+    cur.names.push(r.playerName);
+    if (viewerId && r.playerId === viewerId) cur.mine = true;
+    map.set(r.emoji, cur);
+  }
+  return [...map.values()];
+}
+
 function renderTextContent(content: string) {
   const parts = content.split(/(@\w+|https?:\/\/\S+)/g);
   return parts.map((part, i) => {
@@ -130,6 +160,11 @@ export function Feed() {
   const [showMention, setShowMention] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionSuggestions, setMentionSuggestions] = useState<MentionSuggestion[]>([]);
+  // Per-message actions popover (reactions + reply). Holds the post id of
+  // the currently-tapped bubble, or null when nothing is open.
+  const [actionsForPost, setActionsForPost] = useState<string | null>(null);
+  // When set, the next message sent will quote this post (WhatsApp-style).
+  const [replyTo, setReplyTo] = useState<any | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
 
@@ -143,6 +178,7 @@ export function Feed() {
     mentionQuery.length >= 2 && player ? { query: mentionQuery, currentPlayerId: player.playerId } : 'skip' as any
   );
   const createPost = useMutation(api.feed.createPost);
+  const toggleReaction = useMutation(api.feed.toggleReaction);
 
   const loadGifs = useCallback(async (query: string) => {
     setGifLoading(true);
@@ -171,11 +207,31 @@ export function Feed() {
   const handleSend = async () => {
     if (!message.trim() || !player || !createPost) return;
     try {
-      await createPost({ authorId: player.playerId as any, type: 'chat', content: message.trim() });
+      await createPost({
+        authorId: player.playerId as any,
+        type: 'chat',
+        content: message.trim(),
+        ...(replyTo ? { replyToId: replyTo.id as any } : {}),
+      });
       setMessage('');
       setShowEmoji(false);
       setShowGif(false);
+      setReplyTo(null);
     } catch { /* send failed */ }
+  };
+
+  const handleToggleReaction = async (postId: string, emoji: string) => {
+    if (!player || !toggleReaction) return;
+    setActionsForPost(null);
+    try {
+      await toggleReaction({ postId: postId as any, playerId: player.playerId as any, emoji });
+    } catch { /* toggle failed */ }
+  };
+
+  const handleStartReply = (post: any) => {
+    setReplyTo(post);
+    setActionsForPost(null);
+    inputRef.current?.focus();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,8 +264,14 @@ export function Feed() {
   const sendGif = async (gifUrl: string) => {
     if (!player || !createPost) return;
     try {
-      await createPost({ authorId: player.playerId as any, type: 'gif_url', content: gifUrl });
+      await createPost({
+        authorId: player.playerId as any,
+        type: 'gif_url',
+        content: gifUrl,
+        ...(replyTo ? { replyToId: replyTo.id as any } : {}),
+      });
       setShowGif(false); setGifQuery('');
+      setReplyTo(null);
     } catch { /* send failed */ }
   };
 
@@ -329,15 +391,94 @@ export function Feed() {
                           />
                         )}
                         <div
-                          className={`rounded-2xl px-3 py-2 text-sm break-words leading-relaxed ${
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            // Let links/images inside the bubble keep their own click semantics.
+                            if ((e.target as HTMLElement).closest('a, img')) return;
+                            setActionsForPost(prev => prev === post.id ? null : post.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setActionsForPost(prev => prev === post.id ? null : post.id);
+                            }
+                          }}
+                          className={`rounded-2xl px-3 py-2 text-sm break-words leading-relaxed cursor-pointer transition-shadow ${
                             isMe
                               ? `bg-accent text-bg ${isFirstInGroup ? 'rounded-tr-sm' : ''} ${isLastInGroup ? 'rounded-br-sm' : ''}`
                               : `bg-card text-text ${isFirstInGroup ? 'rounded-tl-sm' : ''} ${isLastInGroup ? 'rounded-bl-sm' : ''}`
-                          }`}
+                          } ${actionsForPost === post.id ? 'ring-2 ring-accent/50' : ''}`}
                         >
+                          {/* Quoted reply preview at top of bubble */}
+                          {post.replyToId && post.replyToContent && (
+                            <div className={`mb-1.5 rounded-lg pl-2 pr-2 py-1 border-l-2 ${
+                              isMe
+                                ? 'bg-black/15 border-bg/40'
+                                : 'bg-white/5 border-white/20'
+                            }`}>
+                              <div className={`text-[10px] font-bold ${isMe ? 'opacity-80' : authorColor(post.replyToAuthorName || '').name}`}>
+                                {post.replyToAuthorName === player?.name ? 'You' : post.replyToAuthorName}
+                              </div>
+                              <div className={`text-[11px] truncate ${isMe ? 'opacity-70' : 'opacity-60'}`}>
+                                {quotedPreview(post.replyToType, post.replyToContent)}
+                              </div>
+                            </div>
+                          )}
                           {renderChatContent(post)}
                         </div>
                       </div>
+
+                      {/* Reactions row */}
+                      {post.reactions && post.reactions.length > 0 && (
+                        <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end mr-1' : 'ml-2'}`}>
+                          {groupReactions(post.reactions, player?.playerId).map(g => (
+                            <button
+                              key={g.emoji}
+                              type="button"
+                              onClick={() => handleToggleReaction(post.id, g.emoji)}
+                              title={g.names.join(', ')}
+                              className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[11px] border transition-colors ${
+                                g.mine
+                                  ? 'bg-accent/15 border-accent/50 text-accent'
+                                  : 'bg-card border-white/10 text-text hover:bg-card-hover'
+                              }`}
+                            >
+                              <span className="text-sm leading-none">{g.emoji}</span>
+                              {g.count > 1 && <span className="font-semibold">{g.count}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Actions popover (reactions row + reply) — shown when bubble tapped */}
+                      {actionsForPost === post.id && (
+                        <div className={`mt-1.5 flex items-center gap-1 bg-card border border-white/10 rounded-full px-1.5 py-1 shadow-lg ${
+                          isMe ? 'self-end mr-1' : 'self-start ml-2'
+                        }`}>
+                          {REACTION_QUICK.map(e => (
+                            <button
+                              key={e}
+                              type="button"
+                              onClick={() => handleToggleReaction(post.id, e)}
+                              className="text-lg w-7 h-7 flex items-center justify-center rounded-full hover:bg-card-hover active:scale-90 transition-all"
+                            >
+                              {e}
+                            </button>
+                          ))}
+                          <span className="w-px h-5 bg-white/10 mx-0.5" aria-hidden />
+                          <button
+                            type="button"
+                            onClick={() => handleStartReply(post)}
+                            className="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-full text-text-muted hover:text-text hover:bg-card-hover transition-colors"
+                            title="Reply"
+                          >
+                            <Reply size={13} />
+                            Reply
+                          </button>
+                        </div>
+                      )}
+
                       {/* Time — show only on last in a group */}
                       {isLastInGroup && (
                         <span className="text-[10px] text-text-muted mt-1 mx-1">{formatTime(post.createdAt)}</span>
@@ -401,6 +542,28 @@ export function Feed() {
       {/* Compose bar (chat only) */}
       {tab === 'chat' && (
         <div className="flex-shrink-0 bg-surface border-t border-white/5 p-3 space-y-2">
+          {/* Reply preview — shown above the input when replying to a message */}
+          {replyTo && (
+            <div className="flex items-center gap-2 bg-card border border-white/10 rounded-xl pl-2 pr-1.5 py-1.5">
+              <Reply size={14} className="text-accent flex-shrink-0" />
+              <div className="flex-1 min-w-0 border-l-2 border-accent pl-2">
+                <div className="text-[10px] font-bold text-accent">
+                  Replying to {replyTo.authorName === player?.name ? 'yourself' : replyTo.authorName}
+                </div>
+                <div className="text-[11px] text-text-muted truncate">
+                  {quotedPreview(replyTo.type, replyTo.content)}
+                </div>
+              </div>
+              <button
+                onClick={() => setReplyTo(null)}
+                className="w-7 h-7 flex items-center justify-center rounded-full text-text-muted hover:text-text hover:bg-card-hover transition-colors flex-shrink-0"
+                title="Cancel reply"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           {/* Mention dropdown */}
           {showMention && mentionSuggestions.length > 0 && (
             <div className="bg-card rounded-xl border border-white/10 overflow-hidden max-h-32 overflow-y-auto">
