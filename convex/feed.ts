@@ -23,17 +23,28 @@ export const getFeed = query({
 const mapPost = (p: any) => ({ id: p._id, authorName: p.authorName, authorAvatar: p.authorAvatar, type: p.type, content: p.content, gameId: p.gameId, gameName: p.gameName, gameEmoji: p.gameEmoji, stage: p.stage, stars: p.stars, createdAt: p.createdAt });
 
 export const getChatMessages = query({
-  args: { limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()), playerId: v.optional(v.id("players")) },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 100;
+    // Hide chat history that predates the viewer's join time. Without a
+    // playerId we fall back to "show nothing" — anonymous viewers should not
+    // see the room's backlog.
+    let since = Number.POSITIVE_INFINITY;
+    if (args.playerId) {
+      const viewer = await ctx.db.get(args.playerId);
+      if (viewer) since = viewer.createdAt;
+    }
+    if (!Number.isFinite(since)) return [];
+
     // Fetch chat, gif, and gif_url posts separately via the type+time index
     const [chats, gifs, gifUrls] = await Promise.all([
       ctx.db.query("feed").withIndex("by_type_time", q => q.eq("type", "chat")).order("desc").take(limit),
       ctx.db.query("feed").withIndex("by_type_time", q => q.eq("type", "gif")).order("desc").take(20),
       ctx.db.query("feed").withIndex("by_type_time", q => q.eq("type", "gif_url")).order("desc").take(20),
     ]);
-    // Merge and sort descending by createdAt, take the limit
+    // Merge, drop anything older than the viewer joined, sort desc, cap to limit
     const all = [...chats, ...gifs, ...gifUrls]
+      .filter(p => p.createdAt >= since)
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, limit);
     return all.map(mapPost);

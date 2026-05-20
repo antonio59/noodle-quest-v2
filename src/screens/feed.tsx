@@ -78,6 +78,28 @@ function formatTime(ts: number) {
   return new Date(ts).toLocaleDateString();
 }
 
+// Deterministic per-author palette. Same author → same name colour + stripe
+// across every message, so a long burst stays recognisable even without
+// re-showing the avatar/name.
+const AUTHOR_PALETTE = [
+  { name: 'text-sky-300', stripe: 'bg-sky-400' },
+  { name: 'text-emerald-300', stripe: 'bg-emerald-400' },
+  { name: 'text-amber-300', stripe: 'bg-amber-400' },
+  { name: 'text-rose-300', stripe: 'bg-rose-400' },
+  { name: 'text-violet-300', stripe: 'bg-violet-400' },
+  { name: 'text-cyan-300', stripe: 'bg-cyan-400' },
+  { name: 'text-orange-300', stripe: 'bg-orange-400' },
+  { name: 'text-pink-300', stripe: 'bg-pink-400' },
+  { name: 'text-lime-300', stripe: 'bg-lime-400' },
+  { name: 'text-indigo-300', stripe: 'bg-indigo-400' },
+];
+
+function authorColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AUTHOR_PALETTE[h % AUTHOR_PALETTE.length];
+}
+
 function renderTextContent(content: string) {
   const parts = content.split(/(@\w+|https?:\/\/\S+)/g);
   return parts.map((part, i) => {
@@ -111,7 +133,10 @@ export function Feed() {
   const inputRef = useRef<HTMLInputElement>(null);
   const feedEndRef = useRef<HTMLDivElement>(null);
 
-  const chatData = useQuery(api.feed.getChatMessages, { limit: 100 });
+  const chatData = useQuery(
+    api.feed.getChatMessages,
+    player ? { limit: 100, playerId: player.playerId as any } : 'skip' as any,
+  );
   const activityData = useQuery(api.feed.getActivity, { limit: 50 });
   const searchResults = useQuery(
     api.auth.searchPlayers as any,
@@ -264,49 +289,59 @@ export function Feed() {
               {chatPosts.map((post: any, idx: number) => {
                 const isMe = post.authorName === player?.name;
                 const prev = chatPosts[idx - 1] as any;
+                const next = chatPosts[idx + 1] as any;
                 const isSameAuthorAsPrev = prev && prev.authorName === post.authorName;
-                const showAvatar = !isMe && !isSameAuthorAsPrev;
-                const showName = !isMe && !isSameAuthorAsPrev;
-                const addGap = !isSameAuthorAsPrev && idx > 0;
+                const isSameAuthorAsNext = next && next.authorName === post.authorName;
+                const isFirstInGroup = !isSameAuthorAsPrev;
+                const isLastInGroup = !isSameAuthorAsNext;
+                const addGap = isFirstInGroup && idx > 0;
+                const color = authorColor(post.authorName || '');
 
                 return (
                   <div
                     key={post.id}
                     className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} ${addGap ? 'mt-3' : ''}`}
                   >
-                    {/* Avatar column (others only) */}
+                    {/* Avatar column (others only) — always reserve space, fade on grouped */}
                     {!isMe && (
-                      <div className="w-8 flex-shrink-0 flex items-end">
-                        {showAvatar ? (
+                      <div className="w-8 flex-shrink-0 flex items-end justify-center">
+                        {isFirstInGroup ? (
                           <span className="text-2xl leading-none">{post.authorAvatar || '🎮'}</span>
-                        ) : null}
+                        ) : (
+                          <span className="text-base leading-none opacity-30">{post.authorAvatar || '🎮'}</span>
+                        )}
                       </div>
                     )}
 
                     {/* Bubble */}
                     <div className={`max-w-[72%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
-                      {showName && (
-                        <span className="text-[10px] font-semibold text-text-muted mb-1 ml-1">
-                          {post.authorName}
+                      {isFirstInGroup && (
+                        <span className={`text-[11px] font-bold mb-1 ${isMe ? 'mr-1 text-accent' : `ml-2 ${color.name}`}`}>
+                          {isMe ? 'You' : post.authorName}
                         </span>
                       )}
-                      <div
-                        className={`rounded-2xl px-3 py-2 text-sm break-words leading-relaxed ${
-                          isMe
-                            ? 'bg-accent text-bg rounded-tr-sm'
-                            : 'bg-card text-text rounded-tl-sm'
-                        }`}
-                      >
-                        {renderChatContent(post)}
+                      <div className={`relative ${!isMe ? 'pl-2' : ''}`}>
+                        {/* Per-author colour stripe on others' bubbles — persistent identifier */}
+                        {!isMe && (
+                          <span
+                            className={`absolute left-0 top-0 bottom-0 w-1 rounded-full ${color.stripe}`}
+                            aria-hidden
+                          />
+                        )}
+                        <div
+                          className={`rounded-2xl px-3 py-2 text-sm break-words leading-relaxed ${
+                            isMe
+                              ? `bg-accent text-bg ${isFirstInGroup ? 'rounded-tr-sm' : ''} ${isLastInGroup ? 'rounded-br-sm' : ''}`
+                              : `bg-card text-text ${isFirstInGroup ? 'rounded-tl-sm' : ''} ${isLastInGroup ? 'rounded-bl-sm' : ''}`
+                          }`}
+                        >
+                          {renderChatContent(post)}
+                        </div>
                       </div>
                       {/* Time — show only on last in a group */}
-                      {(() => {
-                        const next = chatPosts[idx + 1] as any;
-                        const isLastInGroup = !next || next.authorName !== post.authorName;
-                        return isLastInGroup ? (
-                          <span className="text-[10px] text-text-muted mt-1 mx-1">{formatTime(post.createdAt)}</span>
-                        ) : null;
-                      })()}
+                      {isLastInGroup && (
+                        <span className="text-[10px] text-text-muted mt-1 mx-1">{formatTime(post.createdAt)}</span>
+                      )}
                     </div>
                   </div>
                 );
