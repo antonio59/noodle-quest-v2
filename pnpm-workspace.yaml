@@ -7,3 +7,8 @@ allowBuilds:
 pnpm:
   legacyPeerDeps: true
   packageImportMethod: clone-or-copy
+
+# Force any transitive ws to a patched version. CVE-2026-45736
+# (uninitialized memory disclosure) affects ws < 8.18.1.
+overrides:
+  ws: ">=8.18.1"
