@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Outlet, useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import { Home } from '@/screens/home';
 import { Landing } from '@/screens/landing';
 import { Auth } from '@/screens/auth';
@@ -24,9 +25,37 @@ function ScreenFallback() {
   );
 }
 
+// Persistent strip showing which account is active on every screen.
+// Shared computers (e.g. kids forgetting to log out) need this to be
+// unavoidable — placing it at the top of the viewport above all screens.
+function ActiveAccountBar() {
+  const { player, logout } = useAuth();
+  const navigate = useNavigate();
+  if (!player) return null;
+  const handleSwitch = () => { logout(); navigate('/auth'); };
+  return (
+    <div className="flex-shrink-0 bg-accent/12 border-b border-accent/20 px-3 py-1.5 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="text-lg leading-none flex-shrink-0" aria-hidden>{player.avatar || '🎮'}</span>
+        <span className="text-[10px] uppercase tracking-wide text-text-muted font-semibold flex-shrink-0">Signed in as</span>
+        <span className="text-xs font-bold text-text truncate">{player.name}</span>
+      </div>
+      <button
+        onClick={handleSwitch}
+        className="flex items-center gap-1 text-[11px] font-semibold text-accent hover:bg-accent/15 active:scale-95 px-2 py-1 rounded-lg transition-all flex-shrink-0"
+        title="Sign out and switch player"
+      >
+        <LogOut size={12} />
+        Switch
+      </button>
+    </div>
+  );
+}
+
 function AppLayout() {
   return (
     <div className="h-full flex flex-col">
+      <ActiveAccountBar />
       <main className="flex-1 overflow-hidden">
         <Suspense fallback={<ScreenFallback />}>
           <Outlet />
