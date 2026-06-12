@@ -20,5 +20,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     css: false,
+    // convex-test ships TS that must be transformed by Vite
+    server: { deps: { inline: ['convex-test'] } },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
+      include: ['src/**', 'convex/**'],
+      exclude: ['convex/_generated/**', 'src/test-setup.ts', 'src/assets/**'],
+    },
   },
 })
