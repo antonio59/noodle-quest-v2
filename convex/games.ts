@@ -1,19 +1,26 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { playerFromSession } from "./model/auth";
 
 export const saveScore = mutation({
-  args: { playerId: v.id("players"), gameId: v.string(), stage: v.number(), score: v.number(), stars: v.number() },
+  args: { sessionToken: v.string(), gameId: v.string(), stage: v.number(), score: v.number(), stars: v.number() },
   handler: async (ctx, args) => {
-    await ctx.db.insert("scores", { ...args, playedAt: Date.now() });
-    const existing = await ctx.db.query("progress").withIndex("by_player_game", q => q.eq("playerId", args.playerId).eq("gameId", args.gameId)).filter(q => q.eq(q.field("stage"), args.stage)).unique();
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
+    if (!Number.isFinite(args.score) || args.score < 0) return { error: "Invalid score." };
+    if (!Number.isInteger(args.stars) || args.stars < 0 || args.stars > 3) return { error: "Invalid stars." };
+    if (!Number.isInteger(args.stage) || args.stage < 1) return { error: "Invalid stage." };
+
+    const playerId = player._id;
+    await ctx.db.insert("scores", { playerId, gameId: args.gameId, stage: args.stage, score: args.score, stars: args.stars, playedAt: Date.now() });
+    const existing = await ctx.db.query("progress").withIndex("by_player_game", q => q.eq("playerId", playerId).eq("gameId", args.gameId)).filter(q => q.eq(q.field("stage"), args.stage)).unique();
     if (existing) {
       await ctx.db.patch(existing._id, { highScore: Math.max(existing.highScore, args.score), starsEarned: existing.starsEarned + args.stars, timesPlayed: existing.timesPlayed + 1, lastPlayed: Date.now() });
     } else {
-      await ctx.db.insert("progress", { playerId: args.playerId, gameId: args.gameId, stage: args.stage, highScore: args.score, starsEarned: args.stars, timesPlayed: 1, lastPlayed: Date.now() });
+      await ctx.db.insert("progress", { playerId, gameId: args.gameId, stage: args.stage, highScore: args.score, starsEarned: args.stars, timesPlayed: 1, lastPlayed: Date.now() });
     }
     if (args.score > 0) {
-      const player = await ctx.db.get(args.playerId);
-      if (player) await ctx.db.insert("feed", { authorId: args.playerId, authorName: player.name, authorAvatar: player.avatar, type: "score", content: `${"⭐".repeat(Math.min(args.stars, 3))} on ${args.gameId}!`, gameId: args.gameId, stage: args.stage, stars: args.stars, createdAt: Date.now() });
+      await ctx.db.insert("feed", { authorId: playerId, authorName: player.name, authorAvatar: player.avatar, type: "score", content: `${"⭐".repeat(Math.min(args.stars, 3))} on ${args.gameId}!`, gameId: args.gameId, stage: args.stage, stars: args.stars, createdAt: Date.now() });
     }
     return { ok: true };
   },

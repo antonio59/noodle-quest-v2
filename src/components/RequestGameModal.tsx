@@ -30,8 +30,7 @@ export function RequestGameModal({ onClose }: RequestGameModalProps) {
       await createGameRequest({
         gameName: gameName.trim(),
         description: description.trim(),
-        playerId: player?.playerId as any,
-        playerName: player?.name,
+        sessionToken: player?.sessionToken,
       });
 
       // Mirror the same email mechanism as ReportIssueModal

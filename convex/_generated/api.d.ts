@@ -12,6 +12,8 @@ import type * as auth from "../auth.js";
 import type * as challenges from "../challenges.js";
 import type * as feed from "../feed.js";
 import type * as games from "../games.js";
+import type * as migrations from "../migrations.js";
+import type * as model_auth from "../model/auth.js";
 import type * as multiplayer from "../multiplayer.js";
 import type * as reports from "../reports.js";
 import type * as webhooks from "../webhooks.js";
@@ -27,6 +29,8 @@ declare const fullApi: ApiFromModules<{
   challenges: typeof challenges;
   feed: typeof feed;
   games: typeof games;
+  migrations: typeof migrations;
+  "model/auth": typeof model_auth;
   multiplayer: typeof multiplayer;
   reports: typeof reports;
   webhooks: typeof webhooks;

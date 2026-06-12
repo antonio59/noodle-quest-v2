@@ -28,7 +28,7 @@ export function InvitePage() {
     try {
       const result = await joinSession({
         inviteCode: code!,
-        playerId: player.playerId as any,
+        sessionToken: player.sessionToken,
       });
       if (result.error) {
         setError(result.error);

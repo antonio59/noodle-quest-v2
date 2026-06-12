@@ -32,8 +32,7 @@ export function ReportIssueModal({ gameId, gameName, onClose }: ReportIssueModal
       await createReport({
         errorId: `user-report-${Date.now()}`,
         gameId,
-        playerId: player?.playerId as any,
-        playerName: player?.name,
+        sessionToken: player?.sessionToken,
         errorType: category,
         severity: category === 'bug' ? 'high' : 'medium',
         message: `[${gameName}] ${CATEGORIES.find(c => c.id === category)?.label}: ${description.trim()}`,

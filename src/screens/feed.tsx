@@ -175,7 +175,7 @@ export function Feed() {
   const activityData = useQuery(api.feed.getActivity, { limit: 50 });
   const searchResults = useQuery(
     api.auth.searchPlayers as any,
-    mentionQuery.length >= 2 && player ? { query: mentionQuery, currentPlayerId: player.playerId } : 'skip' as any
+    mentionQuery.length >= 2 && player ? { query: mentionQuery, sessionToken: player.sessionToken } : 'skip' as any
   );
   const createPost = useMutation(api.feed.createPost);
   const toggleReaction = useMutation(api.feed.toggleReaction);
@@ -208,7 +208,7 @@ export function Feed() {
     if (!message.trim() || !player || !createPost) return;
     try {
       await createPost({
-        authorId: player.playerId as any,
+        sessionToken: player.sessionToken,
         type: 'chat',
         content: message.trim(),
         ...(replyTo ? { replyToId: replyTo.id as any } : {}),
@@ -224,7 +224,7 @@ export function Feed() {
     if (!player || !toggleReaction) return;
     setActionsForPost(null);
     try {
-      await toggleReaction({ postId: postId as any, playerId: player.playerId as any, emoji });
+      await toggleReaction({ postId: postId as any, sessionToken: player.sessionToken, emoji });
     } catch { /* toggle failed */ }
   };
 
@@ -265,7 +265,7 @@ export function Feed() {
     if (!player || !createPost) return;
     try {
       await createPost({
-        authorId: player.playerId as any,
+        sessionToken: player.sessionToken,
         type: 'gif_url',
         content: gifUrl,
         ...(replyTo ? { replyToId: replyTo.id as any } : {}),

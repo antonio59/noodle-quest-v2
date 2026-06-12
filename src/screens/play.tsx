@@ -99,7 +99,7 @@ export function PlayGame() {
     const minP = gameMeta?.minPlayers ?? 2;
     const maxP = gameMeta?.maxPlayers ?? 2;
     setCreatingInvite(true);
-    createInvite({ gameId, fromId: player.playerId as any, minPlayers: minP, maxPlayers: maxP })
+    createInvite({ gameId, sessionToken: player.sessionToken, minPlayers: minP, maxPlayers: maxP })
       .then((result: any) => {
         if (result && result.inviteCode) {
           setInviteCode(result.inviteCode as string);
@@ -218,7 +218,7 @@ export function PlayGame() {
     const handleStart = async () => {
       if (!sessionId || !player) return;
       try {
-        await startSession({ sessionId: sessionId as any, playerId: player.playerId as any });
+        await startSession({ sessionId: sessionId as any, sessionToken: player.sessionToken });
       } catch {
         // ignore — next poll will reflect state
       }
@@ -367,7 +367,7 @@ export function PlayGame() {
     if (player && saveScore) {
       try {
         await saveScore({
-          playerId: player.playerId as any,
+          sessionToken: player.sessionToken,
           gameId,
           stage: currentStage,
           score: finalScore,
@@ -673,7 +673,7 @@ export function PlayGame() {
               if (!sessionId || !player) return;
               makeMove({
                 sessionId: sessionId as any,
-                playerId: player.playerId as any,
+                sessionToken: player.sessionToken,
                 move,
               }).catch(() => {});
             },
