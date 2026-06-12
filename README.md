@@ -4,20 +4,24 @@ Brain games and board games for the whole family. Train your focus, memory, and 
 
 ## Features
 
-### 21 Brain Games (6 categories)
+### 49 Games (8 categories)
 
 | Category | Games |
 |----------|-------|
-| Memory | Copy Cat, Memory Match, Echo Tap, Mirror Match |
-| Focus | Focus Frenzy, Attention Archery, Breath Bubbles |
-| Motor | Steady Hands, Pixel Paint, Squish Lab |
-| Flexibility | Flexibility Frames, Mistake Master, Reverse Cat |
-| Social | Emotion Volcano, Empathy Engine, Feelings Faces, Story Builder |
-| Sequence | Number Ninja, Pattern Painter, Routine Roadmap, Just Right, Patience Pop |
+| Memory (9) | Anagram Blast, Copy Cat, Dual N-Back, Fill in the Blank, Flag Match, Map Quiz, Memory Match, Number Ninja, Sudoku |
+| Focus (10) | Attention Archery, Breath Bubbles, Color Rush, Echo Tap, Focus Frenzy, Go / No-Go, Grounding Garden, Mirror Match, Patience Pop, Quick Math |
+| Flexibility (5) | Flexibility Frames, Just Right, Mistake Master, Squish Lab, Stroop Challenge |
+| Motor (3) | Pattern Painter, Pixel Paint, Steady Hands |
+| Social (3) | Emotion Volcano, Empathy Engine, Feelings Faces |
+| Sequence (2) | Routine Roadmap, Story Builder |
+| Board (13) | Bingo, Bookworm, Checkers, Chess, Connect Four, Connect Lines, Crossword, Ludo, Scrabble, Snakes & Ladders, Tic-Tac-Toe, UNO, Word Search |
+| Breathe (4) | 4-7-8 Calm, Box Breathing, Coherent Breathing, Triangle Breathing |
 
-### 6 Board Games (vs AI)
+Board games play against an AI with progressive difficulty across stages. Word games (Scrabble, Bookworm, Crossword, Word Search) validate against a full SOWPODS dictionary loaded at runtime.
 
-Tic-Tac-Toe, Checkers, Chess, Connect Four, Ludo, Snakes & Ladders — each with progressive difficulty across stages.
+### Real-Time Multiplayer
+
+Invite another player by link or in-app invite and play board games head-to-head, with live turn sync through Convex. Lobbies support 2+ players depending on the game.
 
 ### Audio Tracks (8 tracks, Web Audio API)
 
@@ -27,12 +31,21 @@ Lo-fi beats, focus pads, nature sounds, and meditation tones — all synthesized
 
 - Activity feed with score announcements
 - Real-time chat with @mention support
-- Emoji picker and sticker/GIF reactions
+- Emoji reactions and reply-to-message quoting
+- Sticker/GIF support
 - Player-to-player challenges
 
-### 45+ Unique Avatars
+### Accounts & Security
 
-Animals, fantasy characters, nature icons — pick yours at signup and change anytime.
+- Netflix-style profile picker with 45+ unique avatars
+- 6-digit PIN per player, stored hashed (never in plaintext)
+- Server-issued session tokens authenticate every write
+- Login lockout after repeated failed attempts
+
+### Issue Reporting & Admin
+
+- In-app "report a problem" and "request a game" flows (with optional email relay via a Netlify function and Linear issue creation via webhook)
+- Admin panel (secret-gated) for player management: PIN resets, account merges, activity overview
 
 ## Tech Stack
 
@@ -42,15 +55,17 @@ Animals, fantasy characters, nature icons — pick yours at signup and change an
 | Build | Vite 8 |
 | Styling | Tailwind CSS 4 |
 | Backend | Convex (real-time database, auth, functions) |
-| Deployment | Netlify |
+| Deployment | Netlify (frontend + functions), Convex Cloud (backend) |
 | Icons | Lucide React |
 | Audio | Web Audio API (programmatic synthesis) |
+| Testing | Vitest, Testing Library, convex-test |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (see `.nvmrc`)
+- pnpm
 - A Convex account ([convex.dev](https://convex.dev))
 
 ### Setup
@@ -63,10 +78,7 @@ cd noodle-quest-v2
 # Install
 pnpm install
 
-# Set up environment
-echo "VITE_CONVEX_URL=your_convex_deployment_url" > .env
-
-# Start Convex backend
+# Start Convex backend (creates .env.local with VITE_CONVEX_URL)
 pnpm run convex:dev
 
 # In another terminal, start frontend
@@ -75,17 +87,24 @@ pnpm run dev
 
 ### Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_CONVEX_URL` | Your Convex deployment URL (from `pnpm exec convex dev` output) |
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `VITE_CONVEX_URL` | frontend | Convex deployment URL (written to `.env.local` by `convex dev`) |
+| `ADMIN_SECRET` | Convex | Gates the admin panel functions |
+| `WEBHOOK_SECRET` | Convex | Verifies incoming report webhooks (optional) |
+| `LINEAR_API_KEY` | Convex | Creates Linear issues from error reports (optional) |
 
 ### Scripts
 
 ```bash
 pnpm run dev             # Start Vite dev server
-pnpm run build           # Production build (tsc + vite build)
+pnpm run build           # Typecheck + production build
 pnpm run preview         # Preview production build
-pnpm run convex:dev      # Start Convex dev (creates .env.local)
+pnpm run lint            # ESLint
+pnpm run typecheck       # tsc for app + convex
+pnpm test                # Vitest (UI + Convex backend tests)
+pnpm run test:coverage   # Tests with V8 coverage report
+pnpm run convex:dev      # Start Convex dev
 pnpm run convex:deploy   # Deploy Convex functions to production
 ```
 
@@ -93,48 +112,72 @@ pnpm run convex:deploy   # Deploy Convex functions to production
 
 | Table | Purpose |
 |-------|---------|
-| `players` | User accounts (name, PIN, avatar) |
+| `players` | User accounts (name, hashed PIN, avatar, lockout state) |
+| `sessions` | Auth session tokens issued at signup/login |
 | `scores` | Individual game score records |
 | `progress` | Per-player per-game stage progress |
 | `feed` | Chat messages and activity posts |
-| `challenges` | Player-to-player game challenges |
+| `reactions` | Emoji reactions on feed posts |
+| `challenges` | Player-to-player score challenges |
 | `favorites` | Favorited games |
 | `playlists` | Custom audio track playlists |
+| `multiplayer_invites` | Invite codes for live games |
+| `multiplayer_sessions` | Live game state (roster, board, turns) |
+| `game_requests` | Player-submitted game ideas |
+| `reports` | Error/issue reports (with optional Linear linkage) |
 
 ## Project Structure
 
 ```
 src/
-  screens/       # Main views (home, game-hub, feed, leaderboard, profile, auth)
-  games/         # 27 game components (21 brain + 6 board)
-  components/    # Shared UI (NavBar)
-  hooks/         # useAudioEngine (Web Audio API)
-  contexts/      # AuthContext (login/signup/session)
-  lib/           # game-registry, convex client, avatars
+  screens/       # Main views (home, game-hub, play, feed, leaderboard, profile, auth, admin, invite)
+  games/         # 49 game components; scrabble/ and uno/ split into logic + UI
+  components/    # Shared UI (NavBar, error boundary, report/request modals)
+  hooks/         # useAudioEngine (Web Audio API), usePageVisibility
+  contexts/      # AuthContext (login/signup/session token)
+  lib/           # game registry/manifest, convex client, avatars, puzzle engine
   tracks/        # Audio track definitions
-  types.ts       # TypeScript interfaces
+  types.ts       # Shared TypeScript interfaces
 
 convex/
-  auth.ts        # Sign up, login, player search, avatar update
+  schema.ts      # Database schema (13 tables)
+  auth.ts        # Sign up, login (hashed PINs, lockout), sessions, admin tools
+  model/auth.ts  # PIN hashing + session helpers
   games.ts       # Score saving, leaderboard queries
-  feed.ts        # Activity feed and chat posts
+  feed.ts        # Activity feed, chat, reactions
   challenges.ts  # Player challenges
-  schema.ts      # Database schema (7 tables)
+  multiplayer.ts # Invites, lobbies, live sessions
+  reports.ts     # Issue reports and game requests
+  webhooks.ts    # HTTP endpoint for bot-reported errors (Linear integration)
+  migrations.ts  # One-time data migrations
+
+tests/
+  convex/        # Backend tests (convex-test)
 ```
+
+## Testing
+
+```bash
+pnpm test
+```
+
+Covers UI contract tests for every game (mount, score, lifecycle), unit tests for extracted game logic (Scrabble scoring/AI, Uno rules, puzzle engine), and Convex backend tests (auth, sessions, scoring, multiplayer authorization, admin merge).
 
 ## Deployment
 
-Deployed on Netlify with SPA routing:
+Netlify builds deploy the Convex backend first, then the frontend, so the two stay in sync:
+
+```toml
+# netlify.toml
+command = "npx convex deploy --cmd 'npm run build'"
+```
+
+Manual deploys:
 
 ```bash
 pnpm run build
-pnpm exec netlify deploy --prod --dir=dist
-```
-
-Convex functions deploy separately:
-
-```bash
-pnpm run convex:deploy
+pnpm exec netlify deploy --prod --dir=dist   # frontend
+pnpm run convex:deploy                        # backend only
 ```
 
 ## License
