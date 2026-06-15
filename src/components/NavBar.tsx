@@ -28,17 +28,20 @@ export function NavBar() {
   };
 
   return (
-    <nav className="flex-shrink-0 flex border-t border-white/5 bg-surface px-1">
+    <nav aria-label="Primary" className="flex-shrink-0 flex border-t border-white/5 bg-surface px-1">
       {tabs.map(t => {
         const active = location.pathname === t.path;
+        const accessibleName = t.kind === 'avatar' ? `Profile (${player?.name ?? 'you'})` : t.label;
         return (
           <button
             key={t.path}
             onClick={() => navigate(t.path)}
-            className={`flex-1 flex flex-col items-center gap-1 py-2.5 transition-colors focus:outline-none relative rounded-xl mx-0.5 my-1 min-w-0 ${
+            aria-label={accessibleName}
+            aria-current={active ? 'page' : undefined}
+            className={`flex-1 flex flex-col items-center gap-1 py-2.5 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent relative rounded-xl mx-0.5 my-1 min-w-0 ${
               active ? 'text-accent' : 'text-text-muted hover:text-text'
             }`}
-            title={t.kind === 'avatar' ? `Profile (${player?.name ?? 'you'})` : t.label}
+            title={accessibleName}
           >
             {active && (
               <span className="absolute inset-0 bg-accent/10 rounded-xl" />
@@ -56,10 +59,11 @@ export function NavBar() {
       })}
       <button
         onClick={handleSwitchPlayer}
-        className="flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 py-3 text-text-muted hover:text-accent transition-colors focus:outline-none border-l border-white/5"
+        aria-label={player ? `Sign out ${player.name} and switch player` : 'Switch player'}
+        className="flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 py-3 text-text-muted hover:text-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent border-l border-white/5"
         title={player ? `Sign out ${player.name} and switch player` : 'Switch Player'}
       >
-        <LogOut size={20} strokeWidth={2} />
+        <LogOut size={20} strokeWidth={2} aria-hidden />
         <span className="text-[10px] font-semibold">Switch</span>
       </button>
     </nav>

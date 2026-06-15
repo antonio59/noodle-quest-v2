@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { X, Bug, AlertCircle, Lightbulb } from 'lucide-react';
+import { Bug, AlertCircle, Lightbulb } from 'lucide-react';
+import { ModalShell } from './ModalShell';
 
 interface ReportIssueModalProps {
   gameId: string;
@@ -63,76 +64,74 @@ export function ReportIssueModal({ gameId, gameName, onClose }: ReportIssueModal
 
   if (submitted) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div className="bg-card rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-white/10 text-center">
-          <div className="text-4xl mb-3">📬</div>
-          <h3 className="text-lg font-bold mb-2">Report Sent!</h3>
-          <p className="text-text-muted text-sm mb-4">
-            Thank you for helping make the games better!
-          </p>
-          <button
-            onClick={onClose}
-            className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition-all"
-          >
-            Close
-          </button>
-        </div>
-      </div>
+      <ModalShell
+        title="Report sent"
+        onClose={onClose}
+        hideHeader
+        panelClassName="bg-card rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-white/10 text-center focus:outline-none"
+      >
+        <div className="text-4xl mb-3" aria-hidden>📬</div>
+        <h3 className="text-lg font-bold mb-2">Report Sent!</h3>
+        <p className="text-text-muted text-sm mb-4">
+          Thank you for helping make the games better!
+        </p>
+        <button
+          onClick={onClose}
+          className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          Close
+        </button>
+      </ModalShell>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-card rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-white/10">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">Report an Issue</h3>
-          <button onClick={onClose} className="text-text-muted hover:text-text p-1">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="space-y-2 mb-4">
-          {CATEGORIES.map(({ id, label, icon: Icon, color }) => (
-            <button
-              key={id}
-              onClick={() => setCategory(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-                category === id ? 'bg-accent-soft ring-1 ring-accent' : 'bg-surface hover:bg-card-hover'
-              }`}
-            >
-              <Icon size={18} className={color} />
-              <span className="text-sm font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="What's the problem? Tell us what happened..."
-          className="w-full bg-surface rounded-xl p-3 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-text-dim"
-          maxLength={500}
-        />
-        <div className="text-right text-[10px] text-text-dim mt-1">
-          {description.length}/500
-        </div>
-
-        <div className="flex gap-3 mt-4">
+    <ModalShell title="Report an Issue" onClose={onClose}>
+      <div className="space-y-2 mb-4" role="radiogroup" aria-label="Issue type">
+        {CATEGORIES.map(({ id, label, icon: Icon, color }) => (
           <button
-            onClick={onClose}
-            className="flex-1 bg-surface hover:bg-card-hover text-text font-semibold py-2.5 rounded-xl transition-colors active:scale-95"
+            key={id}
+            onClick={() => setCategory(id)}
+            role="radio"
+            aria-checked={category === id}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+              category === id ? 'bg-accent-soft ring-1 ring-accent' : 'bg-surface hover:bg-card-hover'
+            }`}
           >
-            Cancel
+            <Icon size={18} className={color} aria-hidden />
+            <span className="text-sm font-medium">{label}</span>
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!description.trim() || sending}
-            className="flex-1 bg-accent text-bg font-semibold py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {sending ? 'Sending...' : 'Send Report'}
-          </button>
-        </div>
+        ))}
       </div>
-    </div>
+
+      <label htmlFor="report-description" className="sr-only">Describe the problem</label>
+      <textarea
+        id="report-description"
+        value={description}
+        onChange={e => setDescription(e.target.value)}
+        placeholder="What's the problem? Tell us what happened..."
+        className="w-full bg-surface rounded-xl p-3 text-sm min-h-[80px] resize-none focus:outline-none focus:ring-1 focus:ring-accent placeholder:text-text-dim"
+        maxLength={500}
+      />
+      <div className="text-right text-[10px] text-text-dim mt-1" aria-hidden>
+        {description.length}/500
+      </div>
+
+      <div className="flex gap-3 mt-4">
+        <button
+          onClick={onClose}
+          className="flex-1 bg-surface hover:bg-card-hover text-text font-semibold py-2.5 rounded-xl transition-colors active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={!description.trim() || sending}
+          className="flex-1 bg-accent text-bg font-semibold py-2.5 rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          {sending ? 'Sending...' : 'Send Report'}
+        </button>
+      </div>
+    </ModalShell>
   );
 }
