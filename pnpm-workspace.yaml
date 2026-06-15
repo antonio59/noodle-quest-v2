@@ -10,5 +10,11 @@ pnpm:
 
 # Force any transitive ws to a patched version. CVE-2026-45736
 # (uninitialized memory disclosure) affects ws < 8.18.1.
+#
+# Force esbuild to a patched version. GHSA-gv7w-rqvm-qjhr (HIGH)
+# affects esbuild < 0.28.1 (binary integrity verification bypass via
+# NPM_CONFIG_REGISTRY in the Deno module). Pulled in transitively by
+# vite and convex.
 overrides:
   ws: ">=8.18.1"
+  esbuild: "^0.28.1"
