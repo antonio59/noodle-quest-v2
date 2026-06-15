@@ -85,6 +85,23 @@ button:not(.game-cell), a, [role="button"]:not(.game-cell) {
 button {
   -webkit-user-select: none;
   user-select: none;
+  /* Snappy taps (no 300ms delay / double-tap zoom on controls) while the
+     page itself stays pinch-zoomable for low-vision users. */
+  touch-action: manipulation;
+}
+
+/* Respect the OS "reduce motion" setting: collapse animations and
+   transitions so motion-sensitive players aren't subjected to the
+   pop-in / shake / celebrate / equalizer effects. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Horizontal scroll hide scrollbar */

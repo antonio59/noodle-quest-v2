@@ -43,11 +43,13 @@ export function Admin() {
       const res = await fetch(`${CONVEX_URL}/api/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-        body: JSON.stringify({ path: 'auth:getAllPlayers', format: 'convex_encoded_json', args: {} }),
+        body: JSON.stringify({ path: 'auth:adminGetAllPlayers', format: 'convex_encoded_json', args: [{ adminSecret: secret }] }),
       });
       const data = await res.json();
-      if (data.value) {
-        setPlayers(data.value);
+      if (data.value?.players) {
+        setPlayers(data.value.players);
+      } else if (data.value?.error) {
+        setError(data.value.error);
       }
     } catch (e) {
       setError('Failed to load players');

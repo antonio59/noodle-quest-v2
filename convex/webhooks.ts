@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -33,8 +33,8 @@ http.route({
         );
       }
 
-      // Create the report
-      const { id: reportId, isNew } = await ctx.runMutation(api.reports.createReport, {
+      // Create the report (internal mutation — the webhook secret was verified above)
+      const { id: reportId, isNew } = await ctx.runMutation(internal.reports.createReportFromWebhook, {
         errorId: body.errorId,
         gameId: body.gameId,
         playerId: body.playerId,

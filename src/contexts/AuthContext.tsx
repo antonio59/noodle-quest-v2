@@ -12,29 +12,46 @@ interface AuthCtx {
 
 const Ctx = createContext<AuthCtx>(null!);
 
+// v2: sessions now carry a server-issued token instead of the plaintext PIN.
+// Old 'nq_session' entries have no token, so we ignore them and clean up —
+// affected players just log in again once.
+const STORAGE_KEY = 'nq_session_v2';
+const LEGACY_STORAGE_KEY = 'nq_session';
+
+async function callConvex(kind: 'mutation' | 'query', path: string, args: Record<string, unknown>) {
+  const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/${kind}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+    body: JSON.stringify({ path, format: 'convex_encoded_json', args: [args] }),
+  });
+  return res.json();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [player, setPlayer] = useState<Player | null>(() => {
     try {
-      return JSON.parse(localStorage.getItem('nq_session') || 'null');
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      return stored?.sessionToken ? stored : null;
     } catch { return null; }
   });
 
   useEffect(() => {
-    if (player) localStorage.setItem('nq_session', JSON.stringify(player));
-    else localStorage.removeItem('nq_session');
+    if (player) localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+    else localStorage.removeItem(STORAGE_KEY);
   }, [player]);
 
   const login = async (name: string, pin: string): Promise<string | null> => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-        body: JSON.stringify({ path: 'auth:logIn', format: 'convex_encoded_json', args: [{ name, pin }] }),
-      });
-      const data = await res.json();
+      const data = await callConvex('mutation', 'auth:logIn', { name, pin });
       if (data.status === 'error') return data.errorMessage;
       if (data.value?.error) return data.value.error;
-      const p: Player = { playerId: data.value.playerId, name: data.value.name, avatar: data.value.avatar, pin };
+      const p: Player = {
+        playerId: data.value.playerId,
+        name: data.value.name,
+        avatar: data.value.avatar,
+        sessionToken: data.value.sessionToken,
+      };
       setPlayer(p);
       return null;
     } catch {
@@ -46,15 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (name.length < 2) return 'Name needs at least 2 characters!';
     if (!/^\d{6}$/.test(pin)) return 'Passcode must be 6 digits';
     try {
-      const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-        body: JSON.stringify({ path: 'auth:signUp', format: 'convex_encoded_json', args: [{ name: name.trim(), pin, avatar }] }),
-      });
-      const data = await res.json();
+      const data = await callConvex('mutation', 'auth:signUp', { name: name.trim(), pin, avatar });
       if (data.status === 'error') return data.errorMessage;
       if (data.value?.error) return data.value.error;
-      const p: Player = { playerId: data.value.playerId, name: name.trim(), avatar: data.value.avatar, pin };
+      const p: Player = {
+        playerId: data.value.playerId,
+        name: name.trim(),
+        avatar: data.value.avatar,
+        sessionToken: data.value.sessionToken,
+      };
       setPlayer(p);
       return null;
     } catch {
@@ -62,17 +79,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => setPlayer(null);
+  const logout = () => {
+    const token = player?.sessionToken;
+    setPlayer(null);
+    if (token) {
+      // Best effort — local logout already happened.
+      callConvex('mutation', 'auth:logOut', { sessionToken: token }).catch(() => {});
+    }
+  };
 
   const updateAvatar = async (emoji: string) => {
     setPlayer(prev => prev ? { ...prev, avatar: emoji } : null);
     if (player) {
       try {
-        await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-          body: JSON.stringify({ path: 'auth:updateAvatar', format: 'convex_encoded_json', args: [{ playerId: player.playerId, avatar: emoji }] }),
-        });
+        await callConvex('mutation', 'auth:updateAvatar', { sessionToken: player.sessionToken, avatar: emoji });
       } catch { /* offline — localStorage still works */ }
     }
   };
@@ -82,12 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (trimmed.length < 2) return 'Name needs at least 2 characters!';
     if (player) {
       try {
-        const res = await fetch(`${import.meta.env.VITE_CONVEX_URL}/api/mutation`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
-          body: JSON.stringify({ path: 'auth:updateName', format: 'convex_encoded_json', args: [{ playerId: player.playerId, name: trimmed }] }),
-        });
-        const data = await res.json();
+        const data = await callConvex('mutation', 'auth:updateName', { sessionToken: player.sessionToken, name: trimmed });
         if (data.status === 'error' || data.value?.error) {
           return data.value?.error || data.errorMessage || 'Failed to update name';
         }

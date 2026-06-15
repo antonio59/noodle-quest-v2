@@ -1,9 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { playerFromSession } from "./model/auth";
+
+const MAX_POST_LENGTH = 2000;
 
 export const createPost = mutation({
   args: {
-    authorId: v.id("players"),
+    sessionToken: v.string(),
     type: v.string(),
     content: v.string(),
     gameId: v.optional(v.string()),
@@ -14,8 +17,11 @@ export const createPost = mutation({
     replyToId: v.optional(v.id("feed")),
   },
   handler: async (ctx, args) => {
-    const author = await ctx.db.get(args.authorId);
-    if (!author) return { error: "Player not found." };
+    const author = await playerFromSession(ctx, args.sessionToken);
+    if (!author) return { error: "Not signed in." };
+    if (args.content.length === 0 || args.content.length > MAX_POST_LENGTH) {
+      return { error: "Message must be 1-2000 characters." };
+    }
 
     // Snapshot the quoted message so deletions/edits don't break old replies.
     let replyToAuthorName: string | undefined;
@@ -31,7 +37,7 @@ export const createPost = mutation({
     }
 
     const postId = await ctx.db.insert("feed", {
-      authorId: args.authorId,
+      authorId: author._id,
       authorName: author.name,
       authorAvatar: author.avatar,
       type: args.type,
@@ -139,17 +145,17 @@ export const getActivity = query({
 // removes their reaction.
 export const toggleReaction = mutation({
   args: {
+    sessionToken: v.string(),
     postId: v.id("feed"),
-    playerId: v.id("players"),
     emoji: v.string(),
   },
   handler: async (ctx, args) => {
-    const player = await ctx.db.get(args.playerId);
-    if (!player) return { error: "Player not found." };
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
 
     const existing = await ctx.db
       .query("reactions")
-      .withIndex("by_post_player", q => q.eq("postId", args.postId).eq("playerId", args.playerId))
+      .withIndex("by_post_player", q => q.eq("postId", args.postId).eq("playerId", player._id))
       .collect();
     const match = existing.find(r => r.emoji === args.emoji);
     if (match) {
@@ -158,7 +164,7 @@ export const toggleReaction = mutation({
     }
     await ctx.db.insert("reactions", {
       postId: args.postId,
-      playerId: args.playerId,
+      playerId: player._id,
       playerName: player.name,
       emoji: args.emoji,
       createdAt: Date.now(),

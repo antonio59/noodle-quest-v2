@@ -81,7 +81,7 @@ export interface Player {
   playerId: string;
   name: string;
   avatar: string;
-  pin?: string;
+  sessionToken: string;
 }
 
 export interface Track {

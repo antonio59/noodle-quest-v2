@@ -1,5 +1,16 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import {
+  hashPin,
+  verifyPin,
+  isValidPin,
+  generateSalt,
+  createSession,
+  playerFromSession,
+  deleteSessionsForPlayer,
+  MAX_LOGIN_ATTEMPTS,
+  LOCKOUT_MS,
+} from "./model/auth";
 
 // Expanded avatar pool — must stay in sync with src/lib/avatars.ts
 const AVATARS = [
@@ -11,14 +22,23 @@ const AVATARS = [
 export const signUp = mutation({
   args: { name: v.string(), pin: v.string(), avatar: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const existing = await ctx.db.query("players").withIndex("by_name", q => q.eq("name", args.name.trim())).unique();
+    const name = args.name.trim();
+    if (name.length < 2) return { error: "Name needs at least 2 characters!" };
+    if (name.length > 30) return { error: "Name is too long (30 characters max)." };
+    if (!isValidPin(args.pin)) return { error: "Passcode must be 6 digits." };
+
+    const existing = await ctx.db.query("players").withIndex("by_name", q => q.eq("name", name)).unique();
     if (existing) return { error: "Name already taken!" };
+
     const avatar = args.avatar && AVATARS.includes(args.avatar)
       ? args.avatar
       : AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    const pinSalt = generateSalt();
+    const pinHash = await hashPin(args.pin, pinSalt);
     const now = Date.now();
-    const playerId = await ctx.db.insert("players", { name: args.name.trim(), pin: args.pin, avatar, createdAt: now, lastActive: now });
-    return { playerId, avatar };
+    const playerId = await ctx.db.insert("players", { name, pinHash, pinSalt, avatar, createdAt: now, lastActive: now });
+    const sessionToken = await createSession(ctx, playerId);
+    return { playerId, avatar, sessionToken };
   },
 });
 
@@ -27,9 +47,51 @@ export const logIn = mutation({
   handler: async (ctx, args) => {
     const player = await ctx.db.query("players").withIndex("by_name", q => q.eq("name", args.name.trim())).unique();
     if (!player) return { error: "No player found." };
-    if (player.pin !== args.pin) return { error: "Wrong PIN!" };
-    await ctx.db.patch(player._id, { lastActive: Date.now() });
-    return { playerId: player._id, name: player.name, avatar: player.avatar };
+
+    const now = Date.now();
+    if (player.lockedUntil && player.lockedUntil > now) {
+      const minutes = Math.ceil((player.lockedUntil - now) / 60_000);
+      return { error: `Too many tries. Locked for ${minutes} more minute${minutes === 1 ? "" : "s"}.` };
+    }
+
+    let valid = false;
+    if (player.pinHash && player.pinSalt) {
+      valid = await verifyPin(args.pin, player.pinSalt, player.pinHash);
+    } else if (player.pin !== undefined) {
+      // Legacy plaintext PIN — verify, then upgrade to a hash in place.
+      valid = player.pin === args.pin;
+      if (valid) {
+        const pinSalt = generateSalt();
+        const pinHash = await hashPin(args.pin, pinSalt);
+        await ctx.db.patch(player._id, { pin: undefined, pinHash, pinSalt });
+      }
+    }
+
+    if (!valid) {
+      const failedAttempts = (player.failedAttempts ?? 0) + 1;
+      if (failedAttempts >= MAX_LOGIN_ATTEMPTS) {
+        await ctx.db.patch(player._id, { failedAttempts: 0, lockedUntil: now + LOCKOUT_MS });
+        return { error: "Too many tries. Locked for 5 minutes." };
+      }
+      await ctx.db.patch(player._id, { failedAttempts });
+      return { error: "Wrong PIN!" };
+    }
+
+    await ctx.db.patch(player._id, { lastActive: now, failedAttempts: 0, lockedUntil: undefined });
+    const sessionToken = await createSession(ctx, player._id);
+    return { playerId: player._id, name: player.name, avatar: player.avatar, sessionToken };
+  },
+});
+
+export const logOut = mutation({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_token", q => q.eq("token", args.sessionToken))
+      .unique();
+    if (session) await ctx.db.delete(session._id);
+    return { success: true };
   },
 });
 
@@ -43,39 +105,65 @@ export const getPlayer = query({
 });
 
 export const searchPlayers = query({
-  args: { query: v.string(), currentPlayerId: v.id("players") },
+  args: { query: v.string(), sessionToken: v.string() },
   handler: async (ctx, args) => {
-    if (args.query.length < 2) return [];
-    const players = await ctx.db.query("players").collect();
-    return players.filter(p => p._id !== args.currentPlayerId && p.name.toLowerCase().includes(args.query.toLowerCase())).slice(0, 10).map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
+    const me = await playerFromSession(ctx, args.sessionToken);
+    if (!me) return [];
+    if (args.query.trim().length < 2) return [];
+    const matches = await ctx.db
+      .query("players")
+      .withSearchIndex("search_name", q => q.search("name", args.query))
+      .take(11);
+    return matches
+      .filter(p => p._id !== me._id)
+      .slice(0, 10)
+      .map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
   },
 });
 
 export const updateAvatar = mutation({
-  args: { playerId: v.id("players"), avatar: v.string() },
+  args: { sessionToken: v.string(), avatar: v.string() },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.playerId, { avatar: args.avatar });
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
+    if (!AVATARS.includes(args.avatar)) return { error: "Unknown avatar." };
+    await ctx.db.patch(player._id, { avatar: args.avatar });
     return { success: true };
   },
 });
 
 export const updateName = mutation({
-  args: { playerId: v.id("players"), name: v.string() },
+  args: { sessionToken: v.string(), name: v.string() },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
     const trimmed = args.name.trim();
     if (trimmed.length < 2) return { error: "Name needs at least 2 characters!" };
+    if (trimmed.length > 30) return { error: "Name is too long (30 characters max)." };
     const existing = await ctx.db.query("players").withIndex("by_name", q => q.eq("name", trimmed)).unique();
-    if (existing && existing._id !== args.playerId) return { error: "Name already taken!" };
-    await ctx.db.patch(args.playerId, { name: trimmed });
+    if (existing && existing._id !== player._id) return { error: "Name already taken!" };
+    await ctx.db.patch(player._id, { name: trimmed });
     return { success: true, name: trimmed };
   },
 });
 
+// Public: powers the profile-picker on the login screen, so it cannot
+// require a session. Only exposes what that screen needs.
 export const getAllPlayers = query({
   args: {},
   handler: async (ctx) => {
     const players = await ctx.db.query("players").collect();
-    return players.map(p => ({ id: p._id, name: p.name, avatar: p.avatar, createdAt: p.createdAt, lastActive: p.lastActive }));
+    return players.map(p => ({ id: p._id, name: p.name, avatar: p.avatar }));
+  },
+});
+
+// Admin: full player list including activity timestamps
+export const adminGetAllPlayers = query({
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    if (args.adminSecret !== process.env.ADMIN_SECRET) return { error: "Unauthorized" };
+    const players = await ctx.db.query("players").collect();
+    return { players: players.map(p => ({ id: p._id, name: p.name, avatar: p.avatar, createdAt: p.createdAt, lastActive: p.lastActive })) };
   },
 });
 
@@ -84,10 +172,14 @@ export const adminResetPin = mutation({
   args: { playerId: v.id("players"), newPin: v.string(), adminSecret: v.string() },
   handler: async (ctx, args) => {
     if (args.adminSecret !== process.env.ADMIN_SECRET) return { error: "Unauthorized" };
-    if (!/^\d{6}$/.test(args.newPin)) return { error: "PIN must be 6 digits" };
+    if (!isValidPin(args.newPin)) return { error: "PIN must be 6 digits" };
     const player = await ctx.db.get(args.playerId);
     if (!player) return { error: "Player not found" };
-    await ctx.db.patch(args.playerId, { pin: args.newPin });
+    const pinSalt = generateSalt();
+    const pinHash = await hashPin(args.newPin, pinSalt);
+    await ctx.db.patch(args.playerId, { pin: undefined, pinHash, pinSalt, failedAttempts: 0, lockedUntil: undefined });
+    // A PIN reset invalidates existing sessions.
+    await deleteSessionsForPlayer(ctx, args.playerId);
     return { success: true };
   },
 });
@@ -192,7 +284,8 @@ export const adminMergePlayers = mutation({
       }
     }
 
-    // Delete source player
+    // Delete the source player's auth sessions, then the player itself
+    await deleteSessionsForPlayer(ctx, args.sourceId);
     await ctx.db.delete(args.sourceId);
 
     return { success: true, message: `Merged ${source.name} into ${target.name}` };

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
+import { playerFromSession } from "./model/auth";
 
 // Generate a short unique invite code
 function generateInviteCode(): string {
@@ -44,14 +45,15 @@ function rosterFor(session: {
 export const createInvite = mutation({
   args: {
     gameId: v.string(),
-    fromId: v.id("players"),
+    sessionToken: v.string(),
     toId: v.optional(v.id("players")),
     minPlayers: v.optional(v.number()),
     maxPlayers: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const from = await ctx.db.get(args.fromId);
-    if (!from) return { error: "Player not found." };
+    const from = await playerFromSession(ctx, args.sessionToken);
+    if (!from) return { error: "Not signed in." };
+    const fromId = from._id;
 
     let toName: string | undefined;
     if (args.toId) {
@@ -64,7 +66,7 @@ export const createInvite = mutation({
     const maxPlayers = Math.max(minPlayers, args.maxPlayers ?? 2);
 
     const hostSeat: Seat = {
-      id: args.fromId,
+      id: fromId,
       name: from.name,
       avatar: from.avatar,
       seat: 1,
@@ -74,7 +76,7 @@ export const createInvite = mutation({
     // start but host hasn't pressed start yet. 'playing' begins on startSession.
     const sessionId = await ctx.db.insert("multiplayer_sessions", {
       gameId: args.gameId,
-      player1Id: args.fromId,
+      player1Id: fromId,
       player1Name: from.name,
       player1Avatar: from.avatar,
       players: [hostSeat],
@@ -91,7 +93,7 @@ export const createInvite = mutation({
     const inviteCode = generateInviteCode();
     const inviteId = await ctx.db.insert("multiplayer_invites", {
       gameId: args.gameId,
-      fromId: args.fromId,
+      fromId,
       fromName: from.name,
       fromAvatar: from.avatar,
       toId: args.toId,
@@ -105,7 +107,7 @@ export const createInvite = mutation({
 
     // Auto-post to feed
     await ctx.db.insert("feed", {
-      authorId: args.fromId,
+      authorId: fromId,
       authorName: from.name,
       authorAvatar: from.avatar,
       type: 'invite',
@@ -170,7 +172,7 @@ export const getPendingInvites = query({
 export const joinSession = mutation({
   args: {
     inviteCode: v.string(),
-    playerId: v.id("players"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
     const invite = await ctx.db.query("multiplayer_invites")
@@ -184,15 +186,16 @@ export const joinSession = mutation({
       return { error: "Invite has expired." };
     }
 
-    const player = await ctx.db.get(args.playerId);
-    if (!player) return { error: "Player not found." };
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
+    const playerId = player._id;
 
     if (!invite.sessionId) return { error: "Session missing." };
     const session = await ctx.db.get(invite.sessionId);
     if (!session) return { error: "Session not found." };
 
     const roster = rosterFor(session);
-    if (roster.some(s => s.id === args.playerId)) {
+    if (roster.some(s => s.id === playerId)) {
       // Already joined — idempotent success.
       return { sessionId: invite.sessionId };
     }
@@ -202,7 +205,7 @@ export const joinSession = mutation({
 
     const minPlayers = session.minPlayers ?? 2;
     const newSeat: Seat = {
-      id: args.playerId,
+      id: playerId,
       name: player.name,
       avatar: player.avatar,
       seat: roster.length + 1,
@@ -248,12 +251,14 @@ export const joinSession = mutation({
 export const startSession = mutation({
   args: {
     sessionId: v.id("multiplayer_sessions"),
-    playerId: v.id("players"),
+    sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
     const session = await ctx.db.get(args.sessionId);
     if (!session) return { error: "Session not found." };
-    if (session.player1Id !== args.playerId) return { error: "Only the host can start." };
+    if (session.player1Id !== player._id) return { error: "Only the host can start." };
     if (session.status === 'playing' || session.status === 'finished') {
       return { error: "Game already started." };
     }
@@ -315,16 +320,18 @@ export const getSession = query({
 export const makeMove = mutation({
   args: {
     sessionId: v.id("multiplayer_sessions"),
-    playerId: v.id("players"),
+    sessionToken: v.string(),
     move: v.any(),
   },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
     const session = await ctx.db.get(args.sessionId);
     if (!session) return { error: "Session not found." };
     if (session.status !== 'playing') return { error: "Game is not active." };
 
     const roster = rosterFor(session);
-    const seat = roster.find(s => s.id === args.playerId);
+    const seat = roster.find(s => s.id === player._id);
     if (!seat) return { error: "You are not in this game." };
     if (session.currentPlayer !== seat.seat) return { error: "Not your turn." };
 
@@ -373,14 +380,18 @@ export const getActiveGames = query({
   },
 });
 
-// Decline an invite
+// Decline an invite. Direct invites can only be declined by the invitee;
+// open link invites can be declined by any signed-in player holding the code.
 export const declineInvite = mutation({
-  args: { inviteCode: v.string() },
+  args: { inviteCode: v.string(), sessionToken: v.string() },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
     const invite = await ctx.db.query("multiplayer_invites")
       .withIndex("by_code", q => q.eq("inviteCode", args.inviteCode))
       .unique();
     if (!invite) return { error: "Invite not found." };
+    if (invite.toId && invite.toId !== player._id) return { error: "This invite isn't for you." };
     await ctx.db.patch(invite._id, { status: 'declined' });
     if (invite.sessionId) {
       await ctx.db.patch(invite.sessionId, { status: 'finished', updatedAt: Date.now() });

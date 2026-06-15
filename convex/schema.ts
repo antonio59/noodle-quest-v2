@@ -4,11 +4,31 @@ import { v } from "convex/values";
 export default defineSchema({
   players: defineTable({
     name: v.string(),
-    pin: v.string(),
+    // Legacy plaintext PIN. Cleared once the player is migrated to
+    // pinHash/pinSalt (lazily on login, or via migrations:hashAllPins).
+    pin: v.optional(v.string()),
+    pinHash: v.optional(v.string()),
+    pinSalt: v.optional(v.string()),
+    // Login brute-force protection
+    failedAttempts: v.optional(v.number()),
+    lockedUntil: v.optional(v.number()),
     avatar: v.string(),
     createdAt: v.number(),
     lastActive: v.number(),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .searchIndex("search_name", { searchField: "name" }),
+
+  // Auth sessions. A token is issued on signup/login and must accompany
+  // every mutation that acts on a player's behalf.
+  sessions: defineTable({
+    playerId: v.id("players"),
+    token: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_player", ["playerId"]),
 
   progress: defineTable({
     playerId: v.id("players"),
