@@ -44,14 +44,16 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Load full SOWPODS dictionary
+  // Load the SOWPODS dictionary (trimmed to 2-10 letter words — with a
+  // 7-tile rack, longer words are effectively unplayable here, and the
+  // smaller set keeps the download and AI search fast)
   useEffect(() => {
     fetch('/scrabble-dictionary.txt')
       .then(r => r.text())
       .then(text => {
         const words = text.split('\n')
           .map(w => w.trim().toUpperCase())
-          .filter(w => w.length >= 2 && w.length <= 15 && /^[A-Z]+$/.test(w));
+          .filter(w => w.length >= 2 && w.length <= 10 && /^[A-Z]+$/.test(w));
         setActiveWordSet(new Set(words));
         setDictLoaded(true);
       })
