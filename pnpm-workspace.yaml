@@ -8,13 +8,18 @@ pnpm:
   legacyPeerDeps: true
   packageImportMethod: clone-or-copy
 
-# Force any transitive ws to a patched version. CVE-2026-45736
-# (uninitialized memory disclosure) affects ws < 8.18.1.
-#
-# Force esbuild to a patched version. GHSA-gv7w-rqvm-qjhr (HIGH)
-# affects esbuild < 0.28.1 (binary integrity verification bypass via
-# NPM_CONFIG_REGISTRY in the Deno module). Pulled in transitively by
-# vite and convex.
+# Pin transitive dependencies to patched versions to clear security
+# advisories (these come in via convex / vite / babel):
+#   ws         >=8.21.0  GHSA-96hv-2xvq-fx4p (DoS) — supersedes the
+#                        earlier 8.18.1 pin for CVE-2026-45736
+#   esbuild    >=0.28.1  GHSA-gv7w-rqvm-qjhr (RCE via NPM_CONFIG_REGISTRY
+#                        in the Deno module)
+#   @babel/core >=7.29.1 GHSA-4x5r-pxfx-6jf8 (arbitrary file read via
+#                        sourceMappingURL)
+#   react-router >=7.15.1 GHSA-84g9-w2xq-vcv6 (CSRF via PUT/PATCH/DELETE)
 overrides:
-  ws: ">=8.18.1"
+  ws: ">=8.21.0"
   esbuild: "^0.28.1"
+  "@babel/core": ">=7.29.1"
+  react-router: ">=7.15.1"
+  undici: "^7.28.0"
