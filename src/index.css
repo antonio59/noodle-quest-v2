@@ -134,3 +134,17 @@ button {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
 }
+
+@keyframes confetti-fall {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--confetti-drift, 0), 105vh) rotate(var(--confetti-spin, 540deg));
+    opacity: 0;
+  }
+}

@@ -5,6 +5,7 @@ import {
   countPieces, bestMove,
   type Board, type Pos,
 } from './logic';
+import { playMove, playCapture } from '@/lib/feedback';
 
 function CheckersGame({
   stage,
@@ -133,8 +134,10 @@ function CheckersGame({
         let cur = b;
         const doHop = (i: number) => {
           if (endedRef.current) return;
+          const isJump = Math.abs(m.path[i + 1][0] - m.path[i][0]) === 2;
           cur = applyMove(cur, m.path[i], m.path[i + 1]);
           setBoard(cur);
+          if (isJump) playCapture(); else playMove();
           if (i + 2 < m.path.length) {
             schedule(() => doHop(i + 1), 350);
             return;
@@ -175,6 +178,7 @@ function CheckersGame({
         if (targets.some(([tr, tc]) => tr === r && tc === c)) {
           const nb = applyMove(board, multiJumpPos, [r, c]);
           setBoard(nb);
+          playCapture();
           const more = getJumps(nb, r, c);
           if (more.length > 0) {
             setMultiJumpPos([r, c]);
@@ -208,6 +212,7 @@ function CheckersGame({
         const nb = applyMove(board, selected, [r, c]);
         setBoard(nb);
         const isJump = Math.abs(r - selected[0]) === 2;
+        if (isJump) playCapture(); else playMove();
         if (isJump) {
           const more = getJumps(nb, r, c);
           if (more.length > 0) {

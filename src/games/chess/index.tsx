@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess, Square } from 'chess.js';
 import type { GameProps } from '@/types';
 import { bestMove } from './logic';
+import { playMove, playCapture } from '@/lib/feedback';
 
 const PIECE_UNICODE: Record<string, string> = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
@@ -157,6 +158,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     if (!moveStr) return;
     const move = game.move(moveStr);
     if (!move) return;
+    if (move.captured) playCapture(); else playMove();
     if (move.captured) {
       setCaptured(p => ({ ...p, b: [...p.b, move.captured!] }));
     }
@@ -176,6 +178,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     const activeColor = isOnline ? myColor : 'w';
     const move = game.move({ from, to, promotion: promotion || 'q' });
     if (!move) return false;
+    if (move.captured) playCapture(); else playMove();
 
     if (move.captured) {
       setCaptured(p => ({ ...p, [activeColor]: [...p[activeColor], move.captured!] }));

@@ -4,6 +4,7 @@ import {
   ROWS, COLS, initBoard, cloneBoard, dropPiece, getWinLine, isFull, bestMove,
   type Board,
 } from './logic';
+import { playPlace } from '@/lib/feedback';
 
 function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
@@ -80,6 +81,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       const row = dropPiece(nb, col, myColor);
       if (row < 0) return;
       setBoard(nb);
+      playPlace();
       const wl = getWinLine(nb, row, col, myColor);
       if (wl) setWinLine(wl);
       const iWon = !!wl;
@@ -100,6 +102,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     const row = dropPiece(nb, col, 'red');
     if (row < 0) return;
     setBoard(nb);
+    playPlace();
 
     const wl = getWinLine(nb, row, col, 'red');
     if (wl) {
@@ -128,6 +131,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       const nb2 = cloneBoard(nb);
       const aiR = dropPiece(nb2, aiC, 'yellow');
       setBoard(nb2);
+      playPlace();
       if (aiR >= 0) {
         const aiWl = getWinLine(nb2, aiR, aiC, 'yellow');
         if (aiWl) {

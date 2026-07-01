@@ -5,6 +5,7 @@ import {
   SAFE_POSITIONS, RED_ENTRY, BLUE_ENTRY, HOME, STRETCH_START,
   rollDie, advance, getMovableIndices, capturedIndices, chooseAiMove, posCoord,
 } from './logic';
+import { playDice, playMove, playCapture } from '@/lib/feedback';
 
 const C = 26;
 const N = 15;
@@ -93,6 +94,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
       for (const pi of hits) ppieces[pi] = -1;
       pRef.current = ppieces;
       setPPieces([...ppieces]);
+      playCapture();
       onMessage(`AI rolled ${d} — captured your piece!`);
     } else if (np >= HOME) {
       const hc = apieces.filter(p => p >= HOME).length;
@@ -128,11 +130,13 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
       for (const ai of hits) apieces[ai] = -1;
       aRef.current = apieces;
       setAPieces([...apieces]);
+      playCapture();
       onMessage(`Rolled ${d} — captured an AI piece! 🔴`);
     } else if (np >= HOME) {
       const hc = pieces.filter(p => p >= HOME).length;
       onMessage(`Piece ${hc}/4 home! 🎉`);
     } else {
+      playMove();
       const label = np >= STRETCH_START ? `home stretch ${np - STRETCH_START + 1}/6` : `sq ${np}`;
       onMessage(`Rolled ${d} → ${label}`);
     }
@@ -155,6 +159,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     if (endedRef.current || overRef.current || turn !== 'p' || pendingDice !== null) return;
     const d = rollDie();
     setDice(d);
+    playDice();
 
     const mv = getMovableIndices(pRef.current, d);
     if (mv.length === 0) {

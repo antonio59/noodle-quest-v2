@@ -6,6 +6,8 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGameMeta, getGameComponent, getAllGames } from '@/lib/game-registry';
+import { playWin, playPerfect, playLose } from '@/lib/feedback';
+import { Confetti } from '@/components/Confetti';
 import { computeBonusTiers, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
 import { ReportIssueModal } from '@/components/ReportIssueModal';
@@ -364,6 +366,10 @@ export function PlayGame() {
     setEnded(finalResult);
     setSaving(true);
 
+    if (result.stars >= 3) playPerfect();
+    else if (result.stars >= 2) playWin();
+    else playLose();
+
     if (player && saveScore) {
       try {
         await saveScore({
@@ -421,6 +427,7 @@ export function PlayGame() {
     const backLabel = fromTab === 'breathe' ? 'Breathe' : fromTab === 'board' ? 'Board' : fromTab === 'tracks' ? 'Tracks' : 'Games';
     return (
       <div className="h-full overflow-y-auto flex flex-col items-center justify-center p-5">
+        {isGood && <Confetti count={isPerfect ? 56 : 32} />}
         <div className={`w-full max-w-sm rounded-3xl p-6 border text-center transition-all ${
           isPerfect
             ? 'bg-yellow-500/8 border-yellow-500/25 shadow-[0_0_40px_rgba(253,224,71,0.15)]'

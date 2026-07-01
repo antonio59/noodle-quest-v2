@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 import { checkWinner, bestMove, type Cell, type Player, type WinLine } from './logic';
+import { playMove } from '@/lib/feedback';
 
 function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const isOnline = !!multiplayerState;
@@ -61,6 +62,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       const next = [...board];
       next[i] = myMark;
       setBoard(next);
+      playMove();
       const { result, line } = checkWinner(next);
       if (result) setWinLine(line);
       // Dispatch to server; server relays to opponent and the useEffect above
@@ -76,6 +78,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     const next = [...board];
     next[i] = human;
     setBoard(next);
+    playMove();
     const { result, line } = checkWinner(next);
     if (result) {
       setWinLine(line);
