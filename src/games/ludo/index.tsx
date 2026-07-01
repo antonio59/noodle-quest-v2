@@ -18,7 +18,8 @@ const BLUE_SPOTS: [number, number][] = [[10.7,10.7],[12.3,10.7],[10.7,12.3],[12.
 // Small px offsets when multiple pieces share one track square
 const STACK_OFF: [number, number][] = [[-4,-4],[4,-4],[-4,4],[4,4]];
 
-function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerState, onMultiplayerMove }: GameProps) {
+function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+  const difficulty = aiDifficulty || 'medium';
   const isOnline = !!multiplayerState;
   const mySide: 'red' | 'blue' = isOnline
     ? (multiplayerState.playerNumber === 1 ? 'red' : 'blue')
@@ -73,7 +74,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     const d = rollDie();
     setDice(d);
 
-    const bestIdx = chooseAiMove(aRef.current, d, oppEntry, pRef.current, myEntry);
+    const bestIdx = chooseAiMove(aRef.current, d, oppEntry, pRef.current, myEntry, difficulty);
 
     if (bestIdx < 0) {
       onMessage(`AI rolled ${d} — no piece can move.`);
@@ -114,7 +115,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
 
     if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus!'); schedule(doAi, 700); return; }
     setTurn('p');
-  }, [myEntry, oppEntry, onMessage, onEnd, schedule]);
+  }, [myEntry, oppEntry, difficulty, onMessage, onEnd, schedule]);
 
   // ── Move a player piece ──────────────────────────────────────────────────
   const movePiece = useCallback((idx: number, d: number) => {

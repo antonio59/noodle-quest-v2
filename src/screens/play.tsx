@@ -7,6 +7,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getGameMeta, getGameComponent, getAllGames } from '@/lib/game-registry';
 import { playWin, playPerfect, playLose } from '@/lib/feedback';
+import { difficultyForStage, DIFFICULTY_STYLE } from '@/lib/difficulty';
 import { Confetti } from '@/components/Confetti';
 import { computeBonusTiers, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
@@ -65,9 +66,9 @@ export function PlayGame() {
     player && gameId ? { playerId: player.playerId as any, gameId } : 'skip' as any,
   );
   const maxUnlocked = playerProgress?.maxUnlockedStage ?? 1;
-  // Difficulty climbs automatically with player progress — no manual selection needed
-  const aiDifficulty: 'easy' | 'medium' | 'hard' =
-    maxUnlocked <= 3 ? 'easy' : maxUnlocked <= 8 ? 'medium' : 'hard';
+  // Difficulty follows the stage on the board, so replaying stage 1 is a
+  // gentle match no matter how far the player has progressed.
+  const aiDifficulty = difficultyForStage(currentStage);
 
   // Monthly bonus pool: the 3 least-played games globally earn 3×, next 3 earn 2×.
   const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
@@ -570,6 +571,9 @@ export function PlayGame() {
           <div className="font-semibold text-sm">{gameMeta.emoji} {gameMeta.name}</div>
           <div className="text-text-muted text-xs flex items-center justify-center gap-1">
             <span>Stage {currentStage}/{gameMeta.stages}</span>
+            <span className={`font-bold ${DIFFICULTY_STYLE[aiDifficulty].className}`}>
+              · {DIFFICULTY_STYLE[aiDifficulty].label}
+            </span>
             <ChevronDown
               size={12}
               className={`transition-transform ${
@@ -609,15 +613,24 @@ export function PlayGame() {
                     setMessage('');
                     setShowStagePicker(false);
                   }}
-                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                  className={`relative w-8 h-8 rounded-lg text-xs font-bold transition-all ${
                     isCurrent
                       ? 'bg-accent text-bg'
                       : unlocked
                         ? 'bg-card text-text hover:bg-card-hover'
                         : 'bg-card/50 text-text-muted/30'
                   }`}
+                  title={unlocked ? `Stage ${s} · ${DIFFICULTY_STYLE[difficultyForStage(s)].label}` : 'Locked'}
                 >
                   {unlocked ? s : <Lock size={10} />}
+                  {unlocked && (
+                    <span
+                      className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${
+                        isCurrent ? 'bg-bg/70' : DIFFICULTY_STYLE[difficultyForStage(s)].dot
+                      }`}
+                      aria-hidden
+                    />
+                  )}
                 </button>
               );
             })}

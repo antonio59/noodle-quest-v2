@@ -135,6 +135,19 @@ describe('AI move selection', () => {
     expect(chooseAiMove([-1, -1, -1, -1], 3, BLUE_ENTRY, [], RED_ENTRY)).toBe(-1);
   });
 
+  test('hard never blunders; easy sometimes moves a random piece', () => {
+    // Capture available: heuristic pick is index 0. Hard must always take
+    // it; easy should deviate at least once over many trials.
+    const ai = [3, 30, 35, 40];
+    const red = [28, -1, -1, -1];
+    let easyDeviated = false;
+    for (let i = 0; i < 200; i++) {
+      expect(chooseAiMove(ai, 1, BLUE_ENTRY, red, RED_ENTRY, 'hard')).toBe(0);
+      if (chooseAiMove(ai, 1, BLUE_ENTRY, red, RED_ENTRY, 'easy') !== 0) easyDeviated = true;
+    }
+    expect(easyDeviated).toBe(true);
+  });
+
   test('always picks a movable piece across random scenarios', () => {
     for (let i = 0; i < 200; i++) {
       const ai = Array.from({ length: 4 }, () => [-1, 0, 5, 12, 30, 47, 50, HOME][Math.floor(Math.random() * 8)]);
