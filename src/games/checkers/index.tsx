@@ -1,202 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameProps } from '@/types';
-
-
-type Piece = { color: 'red' | 'black'; king: boolean };
-type Board = (Piece | null)[][];
-type Pos = [number, number];
-
-const SIZE = 8;
-
-function initBoard(): Board {
-  const board: Board = Array.from({ length: SIZE }, () =>
-    Array<Piece | null>(SIZE).fill(null),
-  );
-  for (let r = 0; r < 3; r++)
-    for (let c = 0; c < SIZE; c++)
-      if ((r + c) % 2 === 1) board[r][c] = { color: 'black', king: false };
-  for (let r = 5; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++)
-      if ((r + c) % 2 === 1) board[r][c] = { color: 'red', king: false };
-  return board;
-}
-
-function cloneBoard(b: Board): Board {
-  return b.map(row => row.map(cell => (cell ? { ...cell } : null)));
-}
-
-function getDirs(p: Piece): number[][] {
-  if (p.king) return [[-1, -1], [-1, 1], [1, -1], [1, 1]];
-  return p.color === 'red' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
-}
-
-function getJumps(b: Board, r: number, c: number): Pos[] {
-  const p = b[r][c];
-  if (!p) return [];
-  const out: Pos[] = [];
-  for (const [dr, dc] of getDirs(p)) {
-    const mr = r + dr,
-      mc = c + dc,
-      jr = r + 2 * dr,
-      jc = c + 2 * dc;
-    if (
-      jr >= 0 &&
-      jr < SIZE &&
-      jc >= 0 &&
-      jc < SIZE &&
-      b[mr][mc] &&
-      b[mr][mc]!.color !== p.color &&
-      !b[jr][jc]
-    )
-      out.push([jr, jc]);
-  }
-  return out;
-}
-
-function getSteps(b: Board, r: number, c: number): Pos[] {
-  const p = b[r][c];
-  if (!p) return [];
-  const out: Pos[] = [];
-  for (const [dr, dc] of getDirs(p)) {
-    const nr = r + dr,
-      nc = c + dc;
-    if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !b[nr][nc])
-      out.push([nr, nc]);
-  }
-  return out;
-}
-
-function allMoves(
-  b: Board,
-  color: 'red' | 'black',
-): { from: Pos; to: Pos; jump: boolean }[] {
-  const jumps: { from: Pos; to: Pos; jump: boolean }[] = [];
-  const steps: { from: Pos; to: Pos; jump: boolean }[] = [];
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++)
-      if (b[r][c]?.color === color) {
-        for (const to of getJumps(b, r, c))
-          jumps.push({ from: [r, c], to, jump: true });
-        for (const to of getSteps(b, r, c))
-          steps.push({ from: [r, c], to, jump: false });
-      }
-  return jumps.length > 0 ? jumps : steps;
-}
-
-function pieceTargets(
-  b: Board,
-  r: number,
-  c: number,
-  color: 'red' | 'black',
-): Pos[] {
-  const p = b[r][c];
-  if (!p || p.color !== color) return [];
-  const jumps = getJumps(b, r, c);
-  if (jumps.length > 0) return jumps;
-  if (allMoves(b, color).some(m => m.jump)) return [];
-  return getSteps(b, r, c);
-}
-
-function applyMove(b: Board, from: Pos, to: Pos): Board {
-  const nb = cloneBoard(b);
-  const p = { ...nb[from[0]][from[1]]! };
-  nb[to[0]][to[1]] = p;
-  nb[from[0]][from[1]] = null;
-  if (Math.abs(to[0] - from[0]) === 2) {
-    nb[(from[0] + to[0]) / 2][(from[1] + to[1]) / 2] = null;
-  }
-  if (
-    (p.color === 'red' && to[0] === 0) ||
-    (p.color === 'black' && to[0] === SIZE - 1)
-  ) {
-    p.king = true;
-    nb[to[0]][to[1]] = p;
-  }
-  return nb;
-}
-
-function countPieces(b: Board, color: 'red' | 'black'): number {
-  let n = 0;
-  for (const row of b) for (const c of row) if (c?.color === color) n++;
-  return n;
-}
-
-function evaluate(b: Board): number {
-  let s = 0;
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++) {
-      const p = b[r][c];
-      if (!p) continue;
-      const v = p.king ? 5 : 1;
-      const adv = p.color === 'black' ? r : 7 - r;
-      const cen = (3.5 - Math.abs(c - 3.5)) * 0.1;
-      const t = v + adv * 0.15 + cen;
-      s += p.color === 'black' ? t : -t;
-    }
-  return s;
-}
-
-function minimax(
-  b: Board,
-  depth: number,
-  alpha: number,
-  beta: number,
-  maximizing: boolean,
-): number {
-  const col: 'red' | 'black' = maximizing ? 'black' : 'red';
-  const moves = allMoves(b, col);
-  if (moves.length === 0) return maximizing ? -100 : 100;
-  if (depth === 0) return evaluate(b);
-  if (maximizing) {
-    let best = -Infinity;
-    for (const m of moves) {
-      const nb = applyMove(b, m.from, m.to);
-      const sc = minimax(nb, depth - 1, alpha, beta, false);
-      best = Math.max(best, sc);
-      alpha = Math.max(alpha, sc);
-      if (alpha >= beta) break;
-    }
-    return best;
-  } else {
-    let best = Infinity;
-    for (const m of moves) {
-      const nb = applyMove(b, m.from, m.to);
-      const sc = minimax(nb, depth - 1, alpha, beta, true);
-      best = Math.min(best, sc);
-      beta = Math.min(beta, sc);
-      if (alpha >= beta) break;
-    }
-    return best;
-  }
-}
-
-function aiPick(
-  b: Board,
-  diff: 'easy' | 'medium' | 'hard',
-): { from: Pos; to: Pos; jump: boolean } | null {
-  const moves = allMoves(b, 'black');
-  if (moves.length === 0) return null;
-  if (diff === 'easy')
-    return moves[Math.floor(Math.random() * moves.length)];
-  if (diff === 'medium') {
-    const jumps = moves.filter(m => m.jump);
-    if (jumps.length > 0)
-      return jumps[Math.floor(Math.random() * jumps.length)];
-    const sorted = [...moves].sort((a, b) => b.to[0] - a.to[0]);
-    return sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
-  }
-  let best = moves[0],
-    bestSc = -Infinity;
-  for (const m of moves) {
-    const nb = applyMove(b, m.from, m.to);
-    const sc = minimax(nb, 3, -Infinity, Infinity, false);
-    if (sc > bestSc) {
-      bestSc = sc;
-      best = m;
-    }
-  }
-  return best;
-}
+import {
+  SIZE, initBoard, getJumps, allMoves, pieceTargets, applyMove,
+  countPieces, bestMove,
+  type Board, type Pos,
+} from './logic';
 
 function CheckersGame({
   stage,
@@ -314,32 +122,28 @@ function CheckersGame({
     (b: Board) => {
       onMessage('AI thinking...');
 
-      const step = (cb: Board, pos: Pos | null, wasJump: boolean) => {
-        if (endedRef.current) return;
-        if (wasJump && pos) {
-          const more = getJumps(cb, pos[0], pos[1]);
-          if (more.length > 0) {
-            const pick = more[Math.floor(Math.random() * more.length)];
-            const nb = applyMove(cb, pos, pick);
-            setBoard(nb);
-            schedule(() => step(nb, pick, true), 350);
-            return;
-          }
-        }
-        if (handleEnd(cb)) return;
-        setTurn('red');
-        onMessage('Your turn!');
-      };
-
       schedule(() => {
-        const m = aiPick(b, diff);
+        // The search picks a complete move (including any multi-jump
+        // chain); we animate it hop by hop.
+        const m = bestMove(b, 'black', diff);
         if (!m) {
           handleEnd(b);
           return;
         }
-        const nb = applyMove(b, m.from, m.to);
-        setBoard(nb);
-        schedule(() => step(nb, m.to, m.jump), 350);
+        let cur = b;
+        const doHop = (i: number) => {
+          if (endedRef.current) return;
+          cur = applyMove(cur, m.path[i], m.path[i + 1]);
+          setBoard(cur);
+          if (i + 2 < m.path.length) {
+            schedule(() => doHop(i + 1), 350);
+            return;
+          }
+          if (handleEnd(cur)) return;
+          setTurn('red');
+          onMessage('Your turn!');
+        };
+        schedule(() => doHop(0), 350);
       }, 400);
     },
     [diff, onMessage, handleEnd, schedule],
@@ -612,3 +416,4 @@ function CheckersGame({
 }
 
 export default CheckersGame;
+
