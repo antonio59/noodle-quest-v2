@@ -300,6 +300,8 @@ function CheckersGame({
         height={boardSize}
         viewBox={`0 0 ${boardSize} ${boardSize}`}
         className="rounded-lg overflow-hidden shadow-lg"
+        role="img"
+        aria-label={`Checkers board. You have ${redCount} pieces, opponent has ${blackCount}. ${isMyTurn ? 'Your turn.' : 'Opponent is moving.'}`}
       >
         {board.map((row, r) =>
           row.map((cell, c) => {

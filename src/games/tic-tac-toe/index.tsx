@@ -201,14 +201,16 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-3 game-board">
+      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-3 game-board" role="grid" aria-label="Tic-tac-toe board">
         {board.map((cell, i) => {
           const isWinCell = winLine?.includes(i) ?? false;
+          const cellName = `Row ${Math.floor(i / 3) + 1}, column ${(i % 3) + 1}`;
           return (
             <button
               key={i}
               onClick={() => handleCell(i)}
               disabled={!!cell || inputDisabled}
+              aria-label={cell ? `${cellName}: ${cell}` : `${cellName}: empty`}
               className={`game-cell w-20 h-20 rounded-xl text-4xl font-bold flex items-center justify-center transition-all active:scale-90 ${
                 !cell && !inputDisabled ? 'hover:bg-card-hover' : ''
               } ${isWinCell ? 'ring-2 ring-success bg-success/20' : cell ? '' : 'bg-card-hover/50'}`}

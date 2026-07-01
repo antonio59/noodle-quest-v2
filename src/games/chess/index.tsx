@@ -343,6 +343,8 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
           width={svgSize} height={svgSize}
           viewBox={`0 0 ${svgSize} ${svgSize}`}
           className="rounded-xl overflow-hidden shadow-2xl flex-shrink-0"
+          role="img"
+          aria-label={`Chess board. ${moveHistory.length} moves played. ${turn === (isOnline ? myColor : 'w') ? 'Your turn.' : 'Opponent is thinking.'}`}
         >
           {/* Dark frame background */}
           <rect width={svgSize} height={svgSize} fill="#12102a" rx={6} />

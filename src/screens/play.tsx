@@ -649,7 +649,7 @@ export function PlayGame() {
       </div>
 
       {message && (
-        <div className="text-center text-text-dim text-sm py-2 px-4">{message}</div>
+        <div role="status" aria-live="polite" className="text-center text-text-dim text-sm py-2 px-4">{message}</div>
       )}
 
       <div className="flex-1 overflow-hidden relative">

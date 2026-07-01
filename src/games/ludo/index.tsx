@@ -489,7 +489,9 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       {/* Board */}
       <div className="flex-shrink-0 w-full flex justify-center">
         <svg viewBox={`0 0 ${W} ${W}`} className="rounded-xl w-full h-auto shadow-2xl"
-          style={{ maxWidth: 390, maxHeight: '52vh' }} onClick={handleSvgClick}>
+          style={{ maxWidth: 390, maxHeight: '52vh' }} onClick={handleSvgClick}
+          role="img"
+          aria-label={`Ludo board. You have ${pHome} of 4 pieces home, opponent has ${aHome}. ${turn === 'p' ? 'Your turn.' : 'Opponent is rolling.'}`}>
           {renderBoard()}
           {renderTokens()}
         </svg>
