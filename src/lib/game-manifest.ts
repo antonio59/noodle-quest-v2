@@ -273,7 +273,7 @@ reg('ludo', {
   name: 'Ludo', emoji: '🎲',
   description: 'Roll the dice and race all 4 pieces home!',
   category: 'board', stages: 99,
-  minPlayers: 2, maxPlayers: 4,
+  minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/ludo'));
 
 reg('scrabble', {

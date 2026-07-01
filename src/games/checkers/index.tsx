@@ -6,6 +6,7 @@ import {
   type Board, type Pos,
 } from './logic';
 import { playMove, playCapture } from '@/lib/feedback';
+import { useBoardCursor } from '@/hooks/useBoardCursor';
 
 function CheckersGame({
   stage,
@@ -237,6 +238,25 @@ function CheckersGame({
     [board, selected, targets, turn, multiJumpPos, onMessage, handleEnd, doAiTurn, isOnline, myColor, otherColor, finishOnlineTurn],
   );
 
+  const describeSquare = useCallback((r: number, c: number): string => {
+    const square = `${String.fromCharCode(97 + c)}${SIZE - r}`;
+    const p = board[r][c];
+    const what = p
+      ? `${p.color === (isOnline ? myColor : 'red') ? 'your' : 'opponent'} ${p.king ? 'king' : 'piece'}`
+      : 'empty';
+    const isSel = selected?.[0] === r && selected?.[1] === c;
+    const isTarget = targets.some(([tr, tc]) => tr === r && tc === c);
+    return `${square}: ${what}${isSel ? ', selected' : ''}${isTarget ? ', available move' : ''}`;
+  }, [board, selected, targets, isOnline, myColor]);
+
+  const boardCursor = useBoardCursor({
+    rows: SIZE,
+    cols: SIZE,
+    onActivate: handleClick,
+    describe: describeSquare,
+    initial: [5, 2],
+  });
+
   const cs = boardSize / SIZE;
   const redCount = countPieces(board, 'red');
   const blackCount = countPieces(board, 'black');
@@ -300,8 +320,13 @@ function CheckersGame({
         height={boardSize}
         viewBox={`0 0 ${boardSize} ${boardSize}`}
         className="rounded-lg overflow-hidden shadow-lg"
-        role="img"
-        aria-label={`Checkers board. You have ${redCount} pieces, opponent has ${blackCount}. ${isMyTurn ? 'Your turn.' : 'Opponent is moving.'}`}
+        role="application"
+        aria-roledescription="checkers board"
+        aria-label={`Checkers board. You have ${redCount} pieces, opponent has ${blackCount}. ${isMyTurn ? 'Your turn. Use arrow keys to move around the board, Enter to select and move.' : 'Opponent is moving.'}`}
+        tabIndex={0}
+        onKeyDown={boardCursor.onKeyDown}
+        onFocus={boardCursor.onFocus}
+        onBlur={boardCursor.onBlur}
       >
         {board.map((row, r) =>
           row.map((cell, c) => {
@@ -407,7 +432,22 @@ function CheckersGame({
             );
           }),
         )}
+        {boardCursor.cursor && (
+          <rect
+            x={boardCursor.cursor[1] * cs + 1.5}
+            y={boardCursor.cursor[0] * cs + 1.5}
+            width={cs - 3}
+            height={cs - 3}
+            fill="none"
+            stroke="#fbbf24"
+            strokeWidth={3}
+            strokeDasharray="6 3"
+            pointerEvents="none"
+          />
+        )}
       </svg>
+
+      <span className="sr-only" role="status" aria-live="polite">{boardCursor.announce}</span>
 
       <div className="mt-2 text-xs text-text-muted text-center">
         {isMyTurn

@@ -3,6 +3,7 @@ import { Chess, Square } from 'chess.js';
 import type { GameProps } from '@/types';
 import { bestMove } from './logic';
 import { playMove, playCapture } from '@/lib/feedback';
+import { useBoardCursor } from '@/hooks/useBoardCursor';
 
 const PIECE_UNICODE: Record<string, string> = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
@@ -248,6 +249,26 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
     }
   }, [gameOver, turn, selected, game, isOnline, myColor, completeMove]);
 
+  const describeChessSquare = useCallback((r: number, c: number): string => {
+    const sqName = `${'abcdefgh'[c]}${'87654321'[r]}` as Square;
+    const cell = game.board()[r][c];
+    const names: Record<string, string> = { p: 'pawn', n: 'knight', b: 'bishop', r: 'rook', q: 'queen', k: 'king' };
+    const what = cell
+      ? `${cell.color === (isOnline ? myColor : 'w') ? 'your' : 'opponent'} ${names[cell.type]}`
+      : 'empty';
+    const isSel = selected === sqName;
+    const isLegal = legalMoves.includes(sqName);
+    return `${sqName}: ${what}${isSel ? ', selected' : ''}${isLegal ? ', legal move' : ''}`;
+  }, [game, selected, legalMoves, isOnline, myColor]);
+
+  const boardCursor = useBoardCursor({
+    rows: 8,
+    cols: 8,
+    onActivate: (r, c) => handleSquareClick(`${'abcdefgh'[c]}${'87654321'[r]}` as Square),
+    describe: describeChessSquare,
+    initial: [6, 4], // e2
+  });
+
   const board = game.board();
   const cs = boardSize / 8;
   const FRAME = 18;             // px reserved for coordinate labels
@@ -343,8 +364,13 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
           width={svgSize} height={svgSize}
           viewBox={`0 0 ${svgSize} ${svgSize}`}
           className="rounded-xl overflow-hidden shadow-2xl flex-shrink-0"
-          role="img"
-          aria-label={`Chess board. ${moveHistory.length} moves played. ${turn === (isOnline ? myColor : 'w') ? 'Your turn.' : 'Opponent is thinking.'}`}
+          role="application"
+          aria-roledescription="chess board"
+          aria-label={`Chess board. ${moveHistory.length} moves played. ${turn === (isOnline ? myColor : 'w') ? 'Your turn. Use arrow keys to move around the board, Enter to select and move.' : 'Opponent is thinking.'}`}
+          tabIndex={0}
+          onKeyDown={boardCursor.onKeyDown}
+          onFocus={boardCursor.onFocus}
+          onBlur={boardCursor.onBlur}
         >
           {/* Dark frame background */}
           <rect width={svgSize} height={svgSize} fill="#12102a" rx={6} />
@@ -433,7 +459,24 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
               fill="#9ca3af" style={{ pointerEvents: 'none' }}
             >{rank}</text>
           ))}
+
+          {/* Keyboard cursor */}
+          {boardCursor.cursor && (
+            <rect
+              x={FRAME + boardCursor.cursor[1] * cs + 1.5}
+              y={FRAME + boardCursor.cursor[0] * cs + 1.5}
+              width={cs - 3}
+              height={cs - 3}
+              fill="none"
+              stroke="#fbbf24"
+              strokeWidth={3}
+              strokeDasharray="6 3"
+              pointerEvents="none"
+            />
+          )}
         </svg>
+
+        <span className="sr-only" role="status" aria-live="polite">{boardCursor.announce}</span>
 
         <div className="mt-1 w-full flex items-center justify-between gap-2 px-1">
           {/* You row */}

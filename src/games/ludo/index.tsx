@@ -44,6 +44,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
   const [over, setOver]       = useState(false);
   const [started, setStarted] = useState(false);
 
+  const oppLabel = isOnline ? (multiplayerState?.opponentName ?? 'Opponent') : 'AI';
+
   const pRef     = useRef<number[]>([-1,-1,-1,-1]);
   const aRef     = useRef<number[]>([-1,-1,-1,-1]);
   const overRef  = useRef(false);
@@ -68,9 +70,62 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     onMessage('Roll a 6 to enter! Tap a glowing piece to move it.');
   }, [onMessage]);
 
+  // ── Online sync ──────────────────────────────────────────────────────────
+  // boardState carries seat-indexed relative piece arrays plus an explicit
+  // turnSeat: bonus rolls on a 6 break the server's automatic turn
+  // rotation, so the authoritative turn travels with the board.
+  useEffect(() => {
+    if (!isOnline) return;
+    const mySeat = multiplayerState.playerNumber;
+    const bs = multiplayerState.boardState as
+      | { pieces?: [number[], number[]]; lastRoll?: number; turnSeat?: number }
+      | null
+      | undefined;
+    if (bs && Array.isArray(bs.pieces)) {
+      const mine = bs.pieces[mySeat - 1] ?? [-1, -1, -1, -1];
+      const theirs = bs.pieces[mySeat === 1 ? 1 : 0] ?? [-1, -1, -1, -1];
+      pRef.current = [...mine];
+      setPPieces([...mine]);
+      aRef.current = [...theirs];
+      setAPieces([...theirs]);
+      if (typeof bs.lastRoll === 'number') setDice(bs.lastRoll);
+      const turnSeat = bs.turnSeat ?? multiplayerState.currentPlayer;
+      setTurn(turnSeat === mySeat ? 'p' : 'a');
+      if (!endedRef.current) {
+        const iWon = mine.every(p => p >= HOME);
+        const theyWon = theirs.every(p => p >= HOME);
+        if (iWon || theyWon) {
+          endedRef.current = true;
+          overRef.current = true;
+          setOver(true);
+          onEnd({
+            score: iWon ? 100 : 10,
+            stars: iWon ? 3 : 1,
+            summary: iWon ? 'All 4 pieces home! You win!' : 'Opponent got all 4 pieces home.',
+          });
+        }
+      }
+    } else {
+      // Fresh session: seat 1 starts.
+      setTurn(multiplayerState.currentPlayer === mySeat ? 'p' : 'a');
+    }
+  }, [isOnline, multiplayerState, onEnd]);
+
+  // Send my updated state to the server. keepTurn = I rolled a 6.
+  const dispatchOnline = useCallback((mine: number[], theirs: number[], d: number, keepTurn: boolean) => {
+    if (!isOnline) return;
+    const mySeat = multiplayerState!.playerNumber;
+    const pieces: [number[], number[]] = mySeat === 1 ? [mine, theirs] : [theirs, mine];
+    const iWon = mine.every(p => p >= HOME);
+    onMultiplayerMove?.({
+      boardState: { pieces, lastRoll: d, turnSeat: keepTurn && !iWon ? mySeat : (mySeat === 1 ? 2 : 1) },
+      winner: iWon ? mySeat : undefined,
+    });
+  }, [isOnline, multiplayerState, onMultiplayerMove]);
+
   // ── AI turn ──────────────────────────────────────────────────────────────
   const doAi = useCallback(() => {
-    if (endedRef.current || overRef.current) return;
+    if (endedRef.current || overRef.current || isOnline) return;
     const d = rollDie();
     setDice(d);
 
@@ -115,7 +170,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
 
     if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus!'); schedule(doAi, 700); return; }
     setTurn('p');
-  }, [myEntry, oppEntry, difficulty, onMessage, onEnd, schedule]);
+  }, [myEntry, oppEntry, difficulty, isOnline, onMessage, onEnd, schedule]);
 
   // ── Move a player piece ──────────────────────────────────────────────────
   const movePiece = useCallback((idx: number, d: number) => {
@@ -142,7 +197,14 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       onMessage(`Rolled ${d} → ${label}`);
     }
 
-    if (pieces.every(p => p >= HOME)) {
+    const won = pieces.every(p => p >= HOME);
+    const bonus = d === 6 && !won;
+
+    if (isOnline) {
+      dispatchOnline(pieces, aRef.current, d, bonus);
+    }
+
+    if (won) {
       overRef.current = true; setOver(true);
       onScore(100); onProgress(1);
       endedRef.current = true;
@@ -150,10 +212,10 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
       return;
     }
 
-    if (d === 6 && !overRef.current) { onMessage('Rolled 6 — bonus roll!'); return; }
+    if (bonus && !overRef.current) { onMessage('Rolled 6 — bonus roll!'); return; }
     setTurn('a');
-    schedule(doAi, 800);
-  }, [myEntry, oppEntry, onMessage, onScore, onProgress, onEnd, schedule, doAi]);
+    if (!isOnline) schedule(doAi, 800);
+  }, [myEntry, oppEntry, isOnline, dispatchOnline, onMessage, onScore, onProgress, onEnd, schedule, doAi]);
 
   // ── Roll handler ─────────────────────────────────────────────────────────
   const handleRoll = () => {
@@ -165,6 +227,11 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
     const mv = getMovableIndices(pRef.current, d);
     if (mv.length === 0) {
       onMessage(`Rolled ${d} — no piece can move!`);
+      if (isOnline) {
+        dispatchOnline(pRef.current, aRef.current, d, false);
+        setTurn('a');
+        return;
+      }
       setTurn('a');
       schedule(doAi, 800);
       return;
@@ -476,12 +543,12 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
               <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
             </span> Your turn</>
           ) : (
-            <><span className="animate-pulse">🤖</span> AI rolling…</>
+            <><span className="animate-pulse">{isOnline ? '⏳' : '🤖'}</span> {isOnline ? `${oppLabel}'s turn…` : 'AI rolling…'}</>
           )}
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] text-text-muted">{aHome}/4 home</span>
-          <span className="text-xs font-bold" style={{ color: oppColor }}>AI</span>
+          <span className="text-xs font-bold" style={{ color: oppColor }}>{oppLabel}</span>
           <span className="w-2.5 h-2.5 rounded-full" style={{ background: oppColor }} />
         </div>
       </div>
@@ -505,15 +572,41 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, 
           disabled={over || turn !== 'p' || pendingDice !== null}
           className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl text-sm hover:opacity-90 active:scale-95 disabled:opacity-30 transition-all shadow-lg shadow-accent/25"
         >
-          {pendingDice !== null ? 'Pick a piece ↑' : turn === 'p' ? 'Roll!' : 'AI thinking…'}
+          {pendingDice !== null ? 'Pick a piece ↑' : turn === 'p' ? 'Roll!' : isOnline ? 'Waiting…' : 'AI thinking…'}
         </button>
       </div>
+
+      {/* Piece chooser — keyboard/screen-reader accessible alternative to
+          tapping tokens, and a bigger touch target for everyone */}
+      {pendingDice !== null && movable.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap justify-center max-w-[400px]" role="group" aria-label="Choose a piece to move">
+          {movable.map(i => {
+            const np = advance(pPieces[i], pendingDice);
+            const dest = pPieces[i] === -1
+              ? 'enter the track'
+              : np >= HOME
+                ? 'reach home! 🎉'
+                : np >= STRETCH_START
+                  ? `home stretch ${np - STRETCH_START + 1}/6`
+                  : `square ${np}`;
+            return (
+              <button
+                key={i}
+                onClick={() => handlePieceClick(i)}
+                className="bg-card hover:bg-card-hover text-text text-xs font-semibold px-3 py-2 rounded-xl border border-accent/40 transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                Piece {i + 1} → {dest}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Progress bars */}
       <div className="w-full max-w-[400px] flex flex-col gap-1.5 px-1">
         {[
           { label:'You', pct:pPct, home:pHome, color: myColor  },
-          { label:'AI',  pct:aPct, home:aHome, color: oppColor },
+          { label: oppLabel.slice(0, 8), pct:aPct, home:aHome, color: oppColor },
         ].map(bar => (
           <div key={bar.label} className="flex items-center gap-2 text-xs">
             <span className="font-bold w-5 text-right" style={{ color: bar.color }}>{bar.label}</span>
