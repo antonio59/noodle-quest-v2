@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Chess, Square } from 'chess.js';
 import type { GameProps } from '@/types';
+import { bestMove } from './logic';
 
 const PIECE_UNICODE: Record<string, string> = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
@@ -17,58 +18,8 @@ const PIECE_STROKE: Record<string, string> = {
   b: '#000000',
 };
 
+// Pawn-scale values for the captured-material display
 const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-
-function evaluateBoard(game: Chess): number {
-  const board = game.board();
-  let score = 0;
-  for (const row of board) {
-    for (const cell of row) {
-      if (cell) {
-        const val = PIECE_VALUES[cell.type] || 0;
-        score += cell.color === 'w' ? val : -val;
-      }
-    }
-  }
-  return game.turn() === 'w' ? score : -score;
-}
-
-function minimax(game: Chess, depth: number, alpha: number, beta: number): number {
-  if (depth === 0) return evaluateBoard(game);
-  const moves = game.moves();
-  if (moves.length === 0) return game.isCheckmate() ? -1000 : 0;
-  let best = -Infinity;
-  for (const m of moves) {
-    game.move(m);
-    const score = -minimax(game, depth - 1, -beta, -alpha);
-    game.undo();
-    best = Math.max(best, score);
-    alpha = Math.max(alpha, score);
-    if (alpha >= beta) break;
-  }
-  return best;
-}
-
-function getAiMove(game: Chess, difficulty: string): string | null {
-  const moves = game.moves();
-  if (moves.length === 0) return null;
-  if (difficulty === 'easy') return moves[Math.floor(Math.random() * moves.length)];
-  if (difficulty === 'medium') {
-    const captures = moves.filter(m => m.includes('x'));
-    const checks = moves.filter(m => m.includes('+'));
-    const pool = checks.length > 0 ? checks : captures.length > 0 ? captures : moves;
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-  let bestMove = moves[0];
-  let bestScore = -Infinity;
-  for (const m of moves) {
-    game.move(m);
-    const score = -minimax(game, 2, -Infinity, Infinity);
-    game.undo();
-    if (score > bestScore) { bestScore = score; bestMove = m; }
-  }
-  return bestMove;
-}
 
 const PROMOTION_PIECES: { type: 'q' | 'r' | 'b' | 'n'; label: string }[] = [
   { type: 'q', label: 'Queen' },
@@ -202,7 +153,7 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
 
   const doAiMove = useCallback(() => {
     if (endedRef.current || game.isGameOver()) return;
-    const moveStr = getAiMove(game, difficulty);
+    const moveStr = bestMove(game, difficulty);
     if (!moveStr) return;
     const move = game.move(moveStr);
     if (!move) return;
@@ -558,3 +509,4 @@ function ChessGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
 }
 
 export default ChessGame;
+
