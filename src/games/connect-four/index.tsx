@@ -1,96 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameProps } from '@/types';
-
-const DIFFICULTY_LEVELS = {
-  easy: { winChance: 0.4, blockChance: 0.6, centerChance: 0.7 },
-  medium: { winChance: 0.8, blockChance: 0.95, centerChance: 0.9 },
-  hard: { winChance: 1.0, blockChance: 1.0, centerChance: 1.0 },
-};
-
-type Cell = 'red' | 'yellow' | null;
-type Board = Cell[][];
-
-const ROWS = 6;
-const COLS = 7;
-
-function initBoard(): Board {
-  return Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null));
-}
-
-function clone(b: Board): Board {
-  return b.map(r => [...r]);
-}
-
-function dropPiece(b: Board, col: number, color: 'red' | 'yellow'): number {
-  for (let r = ROWS - 1; r >= 0; r--) {
-    if (!b[r][col]) { b[r][col] = color; return r; }
-  }
-  return -1;
-}
-
-function getWinLine(b: Board, row: number, col: number, color: string): number[][] | null {
-  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
-  for (const [dr, dc] of dirs) {
-    const line: number[][] = [[row, col]];
-    for (const sign of [1, -1]) {
-      for (let i = 1; i < 4; i++) {
-        const r = row + dr * i * sign;
-        const c = col + dc * i * sign;
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || b[r][c] !== color) break;
-        line.push([r, c]);
-      }
-    }
-    if (line.length >= 4) return line;
-  }
-  return null;
-}
-
-function checkWin(b: Board, row: number, col: number, color: string): boolean {
-  return getWinLine(b, row, col, color) !== null;
-}
-
-function isFull(b: Board): boolean {
-  return b[0].every(c => c !== null);
-}
-
-function aiCol(b: Board, difficulty: 'easy' | 'medium' | 'hard'): number {
-  const { winChance, blockChance, centerChance } = DIFFICULTY_LEVELS[difficulty];
-  const enemy = 'red';
-  const me = 'yellow';
-
-  if (Math.random() < winChance) {
-    for (let c = 0; c < COLS; c++) {
-      if (!b[0][c]) {
-        const nb = clone(b);
-        const r = dropPiece(nb, c, me);
-        if (r >= 0 && checkWin(nb, r, c, me)) return c;
-      }
-    }
-  }
-
-  if (Math.random() < blockChance) {
-    for (let c = 0; c < COLS; c++) {
-      if (!b[0][c]) {
-        const nb = clone(b);
-        const r = dropPiece(nb, c, enemy);
-        if (r >= 0 && checkWin(nb, r, c, enemy)) return c;
-      }
-    }
-  }
-
-  if (Math.random() < centerChance) {
-    const order = [3, 2, 4, 1, 5, 0, 6];
-    for (const c of order) {
-      if (!b[0][c]) return c;
-    }
-  }
-
-  const emptyCols: number[] = [];
-  for (let c = 0; c < COLS; c++) {
-    if (!b[0][c]) emptyCols.push(c);
-  }
-  return emptyCols[Math.floor(Math.random() * emptyCols.length)];
-}
+import {
+  ROWS, COLS, initBoard, cloneBoard, dropPiece, getWinLine, isFull, bestMove,
+  type Board,
+} from './logic';
 
 function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
@@ -163,7 +76,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
 
     if (isOnline) {
       if (turn !== myColor) return;
-      const nb = clone(board);
+      const nb = cloneBoard(board);
       const row = dropPiece(nb, col, myColor);
       if (row < 0) return;
       setBoard(nb);
@@ -183,7 +96,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     }
 
     if (turn !== 'red') return;
-    const nb = clone(board);
+    const nb = cloneBoard(board);
     const row = dropPiece(nb, col, 'red');
     if (row < 0) return;
     setBoard(nb);
@@ -211,8 +124,8 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     onMessage('AI thinking...');
     schedule(() => {
       if (endedRef.current) return;
-      const aiC = aiCol(nb, difficulty);
-      const nb2 = clone(nb);
+      const aiC = bestMove(nb, 'yellow', difficulty);
+      const nb2 = cloneBoard(nb);
       const aiR = dropPiece(nb2, aiC, 'yellow');
       setBoard(nb2);
       if (aiR >= 0) {
@@ -390,3 +303,4 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
 }
 
 export default ConnectFourGame;
+
