@@ -17,7 +17,7 @@ Brain games and board games for the whole family. Train your focus, memory, and 
 | Board (13) | Bingo, Bookworm, Checkers, Chess, Connect Four, Connect Lines, Crossword, Ludo, Scrabble, Snakes & Ladders, Tic-Tac-Toe, UNO, Word Search |
 | Breathe (4) | 4-7-8 Calm, Box Breathing, Coherent Breathing, Triangle Breathing |
 
-Board games play against an AI with progressive difficulty across stages. Word games (Scrabble, Bookworm, Crossword, Word Search) validate against a full SOWPODS dictionary loaded at runtime.
+Board games play against an AI with progressive difficulty across stages. Scrabble validates against your choice of two real lexica — UK & International (SOWPODS) or US & Canada (TWL) — downloaded at runtime; online games use the host's choice so everyone plays by the same words.
 
 ### Real-Time Multiplayer
 

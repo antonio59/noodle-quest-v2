@@ -63,7 +63,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Big static extras: serve from cache, refresh in the background.
-  if (url.pathname === '/scrabble-dictionary.txt' || url.pathname.startsWith('/icons/') || url.pathname === '/favicon.svg' || url.pathname === '/icons.svg') {
+  if (url.pathname.startsWith('/dict/') || url.pathname.startsWith('/icons/') || url.pathname === '/favicon.svg' || url.pathname === '/icons.svg') {
     event.respondWith(
       caches.match(request).then((hit) => {
         const refresh = fetch(request)

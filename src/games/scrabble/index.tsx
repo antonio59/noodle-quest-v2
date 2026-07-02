@@ -9,6 +9,10 @@ import {
   type Direction, type ScoreBreakdown,
 } from './logic';
 import { ScrabbleBoard } from './Board';
+import {
+  DICTIONARIES, fetchDictionary, getPreferredDictionary, setPreferredDictionary,
+  isDictVariant, type DictVariant,
+} from './dictionary';
 
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -40,28 +44,33 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
   const [lastWord, setLastWord] = useState('');
   const [isFirstMove, setIsFirstMove] = useState(true);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | null>(null);
-  const [dictLoaded, setDictLoaded] = useState(false);
+  // Dictionary: which lexicon validates words, and whether it's ready.
+  // The game must not be playable against the small embedded fallback —
+  // that's how valid words end up rejected.
+  const [dictVariant, setDictVariant] = useState<DictVariant>(getPreferredDictionary);
+  const [dictStatus, setDictStatus] = useState<'loading' | 'ready' | 'error' | 'fallback'>('loading');
   const endedRef = useRef(false);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Load the SOWPODS dictionary (trimmed to 2-10 letter words — with a
-  // 7-tile rack, longer words are effectively unplayable here, and the
-  // smaller set keeps the download and AI search fast)
   useEffect(() => {
-    fetch('/scrabble-dictionary.txt')
-      .then(r => r.text())
-      .then(text => {
-        const words = text.split('\n')
-          .map(w => w.trim().toUpperCase())
-          .filter(w => w.length >= 2 && w.length <= 10 && /^[A-Z]+$/.test(w));
-        setActiveWordSet(new Set(words));
-        setDictLoaded(true);
+    let cancelled = false;
+    setDictStatus('loading');
+    fetchDictionary(dictVariant)
+      .then(words => {
+        if (cancelled) return;
+        setActiveWordSet(words);
+        setDictStatus('ready');
       })
       .catch(() => {
-        // Keep embedded fallback
-        setDictLoaded(true);
+        if (!cancelled) setDictStatus('error');
       });
-  }, []);
+    return () => { cancelled = true; };
+  }, [dictVariant]);
+
+  const chooseDictionary = (v: DictVariant) => {
+    setPreferredDictionary(v);
+    setDictVariant(v);
+  };
 
   const maxRounds = 6 + stage * 6; // each seat plays maxRounds turns
   const targetScore = stage * 30;
@@ -123,9 +132,10 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
         currentSeat: 0,
         isFirstMove: true,
         lastWord: '',
+        dict: dictVariant,
       },
     });
-  }, [isOnline, onMultiplayerMove, isHost, multiplayerState, SEATS]);
+  }, [isOnline, onMultiplayerMove, isHost, multiplayerState, SEATS, dictVariant]);
 
   // Online: reconcile from server boardState.
   useEffect(() => {
@@ -138,8 +148,13 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
       currentSeat?: number;
       isFirstMove?: boolean;
       lastWord?: string;
+      dict?: string;
     } | null | undefined;
     if (!bs || !bs.racks) return;
+    // Everyone validates against the host's dictionary choice.
+    if (isDictVariant(bs.dict)) {
+      setDictVariant(cur => (cur === bs.dict ? cur : bs.dict as DictVariant));
+    }
     if (bs.board) setBoard(bs.board);
     if (bs.racks) setRacks(bs.racks);
     if (bs.pool) setPool(bs.pool);
@@ -388,6 +403,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
           currentSeat: nextSeat,
           isFirstMove: false,
           lastWord: `P${multiplayerState.playerNumber} played "${result.word}" for ${result.score}`,
+          dict: dictVariant,
         },
         winner: iWon ? multiplayerState.playerNumber : undefined,
       });
@@ -506,6 +522,7 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
           currentSeat: nextSeat,
           isFirstMove,
           lastWord: 'Opponent passed',
+          dict: dictVariant,
         },
       });
       return;
@@ -563,12 +580,84 @@ function ScrabbleGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficul
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setStarted(true)}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
-        >
-          Start Game
-        </button>
+        {/* Dictionary picker */}
+        <div className="w-full max-w-xs" role="radiogroup" aria-label="Dictionary">
+          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wide block mb-1.5">Dictionary</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(Object.keys(DICTIONARIES) as DictVariant[]).map(v => (
+              <button
+                key={v}
+                onClick={() => chooseDictionary(v)}
+                role="radio"
+                aria-checked={dictVariant === v}
+                title={DICTIONARIES[v].blurb}
+                className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-xl text-xs font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  dictVariant === v ? 'bg-accent-soft ring-1 ring-accent text-text' : 'bg-card hover:bg-card-hover text-text-muted'
+                }`}
+              >
+                <span className="text-base" aria-hidden>{DICTIONARIES[v].flag}</span>
+                {DICTIONARIES[v].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {dictStatus === 'error' ? (
+          <div className="w-full max-w-xs bg-danger/10 border border-danger/30 rounded-xl p-3 text-center space-y-2">
+            <p className="text-xs text-text-muted">Couldn't download the dictionary — check your connection.</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => chooseDictionary(dictVariant)}
+                className="bg-accent text-bg font-bold px-4 py-2 rounded-xl text-sm hover:opacity-90 active:scale-95"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => setDictStatus('fallback')}
+                title="A small built-in word list — many valid words will be rejected"
+                className="bg-card hover:bg-card-hover text-text-muted font-semibold px-4 py-2 rounded-xl text-sm"
+              >
+                Use basic list
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setStarted(true)}
+            disabled={dictStatus === 'loading'}
+            className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait"
+          >
+            {dictStatus === 'loading' ? 'Loading dictionary…' : 'Start Game'}
+          </button>
+        )}
+        {dictStatus === 'fallback' && (
+          <p className="text-[10px] text-warning text-center max-w-xs">
+            Playing with the basic built-in list — some valid words may be rejected.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // Online games skip the start screen, so gate play behind the download
+  // there too — otherwise words validate against the tiny fallback list.
+  if (isOnline && (dictStatus === 'loading' || dictStatus === 'error')) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <div className="text-5xl" aria-hidden>🅰️</div>
+        {dictStatus === 'loading' ? (
+          <p className="text-text-muted text-sm" role="status">Loading the {DICTIONARIES[dictVariant].label} dictionary…</p>
+        ) : (
+          <>
+            <p className="text-text-muted text-sm">Couldn't download the dictionary — check your connection.</p>
+            <button
+              onClick={() => chooseDictionary(dictVariant)}
+              className="bg-accent text-bg font-bold px-6 py-2.5 rounded-xl hover:opacity-90 active:scale-95"
+            >
+              Retry
+            </button>
+          </>
+        )}
       </div>
     );
   }

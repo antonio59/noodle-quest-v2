@@ -1,6 +1,6 @@
-// Embedded fallback word list. The full SOWPODS dictionary is fetched
-// at runtime (public/scrabble-dictionary.txt) and swapped in via
-// setActiveWordSet in logic.ts.
+// Embedded fallback word list of last resort. A full lexicon (SOWPODS
+// or TWL, public/dict/*.txt) is fetched at runtime and swapped in via
+// setActiveWordSet in logic.ts; gameplay is gated on that download.
 // ── Word list ─────────────────────────────────────────────────────────
 // Embedded fallback list + full SOWPODS dictionary loaded at runtime.
 export const VALID_WORDS = new Set([
