@@ -15,3 +15,18 @@
 
 [context.production.environment]
   VITE_CONVEX_URL = "https://incredible-lobster-12.eu-west-1.convex.cloud"
+
+# Deploy previews and branch deploys can't (and shouldn't) deploy the
+# Convex backend — build the frontend only, pointed at production Convex.
+# Previously previews ran the production command and failed on every PR.
+[context.deploy-preview]
+  command = "npm run build"
+
+[context.deploy-preview.environment]
+  VITE_CONVEX_URL = "https://incredible-lobster-12.eu-west-1.convex.cloud"
+
+[context.branch-deploy]
+  command = "npm run build"
+
+[context.branch-deploy.environment]
+  VITE_CONVEX_URL = "https://incredible-lobster-12.eu-west-1.convex.cloud"

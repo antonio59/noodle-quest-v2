@@ -83,7 +83,9 @@ describe('bestMove — hard is unbeatable', () => {
     expect(result).toBe('O');
   });
 
-  test('never loses across 50 games against random play', () => {
+  // Full-depth minimax from an empty board is slow on CI runners —
+  // give the sweep a generous budget (5.4s observed on GitHub Actions).
+  test('never loses across 50 games against random play', { timeout: 30000 }, () => {
     for (let g = 0; g < 50; g++) {
       let board: Cell[] = Array(9).fill(null);
       let turn: Player = g % 2 === 0 ? 'X' : 'O'; // alternate who starts
