@@ -485,7 +485,7 @@ export function PlayGame() {
 
           {/* Score block */}
           <div className={`rounded-2xl px-6 py-4 mb-4 ${isPerfect ? 'bg-yellow-500/12' : 'bg-surface/60'}`}>
-            <div className={`text-4xl font-black tracking-tight ${isPerfect ? 'text-yellow-300' : 'text-accent'}`}>
+            <div className={`font-display text-4xl font-black tracking-tight ${isPerfect ? 'text-yellow-300' : 'text-accent'}`}>
               {ended.score.toLocaleString()}
             </div>
             <div className="text-text-muted text-xs mt-1">points · Stage {currentStage}/{gameMeta.stages}</div>

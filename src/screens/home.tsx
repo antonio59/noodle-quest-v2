@@ -41,6 +41,12 @@ export function Home() {
     : 100;
   const nextTier = nextTierStars !== null ? RANK_TIERS.find(t => t.min === nextTierStars) : null;
 
+  // Continue playing: the game touched most recently
+  const lastPlayedEntry = Object.entries(gameStages)
+    .map(([id, g]) => ({ id, game: games.find(x => x.id === id), lastPlayed: (g as any).lastPlayed ?? 0, lastStage: (g as any).lastStage ?? 1 }))
+    .filter(e => e.game && e.lastPlayed > 0)
+    .sort((a, b) => b.lastPlayed - a.lastPlayed)[0];
+
   // Quick Play: played games first (by recency), then unplayed
   const played = games
     .filter(g => (gameStages[g.id]?.timesPlayed ?? 0) > 0)
@@ -99,6 +105,28 @@ export function Home() {
             <p className={`relative text-xs font-bold mt-3 ${tier.color}`}>💎 Maximum rank — Diamond achieved!</p>
           )}
         </div>
+
+        {/* ── Continue playing ────────────────────────────── */}
+        {lastPlayedEntry && (
+          <button
+            onClick={() => navigate(`/play/${lastPlayedEntry.id}`, {
+              state: {
+                stage: lastPlayedEntry.lastStage,
+                fromTab: lastPlayedEntry.game!.category === 'board' ? 'board' : lastPlayedEntry.game!.category === 'breathe' ? 'breathe' : 'brain',
+              },
+            })}
+            className="w-full flex items-center gap-3 bg-accent/8 hover:bg-accent/15 border border-accent/25 rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          >
+            <span className="text-3xl flex-shrink-0" aria-hidden>{lastPlayedEntry.game!.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-accent uppercase tracking-widest">Continue playing</p>
+              <p className="text-sm font-bold truncate">{lastPlayedEntry.game!.name} · Stage {lastPlayedEntry.lastStage}</p>
+            </div>
+            <span className="flex items-center gap-1 text-xs font-bold text-accent flex-shrink-0">
+              Play <ChevronRight size={14} aria-hidden />
+            </span>
+          </button>
+        )}
 
         {/* ── Pending challenges ──────────────────────────── */}
         {pendingChallenges.length > 0 && (

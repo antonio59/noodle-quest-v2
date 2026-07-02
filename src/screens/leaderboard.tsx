@@ -176,9 +176,32 @@ export function Leaderboard() {
       {/* List */}
       <div ref={listRef} className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-            <p className="text-text-muted text-sm">Loading rankings...</p>
+          <div className="p-3 space-y-2" aria-busy="true" aria-label="Loading rankings">
+            {/* Skeleton podium + rows — mirrors the loaded layout so nothing jumps */}
+            {[0, 1, 2].map(i => (
+              <div key={`sp${i}`} className="rounded-2xl p-4 border border-white/5 bg-card animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-card-hover flex-shrink-0" />
+                  <div className="w-10 h-10 rounded-xl bg-card-hover flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-24 rounded bg-card-hover" />
+                    <div className="h-1.5 w-full rounded-full bg-card-hover" />
+                  </div>
+                  <div className="h-6 w-10 rounded bg-card-hover flex-shrink-0" />
+                </div>
+              </div>
+            ))}
+            {[0, 1, 2, 3].map(i => (
+              <div key={`sr${i}`} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-card border border-white/5 animate-pulse">
+                <div className="w-7 h-4 rounded bg-card-hover flex-shrink-0" />
+                <div className="w-8 h-8 rounded-full bg-card-hover flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-20 rounded bg-card-hover" />
+                  <div className="h-2.5 w-28 rounded bg-card-hover" />
+                </div>
+                <div className="h-4 w-8 rounded bg-card-hover flex-shrink-0" />
+              </div>
+            ))}
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted">

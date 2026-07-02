@@ -14,6 +14,17 @@
   --color-text: #e2e0f0;
   --color-text-dim: #a78bfa;
   --color-text-muted: #8a8aa0;
+  --font-display: 'Baloo 2', 'Inter', system-ui, sans-serif;
+}
+
+/* Headings get the rounded display face — it's what makes the app feel
+   like a game rather than a dashboard. Body text stays Inter. */
+h1, h2, h3 {
+  font-family: var(--font-display);
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 body {
@@ -133,6 +144,11 @@ button {
 @keyframes progressLoop {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 @keyframes confetti-fall {

@@ -57,7 +57,7 @@ export const getPlayerStats = query({
     }
     // Get progress for best stage info
     const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
-    const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number }> = {};
+    const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number; lastPlayed: number; lastStage: number }> = {};
     for (const p of progress) {
       const existing = gameStages[p.gameId];
       if (!existing) {
@@ -65,12 +65,17 @@ export const getPlayerStats = query({
           highScore: p.highScore,
           starsEarned: p.starsEarned,
           timesPlayed: p.timesPlayed,
+          lastPlayed: p.lastPlayed,
+          lastStage: p.stage,
         };
       } else {
         gameStages[p.gameId] = {
           highScore: Math.max(existing.highScore, p.highScore),
           starsEarned: Math.max(existing.starsEarned, p.starsEarned),
           timesPlayed: existing.timesPlayed + p.timesPlayed,
+          // Most recent stage wins the "continue playing" slot
+          lastPlayed: Math.max(existing.lastPlayed, p.lastPlayed),
+          lastStage: p.lastPlayed > existing.lastPlayed ? p.stage : existing.lastStage,
         };
       }
     }

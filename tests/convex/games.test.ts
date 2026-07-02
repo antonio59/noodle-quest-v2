@@ -59,6 +59,23 @@ describe("saveScore", () => {
   });
 });
 
+describe("getPlayerStats — continue playing", () => {
+  test("tracks the most recently played game and stage", async (): Promise<void> => {
+    const t = setup();
+    const { sessionToken, playerId } = await signedUpPlayer(t, "Resumer");
+    await t.mutation(api.games.saveScore, { sessionToken, gameId: "chess", stage: 3, score: 50, stars: 2 });
+    await t.mutation(api.games.saveScore, { sessionToken, gameId: "ludo", stage: 5, score: 80, stars: 3 });
+
+    const stats = await t.query(api.games.getPlayerStats, { playerId });
+    const chess = stats.gameStages["chess"];
+    const ludo = stats.gameStages["ludo"];
+    expect(chess.lastStage).toBe(3);
+    expect(ludo.lastStage).toBe(5);
+    // Ludo was played last
+    expect(ludo.lastPlayed).toBeGreaterThanOrEqual(chess.lastPlayed);
+  });
+});
+
 describe("feed", () => {
   test("createPost attributes the author from the session", async () => {
     const t = setup();
