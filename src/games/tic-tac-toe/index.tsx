@@ -1,66 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
-
-// Define AI difficulty levels
-const DIFFICULTY_LEVELS = {
-  easy: { winChance: 0.3, blockChance: 0.6, centerChance: 0.8 },
-  medium: { winChance: 0.7, blockChance: 0.9, centerChance: 0.95 },
-  hard: { winChance: 1.0, blockChance: 1.0, centerChance: 1.0 },
-};
-
-type Cell = 'X' | 'O' | null;
-type Player = 'X' | 'O';
-type WinLine = number[] | null;
-
-const WIN_LINES = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-  [0, 3, 6], [1, 4, 7], [2, 5, 8], // cols
-  [0, 4, 8], [2, 4, 6],            // diagonals
-];
-
-function checkWinner(board: Cell[]): { result: Cell | 'draw' | null; line: WinLine } {
-  for (const line of WIN_LINES) {
-    const [a, b, c] = line;
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) return { result: board[a], line };
-  }
-  if (board.every(c => c !== null)) return { result: 'draw', line: null };
-  return { result: null, line: null };
-}
-
-// Simple AI: win > block > center > random
-function aiMove(board: Cell[], ai: Player, difficulty: 'easy' | 'medium' | 'hard'): number {
-  const human = ai === 'X' ? 'O' : 'X';
-  const { winChance, blockChance, centerChance } = DIFFICULTY_LEVELS[difficulty];
-  
-  // Try to win (with probability based on difficulty)
-  if (Math.random() < winChance) {
-    for (const [a, b, c] of WIN_LINES) {
-      const line = [board[a], board[b], board[c]];
-      if (line.filter(x => x === ai).length === 2 && line.includes(null)) {
-        return [a, b, c][line.indexOf(null)];
-      }
-    }
-  }
-  
-  // Try to block (with probability based on difficulty)
-  if (Math.random() < blockChance) {
-    for (const [a, b, c] of WIN_LINES) {
-      const line = [board[a], board[b], board[c]];
-      if (line.filter(x => x === human).length === 2 && line.includes(null)) {
-        return [a, b, c][line.indexOf(null)];
-      }
-    }
-  }
-  
-  // Center (with probability based on difficulty)
-  if (Math.random() < centerChance && !board[4]) {
-    return 4;
-  }
-  
-  // Random move
-  const empty = board.map((c, i) => c === null ? i : -1).filter(i => i >= 0);
-  return empty[Math.floor(Math.random() * empty.length)];
-}
+import { checkWinner, bestMove, type Cell, type Player, type WinLine } from './logic';
 
 function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const isOnline = !!multiplayerState;
@@ -144,7 +84,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       setTurn(ai);
       onMessage('Thinking...');
       setTimeout(() => {
-        const aiIdx = aiMove(next, ai, difficulty);
+        const aiIdx = bestMove(next, ai, difficulty);
         const afterAi = [...next];
         afterAi[aiIdx] = ai;
         setBoard(afterAi);
@@ -303,3 +243,4 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
 }
 
 export default TicTacToeGame;
+

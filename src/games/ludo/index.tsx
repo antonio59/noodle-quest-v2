@@ -1,90 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameProps } from '@/types';
+import {
+  TRACK, RED_STRETCH, BLUE_STRETCH, GREEN_STRETCH, YELLOW_STRETCH,
+  SAFE_POSITIONS, RED_ENTRY, BLUE_ENTRY, HOME, STRETCH_START,
+  rollDie, advance, getMovableIndices, capturedIndices, chooseAiMove, posCoord,
+} from './logic';
 
 const C = 26;
 const N = 15;
 const W = C * N;
 
-const TRACK: [number, number][] = [
-  [6,1],[6,2],[6,3],[6,4],[6,5],
-  [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
-  [0,7],
-  [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],
-  [6,9],[6,10],[6,11],[6,12],[6,13],
-  [7,14],
-  [8,13],[8,12],[8,11],[8,10],[8,9],
-  [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
-  [14,7],
-  [14,6],[13,6],[12,6],[11,6],[10,6],[9,6],
-  [8,5],[8,4],[8,3],[8,2],[8,1],
-  [7,0],
-];
-
-const RED_STRETCH:    [number, number][] = [[7,1],[7,2],[7,3],[7,4],[7,5],[7,6]];
-const BLUE_STRETCH:   [number, number][] = [[7,13],[7,12],[7,11],[7,10],[7,9],[7,8]];
-const GREEN_STRETCH:  [number, number][] = [[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]];
-const YELLOW_STRETCH: [number, number][] = [[13,7],[12,7],[11,7],[10,7],[9,7],[8,7]];
-
 // 4 parking circles per base (col, row)
 const RED_SPOTS:  [number, number][] = [[1.7,1.7],[3.3,1.7],[1.7,3.3],[3.3,3.3]];
 const BLUE_SPOTS: [number, number][] = [[10.7,10.7],[12.3,10.7],[10.7,12.3],[12.3,12.3]];
 
-const SAFE_POSITIONS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
-const BLUE_ENTRY = 26;
-
 // Small px offsets when multiple pieces share one track square
 const STACK_OFF: [number, number][] = [[-4,-4],[4,-4],[-4,4],[4,4]];
-
-function rollDie(): number { return Math.floor(Math.random() * 6) + 1; }
-
-function posCoord(pos: number, stretch: [number, number][]): [number, number] {
-  if (pos < 0) return [-1, -1];
-  if (pos < 52) return TRACK[pos];
-  if (pos < 58) return stretch[pos - 52];
-  return [7, 7];
-}
-
-// Red/player advance: enters at 0, home stretch wraps to 52+
-function advanceRed(pos: number, steps: number): number {
-  if (pos === -1) return steps === 6 ? 0 : -1;
-  const next = pos + steps;
-  return next > 58 ? pos : next; // can't overshoot home
-}
-
-// Blue/AI advance: enters at BLUE_ENTRY, home stretch separately
-function advanceBlue(pos: number, steps: number): number {
-  if (pos === -1) return steps === 6 ? BLUE_ENTRY : -1;
-  const next = pos + steps;
-  if (pos < 52 && next >= 52) {
-    const over = next - 52;
-    return over <= 6 ? 52 + over : pos;
-  }
-  if (pos >= 52) return next > 58 ? pos : next;
-  return next % 52;
-}
-
-function getMovableIndices(pieces: number[], d: number, isBlue: boolean): number[] {
-  const adv = isBlue ? advanceBlue : advanceRed;
-  const result: number[] = [];
-  for (let i = 0; i < pieces.length; i++) {
-    const pos = pieces[i];
-    if (pos >= 58) continue; // already home
-    const np = adv(pos, d);
-    if (np === pos) continue; // no movement (overshoot or no 6)
-    if (np === -1) continue;  // stayed at base (no 6)
-    result.push(i);
-  }
-  return result;
-}
-
-function scoreMove(np: number, pPieces: number[]): number {
-  if (np >= 58) return 1000;
-  let score = np >= 52 ? 200 + np : np;
-  for (const pp of pPieces) {
-    if (np === pp && np >= 0 && np < 52 && !SAFE_POSITIONS.has(np)) score += 500;
-  }
-  return score;
-}
 
 function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
@@ -99,8 +30,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
   const oppSpots   = mySide === 'red' ? BLUE_SPOTS : RED_SPOTS;
   const myLight    = mySide === 'red' ? '#fca5a5' : '#93c5fd';
   const oppLight   = mySide === 'red' ? '#93c5fd' : '#fca5a5';
-  const myAdv      = mySide === 'red' ? advanceRed : advanceBlue;
-  const oppAdv     = mySide === 'red' ? advanceBlue : advanceRed;
+  const myEntry    = mySide === 'red' ? RED_ENTRY : BLUE_ENTRY;
+  const oppEntry   = mySide === 'red' ? BLUE_ENTRY : RED_ENTRY;
 
   const [pPieces, setPPieces] = useState<number[]>([-1,-1,-1,-1]);
   const [aPieces, setAPieces] = useState<number[]>([-1,-1,-1,-1]);
@@ -141,50 +72,38 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     const d = rollDie();
     setDice(d);
 
-    const mv = getMovableIndices(aRef.current, d, mySide !== 'red');
+    const bestIdx = chooseAiMove(aRef.current, d, oppEntry, pRef.current, myEntry);
 
-    if (mv.length === 0) {
+    if (bestIdx < 0) {
       onMessage(`AI rolled ${d} — no piece can move.`);
       setTurn('p');
       return;
     }
 
-    // Pick best piece
-    let bestIdx = mv[0], bestScore = -Infinity;
-    for (const i of mv) {
-      const np = oppAdv(aRef.current[i], d);
-      const s  = scoreMove(np, pRef.current);
-      if (s > bestScore) { bestScore = s; bestIdx = i; }
-    }
-
     const apieces = [...aRef.current];
-    const np = oppAdv(apieces[bestIdx], d);
+    const np = advance(apieces[bestIdx], d);
     apieces[bestIdx] = np;
     aRef.current = apieces;
     setAPieces([...apieces]);
 
     // Capture check
-    const ppieces = [...pRef.current];
-    let captured = false;
-    if (np >= 0 && np < 52 && !SAFE_POSITIONS.has(np)) {
-      for (let pi = 0; pi < 4; pi++) {
-        if (ppieces[pi] === np) { ppieces[pi] = -1; captured = true; }
-      }
-    }
-    if (captured) {
+    const hits = capturedIndices(np, oppEntry, pRef.current, myEntry);
+    if (hits.length > 0) {
+      const ppieces = [...pRef.current];
+      for (const pi of hits) ppieces[pi] = -1;
       pRef.current = ppieces;
       setPPieces([...ppieces]);
       onMessage(`AI rolled ${d} — captured your piece!`);
-    } else if (np >= 58) {
-      const hc = apieces.filter(p => p >= 58).length;
+    } else if (np >= HOME) {
+      const hc = apieces.filter(p => p >= HOME).length;
       onMessage(`AI piece reached home! (${hc}/4) 💙`);
     } else {
-      const label = np >= 52 ? `home stretch ${np-51}/6` : `sq ${np}`;
+      const label = np >= STRETCH_START ? `home stretch ${np - STRETCH_START + 1}/6` : `sq ${np}`;
       onMessage(`AI rolled ${d} → ${label}`);
     }
 
     // Win check
-    if (apieces.every(p => p >= 58)) {
+    if (apieces.every(p => p >= HOME)) {
       overRef.current = true; setOver(true);
       endedRef.current = true;
       schedule(() => onEnd({ score: 10, stars: 1, summary: 'AI got all 4 pieces home. Better luck next time!' }), 1500);
@@ -193,36 +112,32 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
 
     if (d === 6 && !overRef.current) { onMessage('AI rolled 6 — bonus!'); schedule(doAi, 700); return; }
     setTurn('p');
-  }, [mySide, oppAdv, onMessage, onEnd, schedule]);
+  }, [myEntry, oppEntry, onMessage, onEnd, schedule]);
 
   // ── Move a player piece ──────────────────────────────────────────────────
   const movePiece = useCallback((idx: number, d: number) => {
     const pieces = [...pRef.current];
-    const np = myAdv(pieces[idx], d);
+    const np = advance(pieces[idx], d);
     pieces[idx] = np;
     pRef.current = pieces;
     setPPieces([...pieces]);
 
-    const apieces = [...aRef.current];
-    let captured = false;
-    if (np >= 0 && np < 52 && !SAFE_POSITIONS.has(np)) {
-      for (let ai = 0; ai < 4; ai++) {
-        if (apieces[ai] === np) { apieces[ai] = -1; captured = true; }
-      }
-    }
-    if (captured) {
+    const hits = capturedIndices(np, myEntry, aRef.current, oppEntry);
+    if (hits.length > 0) {
+      const apieces = [...aRef.current];
+      for (const ai of hits) apieces[ai] = -1;
       aRef.current = apieces;
       setAPieces([...apieces]);
       onMessage(`Rolled ${d} — captured an AI piece! 🔴`);
-    } else if (np >= 58) {
-      const hc = pieces.filter(p => p >= 58).length;
+    } else if (np >= HOME) {
+      const hc = pieces.filter(p => p >= HOME).length;
       onMessage(`Piece ${hc}/4 home! 🎉`);
     } else {
-      const label = np >= 52 ? `home stretch ${np-51}/6` : `sq ${np}`;
+      const label = np >= STRETCH_START ? `home stretch ${np - STRETCH_START + 1}/6` : `sq ${np}`;
       onMessage(`Rolled ${d} → ${label}`);
     }
 
-    if (pieces.every(p => p >= 58)) {
+    if (pieces.every(p => p >= HOME)) {
       overRef.current = true; setOver(true);
       onScore(100); onProgress(1);
       endedRef.current = true;
@@ -233,7 +148,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     if (d === 6 && !overRef.current) { onMessage('Rolled 6 — bonus roll!'); return; }
     setTurn('a');
     schedule(doAi, 800);
-  }, [myAdv, onMessage, onScore, onProgress, onEnd, schedule, doAi]);
+  }, [myEntry, oppEntry, onMessage, onScore, onProgress, onEnd, schedule, doAi]);
 
   // ── Roll handler ─────────────────────────────────────────────────────────
   const handleRoll = () => {
@@ -241,7 +156,7 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
     const d = rollDie();
     setDice(d);
 
-    const mv = getMovableIndices(pRef.current, d, mySide !== 'red');
+    const mv = getMovableIndices(pRef.current, d);
     if (mv.length === 0) {
       onMessage(`Rolled ${d} — no piece can move!`);
       setTurn('a');
@@ -267,8 +182,8 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
   const cy = (row: number) => row * C + C / 2;
 
   // Offset position for stacked pieces sharing the same square
-  const stackedXY = (pos: number, stretch: [number, number][], pieceIdx: number, allPieces: number[]): [number, number] => {
-    const [row, col] = posCoord(pos, stretch);
+  const stackedXY = (pos: number, entry: number, stretch: [number, number][], pieceIdx: number, allPieces: number[]): [number, number] => {
+    const [row, col] = posCoord(pos, entry, stretch);
     const bx = cx(col), by = cy(row);
     const rank = allPieces.slice(0, pieceIdx).filter(p => p === pos).length;
     const [ox, oy] = STACK_OFF[rank % 4];
@@ -458,11 +373,11 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
       if (pos === -1) {
         const [sc, sr] = mySpots[i];
         el.push(...drawToken(id, cx(sc), cy(sr), myColor, myLight, String(i+1), turn==='p', isM, 1, isM ? i : undefined));
-      } else if (pos >= 58) {
+      } else if (pos >= HOME) {
         const [fx, fy] = myFin[pFinCount++];
         el.push(...drawToken(id, fx, fy, myColor, myLight, '✓', false, false, 0.62));
       } else {
-        const [tx, ty] = stackedXY(pos, myStretch, i, pPieces);
+        const [tx, ty] = stackedXY(pos, myEntry, myStretch, i, pPieces);
         el.push(...drawToken(id, tx, ty, myColor, myLight, String(i+1), turn==='p', isM, 1, isM ? i : undefined));
       }
     });
@@ -475,11 +390,11 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
       if (pos === -1) {
         const [sc, sr] = oppSpots[i];
         el.push(...drawToken(id, cx(sc), cy(sr), oppColor, oppLight, String(i+1), turn==='a', false));
-      } else if (pos >= 58) {
+      } else if (pos >= HOME) {
         const [fx, fy] = oppFin[aFinCount++];
         el.push(...drawToken(id, fx, fy, oppColor, oppLight, '✓', false, false, 0.62));
       } else {
-        const [tx, ty] = stackedXY(pos, oppStretch, i, aPieces);
+        const [tx, ty] = stackedXY(pos, oppEntry, oppStretch, i, aPieces);
         el.push(...drawToken(id, tx, ty, oppColor, oppLight, String(i+1), turn==='a', false));
       }
     });
@@ -488,10 +403,10 @@ function LudoGame({ stage, onScore, onProgress, onMessage, onEnd, multiplayerSta
   };
 
   // ── Computed stats ───────────────────────────────────────────────────────
-  const pHome = pPieces.filter(p => p >= 58).length;
-  const aHome = aPieces.filter(p => p >= 58).length;
-  const pPct  = Math.round(pPieces.reduce((s,p) => s + (p<0?0:p>=58?58:p), 0) / (58*4) * 100);
-  const aPct  = Math.round(aPieces.reduce((s,p) => s + (p<0?0:p>=58?58:p), 0) / (58*4) * 100);
+  const pHome = pPieces.filter(p => p >= HOME).length;
+  const aHome = aPieces.filter(p => p >= HOME).length;
+  const pPct  = Math.round(pPieces.reduce((s,p) => s + (p<0?0:p>=HOME?HOME:p), 0) / (HOME*4) * 100);
+  const aPct  = Math.round(aPieces.reduce((s,p) => s + (p<0?0:p>=HOME?HOME:p), 0) / (HOME*4) * 100);
 
   // ── Intro screen ─────────────────────────────────────────────────────────
   if (!started) {
@@ -651,3 +566,4 @@ function DiceFace({ value, highlight }: { value: number | null; highlight?: bool
 }
 
 export default LudoGame;
+
