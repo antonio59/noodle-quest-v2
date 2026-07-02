@@ -130,6 +130,20 @@ export const getChatMessages = query({
   },
 });
 
+// Newest chat-style post timestamp — powers the unread dot in the nav
+// without subscribing the whole message list.
+export const getLatestChatTime = query({
+  args: {},
+  handler: async (ctx) => {
+    let latest = 0;
+    for (const type of ["chat", "gif", "gif_url"]) {
+      const post = await ctx.db.query("feed").withIndex("by_type_time", q => q.eq("type", type)).order("desc").first();
+      if (post && post.createdAt > latest) latest = post.createdAt;
+    }
+    return latest;
+  },
+});
+
 export const getActivity = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {

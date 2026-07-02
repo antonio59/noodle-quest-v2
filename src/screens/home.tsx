@@ -3,7 +3,8 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
-import { Star, Zap, Gamepad2, Sparkles, ChevronRight, ArrowRight } from 'lucide-react';
+import { Star, Zap, Gamepad2, Sparkles, ChevronRight, ArrowRight, Swords } from 'lucide-react';
+import { getGame } from '@/lib/game-registry';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
 import { getRankTier, RANK_TIERS } from '@/lib/rank-tiers';
 
@@ -22,6 +23,10 @@ export function Home() {
   const stats = useQuery(api.games.getPlayerStats, player?.playerId ? { playerId: player.playerId as any } : 'skip' as any);
   const isLoading = stats === undefined && !!player?.playerId;
   const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
+  const pendingChallenges = useQuery(
+    api.challenges.getPendingChallenges,
+    player?.playerId ? { playerId: player.playerId as any } : 'skip' as any,
+  ) ?? [];
   const bonusTiers = monthlyPlays ? computeBonusTiers(monthlyPlays.counts, games.map(g => g.id)) : {};
 
   const gameStages = stats?.gameStages ?? {};
@@ -94,6 +99,46 @@ export function Home() {
             <p className={`relative text-xs font-bold mt-3 ${tier.color}`}>💎 Maximum rank — Diamond achieved!</p>
           )}
         </div>
+
+        {/* ── Pending challenges ──────────────────────────── */}
+        {pendingChallenges.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-sm font-bold flex items-center gap-1.5 text-warning">
+              <Swords size={15} aria-hidden /> Challenges for you
+            </h2>
+            {pendingChallenges.map(c => {
+              const game = getGame(c.gameId);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => navigate(`/play/${c.gameId}`, {
+                    state: {
+                      stage: c.stage,
+                      fromTab: game?.category === 'board' ? 'board' : 'brain',
+                      challengeId: c.id,
+                      challengeTarget: c.fromScore,
+                      challengerName: c.fromName,
+                    },
+                  })}
+                  className="w-full flex items-center gap-3 bg-warning/8 hover:bg-warning/15 border border-warning/25 rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-warning"
+                >
+                  <span className="text-2xl flex-shrink-0" aria-hidden>{c.fromAvatar}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">
+                      {c.fromName} challenged you!
+                    </p>
+                    <p className="text-xs text-text-muted truncate">
+                      Beat <span className="text-warning font-bold">{c.fromScore.toLocaleString()} pts</span> in {game ? `${game.emoji} ${game.name}` : c.gameId} · stage {c.stage}
+                    </p>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs font-bold text-warning flex-shrink-0">
+                    Play <ChevronRight size={14} aria-hidden />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* ── Stats ───────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-2">

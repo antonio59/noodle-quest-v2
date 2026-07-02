@@ -1,6 +1,25 @@
+import { useEffect, useState } from 'react';
 import { Home, Gamepad2, MessageCircle, Trophy, User, LogOut } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
+
+const CHAT_READ_KEY = 'nq_chat_read';
+
+/** Newest chat activity vs. the locally stored last-read time. */
+function useChatUnread(onChatScreen: boolean): boolean {
+  const latest = useQuery(api.feed.getLatestChatTime, {});
+  const [lastRead, setLastRead] = useState<number>(() => Number(localStorage.getItem(CHAT_READ_KEY) ?? 0));
+
+  useEffect(() => {
+    const refresh = () => setLastRead(Number(localStorage.getItem(CHAT_READ_KEY) ?? 0));
+    window.addEventListener('nq-chat-read', refresh);
+    return () => window.removeEventListener('nq-chat-read', refresh);
+  }, []);
+
+  return !onChatScreen && typeof latest === 'number' && latest > lastRead;
+}
 
 type Tab =
   | { path: string; label: string; icon: typeof Home; kind: 'icon' }
@@ -10,6 +29,7 @@ export function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { player, logout } = useAuth();
+  const chatUnread = useChatUnread(location.pathname === '/chat');
 
   // First name keeps the label compact in the bottom nav.
   const firstName = (player?.name ?? '').split(/\s+/)[0] || 'You';
@@ -31,7 +51,7 @@ export function NavBar() {
     <nav aria-label="Primary" className="flex-shrink-0 flex border-t border-white/5 bg-surface px-1">
       {tabs.map(t => {
         const active = location.pathname === t.path;
-        const accessibleName = t.kind === 'avatar' ? `Profile (${player?.name ?? 'you'})` : t.label;
+        const accessibleName = t.kind === 'avatar' ? `Profile (${player?.name ?? 'you'})` : t.path === '/chat' && chatUnread ? `${t.label} (new messages)` : t.label;
         return (
           <button
             key={t.path}
@@ -51,7 +71,15 @@ export function NavBar() {
                 {player?.avatar || <User size={20} />}
               </span>
             ) : (
-              <t.icon size={20} strokeWidth={active ? 2.5 : 2} className="relative" />
+              <span className="relative">
+                <t.icon size={20} strokeWidth={active ? 2.5 : 2} className="relative" />
+                {t.path === '/chat' && chatUnread && (
+                  <span
+                    className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-danger ring-2 ring-surface"
+                    aria-hidden
+                  />
+                )}
+              </span>
             )}
             <span className={`text-[10px] font-semibold relative truncate max-w-full px-1 ${active ? 'text-accent' : ''}`}>{t.label}</span>
           </button>

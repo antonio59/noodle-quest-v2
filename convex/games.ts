@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { playerFromSession } from "./model/auth";
 
 export const saveScore = mutation({
@@ -98,11 +99,19 @@ export const getMonthlyPlayCounts = query({
 });
 
 export const getLeaderboard = query({
-  args: { gameId: v.optional(v.string()) },
+  args: { gameId: v.optional(v.string()), since: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const scores = args.gameId
-      ? await ctx.db.query("scores").withIndex("by_game_score", q => q.eq("gameId", args.gameId!)).collect()
-      : await ctx.db.query("scores").collect();
+    let scores: Doc<"scores">[];
+    if (args.since !== undefined) {
+      // Windowed boards (this week/month) walk the playedAt index; the
+      // optional game filter is applied in memory (family-scale data).
+      scores = await ctx.db.query("scores").withIndex("by_playedAt", q => q.gte("playedAt", args.since!)).collect();
+      if (args.gameId) scores = scores.filter(s => s.gameId === args.gameId);
+    } else {
+      scores = args.gameId
+        ? await ctx.db.query("scores").withIndex("by_game_score", q => q.eq("gameId", args.gameId!)).collect()
+        : await ctx.db.query("scores").collect();
+    }
 
     const playerMap = new Map<string, { name: string; avatar: string; totalStars: number; totalScore: number; games: Map<string, { stars: number; score: number }> }>();
     for (const s of scores) {

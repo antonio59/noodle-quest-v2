@@ -38,11 +38,19 @@ export function Leaderboard() {
   const games = getAllGames();
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<string>('');
+  const [window, setWindow] = useState<'all' | 'month' | 'week'>('all');
+
+  // Stable to the hour so the realtime subscription doesn't churn.
+  const since = useMemo(() => {
+    if (window === 'all') return undefined;
+    const hour = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+    return hour - (window === 'week' ? 7 : 30) * 24 * 3_600_000;
+  }, [window]);
   const listRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
 
-  const overallData = useQuery(api.games.getLeaderboard, {});
-  const gameData = useQuery(api.games.getLeaderboard, selectedGame ? { gameId: selectedGame } : 'skip' as any);
+  const overallData = useQuery(api.games.getLeaderboard, { since });
+  const gameData = useQuery(api.games.getLeaderboard, selectedGame ? { gameId: selectedGame, since } : 'skip' as any);
 
   const isLoading = selectedGame ? gameData === undefined : overallData === undefined;
   const rawEntries: LeaderboardEntry[] = (selectedGame ? gameData : overallData) ?? [];
@@ -95,6 +103,22 @@ export function Leaderboard() {
             <p className="text-text-muted text-xs mt-0.5">
               {entries.length} player{entries.length !== 1 ? 's' : ''} · sorted by stars earned
             </p>
+          </div>
+          {/* Time window pills */}
+          <div className="flex gap-1 bg-card rounded-full p-0.5 border border-white/8" role="radiogroup" aria-label="Time period">
+            {([['all', 'All time'], ['month', 'Month'], ['week', 'Week']] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setWindow(id)}
+                role="radio"
+                aria-checked={window === id}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+                  window === id ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           {/* Filter dropdown */}
           <div className="relative flex-shrink-0">
@@ -159,7 +183,7 @@ export function Leaderboard() {
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             <Star size={40} className="mb-3 text-card-hover" />
-            <p className="text-sm font-semibold">No scores yet</p>
+            <p className="text-sm font-semibold">{window === 'all' ? 'No scores yet' : `No games ${window === 'week' ? 'this week' : 'this month'} yet`}</p>
             <p className="text-xs mt-1 text-center px-8">Play games to earn stars and climb the ranks!</p>
           </div>
         ) : (

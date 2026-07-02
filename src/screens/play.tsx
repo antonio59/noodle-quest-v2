@@ -9,6 +9,8 @@ import { getGameMeta, getGameComponent, getAllGames } from '@/lib/game-registry'
 import { playWin, playPerfect, playLose } from '@/lib/feedback';
 import { difficultyForStage, DIFFICULTY_STYLE } from '@/lib/difficulty';
 import { Confetti } from '@/components/Confetti';
+import { ChallengePlayerModal } from '@/components/ChallengePlayerModal';
+import { Swords } from 'lucide-react';
 import { computeBonusTiers, getBonusTier, applyBonus } from '@/lib/bonus-multiplier';
 import type { GameResult } from '@/types';
 import { ReportIssueModal } from '@/components/ReportIssueModal';
@@ -24,6 +26,10 @@ export function PlayGame() {
   const fromTab = (location.state as any)?.fromTab ?? 'brain';
   const isMultiplayer = (location.state as any)?.multiplayer ?? false;
   const joinerSessionId = (location.state as any)?.sessionId as string | undefined;
+  // Set when this play-through answers a "beat my score" challenge.
+  const challengeId = (location.state as any)?.challengeId as string | undefined;
+  const challengeTarget = (location.state as any)?.challengeTarget as number | undefined;
+  const challengerName = (location.state as any)?.challengerName as string | undefined;
 
   const [currentStage, setCurrentStage] = useState(stage);
   const [score, setScore] = useState(0);
@@ -36,6 +42,8 @@ export function PlayGame() {
   const [lobbyDone, setLobbyDone] = useState(false);
   const [showStagePicker, setShowStagePicker] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [challengeOutcome, setChallengeOutcome] = useState<'won' | 'lost' | null>(null);
   const [hasCopied, setHasCopied] = useState(false);
 
   // Page-visibility pause (tab switch, lock screen, incoming call)
@@ -56,6 +64,7 @@ export function PlayGame() {
   const gamePaused = (isPageHidden || needsResume) && !isMultiplayer;
 
   const saveScore = useMutation(api.games.saveScore);
+  const respondToChallenge = useMutation(api.challenges.respondToChallenge);
 
   // Look up game metadata (no component import)
   const gameMeta = gameId ? getGameMeta(gameId) : undefined;
@@ -384,6 +393,19 @@ export function PlayGame() {
         // save failed silently
       }
     }
+    // Resolve a pending challenge with this score
+    if (challengeId && player) {
+      try {
+        const res = await respondToChallenge({
+          sessionToken: player.sessionToken,
+          challengeId: challengeId as never,
+          toScore: finalScore,
+        });
+        if (res && 'won' in res) setChallengeOutcome(res.won ? 'won' : 'lost');
+      } catch {
+        // challenge result is decoration — the score itself was saved
+      }
+    }
     setSaving(false);
 
     // Auto-advance on success (2+ stars) after a brief pause
@@ -496,6 +518,18 @@ export function PlayGame() {
             <p className="text-text-muted text-xs mb-4 leading-relaxed">{ended.summary}</p>
           )}
 
+          {challengeOutcome && challengerName && (
+            <div className={`rounded-xl px-4 py-3 mb-4 text-sm font-bold border ${
+              challengeOutcome === 'won'
+                ? 'bg-success/10 border-success/30 text-success'
+                : 'bg-card border-white/10 text-text-muted'
+            }`} role="status">
+              {challengeOutcome === 'won'
+                ? `⚔️ You beat ${challengerName}'s challenge!`
+                : `⚔️ Not this time — ${challengerName} keeps the crown.`}
+            </div>
+          )}
+
           {saving && <p className="text-text-muted text-xs mb-3 animate-pulse">Saving...</p>}
 
           {isGood && nextStage && (
@@ -531,6 +565,16 @@ export function PlayGame() {
             )}
           </div>
 
+          {/* Challenge a player with this score */}
+          {!isMultiplayer && !challengeId && ended.score > 0 && player && (
+            <button
+              onClick={() => setShowChallengeModal(true)}
+              className="w-full flex items-center justify-center gap-1.5 bg-card hover:bg-card-hover text-accent font-bold py-2.5 rounded-2xl border border-accent/30 transition-colors active:scale-95 text-sm mb-1"
+            >
+              <Swords size={14} aria-hidden /> Challenge a player
+            </button>
+          )}
+
           {/* Secondary link */}
           <button
             onClick={goBackToGames}
@@ -538,6 +582,16 @@ export function PlayGame() {
           >
             <ArrowLeft size={13} /> Back to {backLabel}
           </button>
+
+          {showChallengeModal && gameMeta && (
+            <ChallengePlayerModal
+              gameId={gameId!}
+              gameName={gameMeta.name}
+              stage={currentStage}
+              score={ended.score}
+              onClose={() => setShowChallengeModal(false)}
+            />
+          )}
         </div>
       </div>
     );
@@ -648,6 +702,11 @@ export function PlayGame() {
         />
       </div>
 
+      {challengeId && challengeTarget !== undefined && !ended && (
+        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-warning bg-warning/10 border-b border-warning/20 py-1.5 px-4">
+          <Swords size={12} aria-hidden /> Beat {challengerName ?? 'their'} score: {challengeTarget.toLocaleString()} pts
+        </div>
+      )}
       {message && (
         <div role="status" aria-live="polite" className="text-center text-text-dim text-sm py-2 px-4">{message}</div>
       )}

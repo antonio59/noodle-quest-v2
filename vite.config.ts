@@ -20,6 +20,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     css: false,
+    // Playwright owns e2e/ — keep vitest out of it
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     // convex-test ships TS that must be transformed by Vite
     server: { deps: { inline: ['convex-test'] } },
     coverage: {

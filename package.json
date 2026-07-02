@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "convex:dev": "npx convex dev",
     "convex:deploy": "CONVEX_DEPLOYMENT=prod:incredible-lobster-12 npx convex deploy --yes"
   },
@@ -28,6 +29,7 @@
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
