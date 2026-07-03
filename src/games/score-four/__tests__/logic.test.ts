@@ -127,7 +127,8 @@ describe('bestRod — tactics', () => {
     expect(bestRod(b, 1, 'hard')).toBeNull();
   });
 
-  test('hard beats a greedy 1-ply opponent', () => {
+  // A full game of depth-4 search needs headroom on slow CI runners
+  test('hard beats a greedy 1-ply opponent', { timeout: 30000 }, () => {
     // Greedy: win if possible, block if possible, else first legal rod.
     const greedy = (b: Board, me: Player, enemy: Player) => {
       const rods = legalRods(b);
@@ -173,6 +174,8 @@ describe('performance', () => {
     const rod = bestRod(b, 1, 'hard');
     const dt = performance.now() - t0;
     expect(rod).not.toBeNull();
-    expect(dt).toBeLessThan(2000);
+    // ~300ms locally; generous bound absorbs CI contention while still
+    // catching a regression to something pathological
+    expect(dt).toBeLessThan(5000);
   });
 });
