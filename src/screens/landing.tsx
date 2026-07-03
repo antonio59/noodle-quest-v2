@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { getAllGames } from '@/lib/game-registry';
 import {
   Brain,
   Target,
@@ -119,13 +120,13 @@ export function Landing() {
   return (
     <div className="h-full overflow-y-auto">
       {/* Hero */}
-      <div className="relative px-6 pt-10 pb-12 text-center">
+      <div className="relative px-6 pt-10 pb-6 text-center">
         <div className="text-7xl mb-5 animate-[celebrate_3s_ease-in-out_infinite]">🍜</div>
         <h1 className="text-4xl font-extrabold text-text mb-3 tracking-tight">Noodle Quest</h1>
         <p className="text-text-dim text-lg font-medium mb-2">Play smarter. Breathe deeper. Feel better.</p>
-        <p className="text-text-muted text-sm max-w-sm mx-auto mb-8 leading-relaxed">
-          A growing collection of brain-training games, classic board games, breathing exercises,
-          and focus soundscapes — designed to strengthen your mind and calm your day.
+        <p className="text-text-muted text-sm max-w-sm mx-auto mb-6 leading-relaxed">
+          Brain training, classic board games, breathing exercises, and lo-fi
+          soundscapes — for the whole family.
         </p>
         <button
           onClick={() => navigate('/auth')}
@@ -133,6 +134,30 @@ export function Landing() {
         >
           Get Started
         </button>
+        <p className="text-text-muted text-xs font-semibold mt-4 tracking-wide">
+          {getAllGames().length} games · 8 focus tracks · play solo or together
+        </p>
+      </div>
+
+      {/* Game emoji marquee — show the goods before a word of copy */}
+      <div className="pb-10 space-y-2 overflow-hidden select-none" aria-hidden>
+        {[0, 1].map(row => {
+          const all = getAllGames().map(g => g.emoji);
+          const half = Math.ceil(all.length / 2);
+          const emojis = row === 0 ? all.slice(0, half) : all.slice(half);
+          return (
+            <div key={row} className="flex w-max" style={{ animation: `marquee ${emojis.length * 3.2}s linear infinite${row === 1 ? ' reverse' : ''}` }}>
+              {[...emojis, ...emojis].map((e, i) => (
+                <span
+                  key={i}
+                  className="flex items-center justify-center w-12 h-12 mx-1 text-2xl bg-card border border-white/5 rounded-2xl flex-shrink-0"
+                >
+                  {e}
+                </span>
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Mission */}
@@ -141,10 +166,8 @@ export function Landing() {
           <Sparkles size={20} className="text-accent mb-2" />
           <h3 className="text-base font-bold text-text mb-2">Built for daily mental fitness</h3>
           <p className="text-text-muted text-sm leading-relaxed">
-            Noodle Quest was created on a simple belief: looking after your mind should be fun,
-            accessible, and part of your everyday routine. Whether you have two minutes between
-            meetings or twenty minutes before bed, there is always something here to help you
-            focus, unwind, or connect with friends.
+            Looking after your mind should be fun and part of your everyday
+            routine — whether you have two minutes or twenty.
           </p>
         </Card>
       </div>

@@ -38,11 +38,19 @@ export function Leaderboard() {
   const games = getAllGames();
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<string>('');
+  const [window, setWindow] = useState<'all' | 'month' | 'week'>('all');
+
+  // Stable to the hour so the realtime subscription doesn't churn.
+  const since = useMemo(() => {
+    if (window === 'all') return undefined;
+    const hour = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+    return hour - (window === 'week' ? 7 : 30) * 24 * 3_600_000;
+  }, [window]);
   const listRef = useRef<HTMLDivElement>(null);
   const [showSticky, setShowSticky] = useState(false);
 
-  const overallData = useQuery(api.games.getLeaderboard, {});
-  const gameData = useQuery(api.games.getLeaderboard, selectedGame ? { gameId: selectedGame } : 'skip' as any);
+  const overallData = useQuery(api.games.getLeaderboard, { since });
+  const gameData = useQuery(api.games.getLeaderboard, selectedGame ? { gameId: selectedGame, since } : 'skip' as any);
 
   const isLoading = selectedGame ? gameData === undefined : overallData === undefined;
   const rawEntries: LeaderboardEntry[] = (selectedGame ? gameData : overallData) ?? [];
@@ -95,6 +103,22 @@ export function Leaderboard() {
             <p className="text-text-muted text-xs mt-0.5">
               {entries.length} player{entries.length !== 1 ? 's' : ''} · sorted by stars earned
             </p>
+          </div>
+          {/* Time window pills */}
+          <div className="flex gap-1 bg-card rounded-full p-0.5 border border-white/8" role="radiogroup" aria-label="Time period">
+            {([['all', 'All time'], ['month', 'Month'], ['week', 'Week']] as const).map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => setWindow(id)}
+                role="radio"
+                aria-checked={window === id}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
+                  window === id ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           {/* Filter dropdown */}
           <div className="relative flex-shrink-0">
@@ -152,14 +176,37 @@ export function Leaderboard() {
       {/* List */}
       <div ref={listRef} className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-            <p className="text-text-muted text-sm">Loading rankings...</p>
+          <div className="p-3 space-y-2" aria-busy="true" aria-label="Loading rankings">
+            {/* Skeleton podium + rows — mirrors the loaded layout so nothing jumps */}
+            {[0, 1, 2].map(i => (
+              <div key={`sp${i}`} className="rounded-2xl p-4 border border-white/5 bg-card animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-card-hover flex-shrink-0" />
+                  <div className="w-10 h-10 rounded-xl bg-card-hover flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-24 rounded bg-card-hover" />
+                    <div className="h-1.5 w-full rounded-full bg-card-hover" />
+                  </div>
+                  <div className="h-6 w-10 rounded bg-card-hover flex-shrink-0" />
+                </div>
+              </div>
+            ))}
+            {[0, 1, 2, 3].map(i => (
+              <div key={`sr${i}`} className="flex items-center gap-3 px-3 py-3 rounded-xl bg-card border border-white/5 animate-pulse">
+                <div className="w-7 h-4 rounded bg-card-hover flex-shrink-0" />
+                <div className="w-8 h-8 rounded-full bg-card-hover flex-shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-20 rounded bg-card-hover" />
+                  <div className="h-2.5 w-28 rounded bg-card-hover" />
+                </div>
+                <div className="h-4 w-8 rounded bg-card-hover flex-shrink-0" />
+              </div>
+            ))}
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-text-muted">
             <Star size={40} className="mb-3 text-card-hover" />
-            <p className="text-sm font-semibold">No scores yet</p>
+            <p className="text-sm font-semibold">{window === 'all' ? 'No scores yet' : `No games ${window === 'week' ? 'this week' : 'this month'} yet`}</p>
             <p className="text-xs mt-1 text-center px-8">Play games to earn stars and climb the ranks!</p>
           </div>
         ) : (

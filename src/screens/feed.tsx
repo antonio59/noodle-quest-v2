@@ -73,6 +73,18 @@ interface MentionSuggestion {
   avatar: string;
 }
 
+function dayLabel(ts: number): string {
+  const d = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (sameDay(d, today)) return 'Today';
+  if (sameDay(d, yesterday)) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 function formatTime(ts: number) {
   const diff = Date.now() - ts;
   if (diff < 60000) return 'just now';
@@ -299,6 +311,14 @@ export function Feed() {
     return content;
   };
 
+  // Mark chat as read while it's on screen (drives the nav unread dot).
+  useEffect(() => {
+    if (tab !== 'chat' || chatPosts.length === 0) return;
+    const newest = Math.max(...chatPosts.map((p: any) => p.createdAt ?? 0));
+    localStorage.setItem('nq_chat_read', String(newest));
+    window.dispatchEvent(new Event('nq-chat-read'));
+  }, [tab, chatPosts]);
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -358,11 +378,19 @@ export function Feed() {
                 const isLastInGroup = !isSameAuthorAsNext;
                 const addGap = isFirstInGroup && idx > 0;
                 const color = authorColor(post.authorName || '');
+                const newDay = !prev || dayLabel(prev.createdAt) !== dayLabel(post.createdAt);
 
                 return (
+                  <div key={post.id}>
+                  {newDay && (
+                    <div className="flex items-center gap-3 py-2" aria-hidden>
+                      <div className="flex-1 h-px bg-white/5" />
+                      <span className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">{dayLabel(post.createdAt)}</span>
+                      <div className="flex-1 h-px bg-white/5" />
+                    </div>
+                  )}
                   <div
-                    key={post.id}
-                    className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} ${addGap ? 'mt-3' : ''}`}
+                    className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'} ${addGap && !newDay ? 'mt-3' : ''}`}
                   >
                     {/* Avatar column (others only) — always reserve space, fade on grouped */}
                     {!isMe && (
@@ -484,6 +512,7 @@ export function Feed() {
                         <span className="text-[10px] text-text-muted mt-1 mx-1">{formatTime(post.createdAt)}</span>
                       )}
                     </div>
+                  </div>
                   </div>
                 );
               })}

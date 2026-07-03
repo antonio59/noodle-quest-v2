@@ -53,6 +53,12 @@ reg('color-rush', {
   category: 'focus', stages: 99,
 }, () => import('@/games/color-rush'));
 
+reg('cube-twist', {
+  name: 'Cube Twist', emoji: '🧊',
+  description: 'Twist the 3D cube until every side is one color!',
+  category: 'flexibility', stages: 99,
+}, () => import('@/games/cube-twist'));
+
 reg('copy-cat', {
   name: 'Copy Cat', emoji: '🐱',
   description: 'Watch the pattern, then copy it — forwards or backwards!',
@@ -273,7 +279,7 @@ reg('ludo', {
   name: 'Ludo', emoji: '🎲',
   description: 'Roll the dice and race all 4 pieces home!',
   category: 'board', stages: 99,
-  minPlayers: 2, maxPlayers: 4,
+  minPlayers: 2, maxPlayers: 2,
 }, () => import('@/games/ludo'));
 
 reg('scrabble', {
@@ -282,6 +288,12 @@ reg('scrabble', {
   category: 'board', stages: 99, hasAdaptiveAi: true,
   minPlayers: 2, maxPlayers: 4,
 }, () => import('@/games/scrabble'));
+
+reg('score-four', {
+  name: 'Score Four', emoji: '🏗️',
+  description: 'Connect Four in 3D — line up 4 in any direction!',
+  category: 'board', stages: 99, hasAdaptiveAi: true,
+}, () => import('@/games/score-four'));
 
 reg('snakes-ladders', {
   name: 'Snakes & Ladders', emoji: '🐍',

@@ -4,6 +4,7 @@ import {
   ROWS, COLS, initBoard, cloneBoard, dropPiece, getWinLine, isFull, bestMove,
   type Board,
 } from './logic';
+import { playPlace } from '@/lib/feedback';
 
 function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
   const isOnline = !!multiplayerState;
@@ -80,6 +81,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       const row = dropPiece(nb, col, myColor);
       if (row < 0) return;
       setBoard(nb);
+      playPlace();
       const wl = getWinLine(nb, row, col, myColor);
       if (wl) setWinLine(wl);
       const iWon = !!wl;
@@ -100,6 +102,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
     const row = dropPiece(nb, col, 'red');
     if (row < 0) return;
     setBoard(nb);
+    playPlace();
 
     const wl = getWinLine(nb, row, col, 'red');
     if (wl) {
@@ -128,6 +131,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
       const nb2 = cloneBoard(nb);
       const aiR = dropPiece(nb2, aiC, 'yellow');
       setBoard(nb2);
+      playPlace();
       if (aiR >= 0) {
         const aiWl = getWinLine(nb2, aiR, aiC, 'yellow');
         if (aiWl) {
@@ -229,6 +233,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
                 onMouseEnter={() => setHoverCol(c)}
                 onMouseLeave={() => setHoverCol(null)}
                 disabled={inputDisabled || !!board[0][c]}
+                aria-label={`Drop disc in column ${c + 1}`}
                 className="h-6 flex items-center justify-center text-sm transition-all disabled:opacity-0"
                 style={{
                   color: hoverCol === c && !inputDisabled ? '#ef4444' : '#ffffff40',
@@ -242,7 +247,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
         </div>
 
         {/* Board */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Connect Four board">
           {board.map((row, r) =>
             row.map((cell, c) => {
               const win = isWinCell(r, c);
@@ -261,6 +266,7 @@ function ConnectFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDiffi
                   onMouseEnter={() => setHoverCol(c)}
                   onMouseLeave={() => setHoverCol(null)}
                   disabled={inputDisabled}
+                  aria-label={`Column ${c + 1}, row ${r + 1}: ${cell === 'red' ? 'your disc' : cell === 'yellow' ? 'opponent disc' : 'empty'}`}
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all"
                   style={{
                     background: cell === 'red'

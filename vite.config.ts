@@ -15,11 +15,18 @@ export default defineConfig({
     port: 5000,
     allowedHosts: true,
   },
+  build: {
+    // The three.js runtime is an isolated lazy chunk (~880KB raw, 234KB
+    // gzip) loaded only by the 3D games — expected, not a regression.
+    chunkSizeWarningLimit: 950,
+  },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     css: false,
+    // Playwright owns e2e/ — keep vitest out of it
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     // convex-test ships TS that must be transformed by Vite
     server: { deps: { inline: ['convex-test'] } },
     coverage: {

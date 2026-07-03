@@ -1,146 +1,58 @@
-# Release Notes - Noodle Quest v2 (OpenClaw Integration)
+# Release Notes — Noodle Quest v1.0
 
 ## Overview
 
-This release adds automated error detection and bot-driven bug-fixing capabilities through OpenClaw integration, Linear issue tracking, and a complete error reporting system.
+Noodle Quest 1.0 is the "whole family" release: two brand-new 3D games, board-game opponents that actually think ahead, score challenges you can send to each other, fairer difficulty, real Scrabble dictionaries, and a friendlier look — on top of properly secured accounts.
 
 ## What's New
 
-### 🤖 OpenClaw Bot Integration
+### 🧊 Two 3D games
 
-The app now supports a full error-to-fix lifecycle:
+- **Cube Twist** — a 3×3×3 twisty cube. Swipe across a face to turn that layer, drag the background to spin the whole cube, or use the U/D/L/R/F/B keys. Stages scale the scramble from 3 twists up to 20.
+- **Score Four** — Connect Four in three dimensions. Drop beads onto a 4×4×4 grid of rods and line up four in *any* direction — 76 winning lines including space diagonals. Spin the board to spot them.
 
-1. **Error Detection** - Games and components can report errors via the `useReportError()` hook
-2. **Report Creation** - Errors are stored in Convex with full context, stack traces, and severity levels
-3. **Linear Issue Creation** - Each error automatically creates a Linear issue in your configured team/project
-4. **Bot Resolution** - OpenClaw monitors the webhook, analyzes errors, fixes code, and calls `resolveReport`
-5. **User Notification** - Players receive feed messages when their bugs are fixed
+Both load their 3D engine only when opened, and devices without WebGL get a friendly fallback.
 
-### 📊 Error Reporting System
+### ⚔️ Player challenges
 
-New `reports` table tracks the full lifecycle of every bug:
+Finish any game, tap **Challenge a player**, and send your score to beat. They'll see a challenge card on their home screen; when they play, the result — glory or heartbreak — posts to the family feed.
 
-- **Status tracking**: `open` → `investigating` → `resolved` → `dismissed`
-- **Deduplication**: Same errors are tracked as updates, not duplicates
-- **Rich context**: Game state, user actions, stack traces, and player info
-- **Linear integration**: Issue IDs and URLs stored for cross-reference
+### 🧠 Smarter opponents, fairer difficulty
 
-### 🔗 Webhook Endpoints
+Every board-game AI was rebuilt with real search: Connect Four and Checkers look many moves ahead, Chess evaluates position (not just material), and hard Tic-Tac-Toe is now genuinely unbeatable. Difficulty follows the stage you're *playing* — so replaying stage 1 is always a gentle warm-up — and every stage shows its difficulty up front.
 
-Two new Convex HTTP routes:
+### 📖 Scrabble, fixed and expanded
 
-- **`/webhook/report`** - Primary endpoint for error submissions. Accepts JSON with error details and optionally creates Linear issues.
-- **`/webhook/linear`** - Optional endpoint for receiving Linear status updates (future use).
+The bug where valid words were rejected is fixed (the game silently used a tiny built-in word list while the real dictionary downloaded). You can now also choose your lexicon: **UK & International (SOWPODS)** or **US & Canada (TWL)** — and online games use the host's choice so everyone plays by the same words.
 
-### 🛠️ Developer Tools
+### 🏆 Rankings that stay interesting
 
-**New hook**: `useReportError()`
+Weekly and monthly boards alongside all-time, so there's a fresh race every Monday.
 
-```tsx
-const reportError = useReportError();
+### 🔊 Game feel
 
-reportError({
-  gameId: "copy-cat",
-  errorType: "runtime",
-  severity: "high",
-  message: "Grid mismatch detected",
-  stackTrace: error.stack,
-  context: { playerMove: "click-3-4" },
-});
-```
+Synthesized sound effects and vibration (toggle in your profile), confetti on wins, and per-move sounds in the board games.
 
-**Global error catching**:
+### 🎲 Ludo, actually multiplayer
 
-```tsx
-import { setupGlobalErrorReporting } from "@/lib/errorReporter";
+Online Ludo was advertised but never wired up — it now works, bonus rolls and captures included. The board math was also fixed (blue's route was accidentally half the length of red's).
 
-// In your root component
-useEffect(() => {
-  setupGlobalErrorReporting(reportError);
-}, []);
-```
+### ♿ Accessibility
 
-## Environment Variables
+Keyboard play on chess and checkers boards, screen-reader announcements of game state, labelled grids, accessible dialogs, reduced-motion support, and pinch-zoom restored.
 
-Add these to your Convex deployment:
+### 🔐 Under the hood
 
-```bash
-pnpm exec convex env set LINEAR_API_KEY "lin_api_..."
-pnpm exec convex env set LINEAR_TEAM_ID "your-team-id"
-pnpm exec convex env set LINEAR_PROJECT_ID "your-project-id"  # Optional
-```
+- PINs are hashed, sessions are token-based, and logins lock after repeated failures
+- Installable as an app (PWA) with offline-aware caching
+- 594 unit tests + Playwright end-to-end smoke tests on every PR
+- Deploy previews finally work — every PR gets a playable URL
 
-## Migration Steps
+## Upgrade Notes
 
-1. **Deploy Convex functions**:
-   ```bash
-   pnpm run convex:deploy
-   ```
+- Everyone is signed out once by the session upgrade — just log in again.
+- If not yet done, run `npx convex run migrations:hashAllPins` against production and set `ADMIN_SECRET` in the Convex environment.
 
-2. **Set Linear credentials** (if using Linear integration):
-   - Get API key from Linear → Settings → API
-   - Find your Team ID from Linear URL or API
-   - Optional: Find Project ID for specific project assignment
+---
 
-3. **Add error reporting to games**:
-   - Import `useReportError` in game components
-   - Wrap error-prone logic in try/catch with `reportError()`
-   - Or use `setupGlobalErrorReporting()` for catch-all coverage
-
-4. **Configure OpenClaw bot** (see `OPENCLAW_INTEGRATION.md`)
-
-## API Reference
-
-### Mutations
-
-| Mutation | Purpose |
-|---|---|
-| `reports.createReport` | Create new error report |
-| `reports.resolveReport` | Mark report as resolved |
-| `reports.updateReportWithLinear` | Link report to Linear issue |
-
-### Queries
-
-| Query | Purpose |
-|---|---|
-| `reports.getOpenReports` | List all open reports |
-| `reports.getGameReports` | Reports for a specific game |
-| `reports.getRecentReports` | Recent reports (paginated) |
-
-## Testing
-
-Send a test report:
-
-```bash
-curl -X POST https://your-deployment.convex.site/webhook/report \
-  -H "Content-Type: application/json" \
-  -d '{
-    "errorId": "test-error",
-    "gameId": "copy-cat",
-    "errorType": "runtime",
-    "severity": "medium",
-    "message": "Test error from curl",
-    "context": {"source": "manual-test"}
-  }'
-```
-
-Verify it was created:
-
-```bash
-pnpm exec convex run reports:getRecentReports
-```
-
-## Breaking Changes
-
-None. All additions are backward-compatible.
-
-## Known Issues
-
-- Linear issue creation requires valid API credentials; silently skipped if not configured
-- Webhook signature verification for Linear is stubbed (TODO: implement HMAC verification)
-
-## Credits
-
-- Error reporting architecture designed for OpenClaw bot integration
-- Linear API integration for issue tracking
-- Convex real-time backend for report storage
+*For the OpenClaw bot-integration release notes that previously lived here, see the `[0.9.0]` section of CHANGELOG.md.*

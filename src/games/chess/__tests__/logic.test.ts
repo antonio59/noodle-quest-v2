@@ -86,6 +86,19 @@ describe('bestMove — tactics', () => {
     }
   });
 
+  test('easy is no longer pure random: it usually takes a hanging queen', () => {
+    // Black queen en prise to a knight. Pure random would take it ~3% of
+    // the time; easy searches 60% of the time, so over 20 trials it must
+    // capture at least once (probability of zero captures < 1e-7).
+    let captures = 0;
+    for (let i = 0; i < 20; i++) {
+      const game = new Chess('rnb1kbnr/pppp1ppp/8/4p3/3q4/2N2N2/PPPPPPPP/R1BQKB1R w KQkq - 0 1');
+      const m = bestMove(game, 'easy');
+      if (m && m.includes('xd4')) captures++;
+    }
+    expect(captures).toBeGreaterThan(0);
+  });
+
   test('returns null when the game is over', () => {
     // Fool's mate position — white is checkmated
     const game = new Chess();

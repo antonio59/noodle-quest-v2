@@ -37,6 +37,8 @@ export function Auth() {
   const [signupPinConfirm, setSignupPinConfirm] = useState('');
 
   const AVATARS = ['🦊','🐱','🐶','🦁','🐼','🐨','🦄','🐸','🐙','🦋','🐢','🦖','🐧','🦜','🐝'];
+  // Nudge toward unique avatars so profile cards stay distinguishable.
+  const takenAvatars = new Set(profiles.map(p => p.avatar));
 
   useEffect(() => {
     fetchPlayers();
@@ -143,18 +145,32 @@ export function Auth() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 mb-6 max-w-[280px] mx-auto">
-            {AVATARS.map(a => (
-              <button
-                key={a}
-                onClick={() => setSignupAvatar(a)}
-                className={`text-2xl p-1.5 rounded-lg transition-all ${
-                  signupAvatar === a ? 'bg-accent-soft ring-2 ring-accent scale-110' : 'opacity-50 hover:opacity-80'
-                }`}
-              >
-                {a}
-              </button>
-            ))}
+            {AVATARS.map(a => {
+              const taken = takenAvatars.has(a);
+              return (
+                <button
+                  key={a}
+                  onClick={() => setSignupAvatar(a)}
+                  title={taken ? 'Already in use by another player' : undefined}
+                  aria-label={taken ? `${a} (already in use)` : a}
+                  className={`relative text-2xl p-1.5 rounded-lg transition-all ${
+                    signupAvatar === a ? 'bg-accent-soft ring-2 ring-accent scale-110' : 'opacity-50 hover:opacity-80'
+                  }`}
+                >
+                  {a}
+                  {taken && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-warning ring-2 ring-bg" aria-hidden />
+                  )}
+                </button>
+              );
+            })}
           </div>
+          {takenAvatars.size > 0 && (
+            <p className="text-[10px] text-text-muted text-center -mt-4 mb-4">
+              <span className="inline-block w-2 h-2 rounded-full bg-warning align-middle mr-1" aria-hidden />
+              = already someone's avatar — picking a fresh one keeps profiles easy to tell apart
+            </p>
+          )}
 
           <div className="space-y-3">
             <input

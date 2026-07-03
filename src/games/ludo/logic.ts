@@ -163,6 +163,15 @@ export function scoreAiMove(
   return score;
 }
 
+export type AILevel = 'easy' | 'medium' | 'hard';
+
+// Chance of ignoring the heuristic and moving a random piece instead.
+const BLUNDER_CHANCE: Record<AILevel, number> = {
+  easy: 0.45,
+  medium: 0.15,
+  hard: 0,
+};
+
 /** Pick which piece the AI should move for die `d`, or -1 if none can. */
 export function chooseAiMove(
   aiPieces: number[],
@@ -170,9 +179,15 @@ export function chooseAiMove(
   aiEntry: number,
   oppPieces: number[],
   oppEntry: number,
+  difficulty: AILevel = 'hard',
 ): number {
   const movable = getMovableIndices(aiPieces, d);
   if (movable.length === 0) return -1;
+
+  if (Math.random() < BLUNDER_CHANCE[difficulty]) {
+    return movable[Math.floor(Math.random() * movable.length)];
+  }
+
   let bestIdx = movable[0];
   let best = -Infinity;
   for (const i of movable) {

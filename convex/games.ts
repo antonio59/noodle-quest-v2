@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { playerFromSession } from "./model/auth";
 
 export const saveScore = mutation({
@@ -56,7 +57,7 @@ export const getPlayerStats = query({
     }
     // Get progress for best stage info
     const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
-    const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number }> = {};
+    const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number; lastPlayed: number; lastStage: number }> = {};
     for (const p of progress) {
       const existing = gameStages[p.gameId];
       if (!existing) {
@@ -64,12 +65,17 @@ export const getPlayerStats = query({
           highScore: p.highScore,
           starsEarned: p.starsEarned,
           timesPlayed: p.timesPlayed,
+          lastPlayed: p.lastPlayed,
+          lastStage: p.stage,
         };
       } else {
         gameStages[p.gameId] = {
           highScore: Math.max(existing.highScore, p.highScore),
           starsEarned: Math.max(existing.starsEarned, p.starsEarned),
           timesPlayed: existing.timesPlayed + p.timesPlayed,
+          // Most recent stage wins the "continue playing" slot
+          lastPlayed: Math.max(existing.lastPlayed, p.lastPlayed),
+          lastStage: p.lastPlayed > existing.lastPlayed ? p.stage : existing.lastStage,
         };
       }
     }
@@ -98,11 +104,19 @@ export const getMonthlyPlayCounts = query({
 });
 
 export const getLeaderboard = query({
-  args: { gameId: v.optional(v.string()) },
+  args: { gameId: v.optional(v.string()), since: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const scores = args.gameId
-      ? await ctx.db.query("scores").withIndex("by_game_score", q => q.eq("gameId", args.gameId!)).collect()
-      : await ctx.db.query("scores").collect();
+    let scores: Doc<"scores">[];
+    if (args.since !== undefined) {
+      // Windowed boards (this week/month) walk the playedAt index; the
+      // optional game filter is applied in memory (family-scale data).
+      scores = await ctx.db.query("scores").withIndex("by_playedAt", q => q.gte("playedAt", args.since!)).collect();
+      if (args.gameId) scores = scores.filter(s => s.gameId === args.gameId);
+    } else {
+      scores = args.gameId
+        ? await ctx.db.query("scores").withIndex("by_game_score", q => q.eq("gameId", args.gameId!)).collect()
+        : await ctx.db.query("scores").collect();
+    }
 
     const playerMap = new Map<string, { name: string; avatar: string; totalStars: number; totalScore: number; games: Map<string, { stars: number; score: number }> }>();
     for (const s of scores) {

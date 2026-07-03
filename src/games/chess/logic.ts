@@ -152,7 +152,9 @@ function negamax(game: Chess, depth: number, alpha: number, beta: number, extend
 
 /**
  * Pick a move (SAN) for the side to move.
- *  - easy: random legal move
+ *  - easy: depth-1 search 60% of the time, otherwise a random legal move
+ *    — blunders plenty, but no longer hangs every piece the way pure
+ *    random did (which made even easy games long and joyless)
  *  - medium: depth-1 search — takes free material and stops sacrificing
  *    the queen for a spite check, but doesn't plan ahead
  *  - hard: depth-2 negamax with alpha-beta, MVV-LVA ordering, capture
@@ -162,9 +164,11 @@ function negamax(game: Chess, depth: number, alpha: number, beta: number, extend
 export function bestMove(game: Chess, difficulty: AILevel): string | null {
   const moves = game.moves();
   if (moves.length === 0) return null;
-  if (difficulty === 'easy') return moves[Math.floor(Math.random() * moves.length)];
+  if (difficulty === 'easy' && Math.random() < 0.4) {
+    return moves[Math.floor(Math.random() * moves.length)];
+  }
 
-  const depth = difficulty === 'medium' ? 1 : 2;
+  const depth = difficulty === 'hard' ? 2 : 1;
   let best: string | null = null;
   let bestScore = -Infinity;
   for (const m of orderedMoves(game)) {

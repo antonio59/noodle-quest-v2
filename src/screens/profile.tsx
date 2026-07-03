@@ -4,7 +4,8 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { AVATARS } from '@/lib/avatars';
-import { LogOut, Star, Gamepad2, Trophy, Zap, AlertTriangle, Pencil, Check, ChevronRight, Users } from 'lucide-react';
+import { LogOut, Star, Gamepad2, Trophy, Zap, AlertTriangle, Pencil, Check, ChevronRight, Users, Volume2, VolumeX } from 'lucide-react';
+import { feedbackEnabled, setFeedbackEnabled, playWin } from '@/lib/feedback';
 import { useNavigate } from 'react-router-dom';
 import { getRankTier, RANK_TIERS } from '@/lib/rank-tiers';
 
@@ -17,7 +18,15 @@ export function Profile() {
   const [nameError, setNameError] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
   const [showAllAvatars, setShowAllAvatars] = useState(false);
+  const [fxOn, setFxOn] = useState(feedbackEnabled);
   const games = getAllGames();
+
+  const toggleFx = () => {
+    const next = !fxOn;
+    setFeedbackEnabled(next);
+    setFxOn(next);
+    if (next) playWin(); // instant audible confirmation
+  };
 
   const stats = useQuery(api.games.getPlayerStats, player ? { playerId: player.playerId as any } : 'skip' as any);
 
@@ -279,6 +288,27 @@ export function Profile() {
             </div>
           )}
         </div>
+
+        {/* ── Settings ──────────────────────────────────────── */}
+        <button
+          onClick={toggleFx}
+          role="switch"
+          aria-checked={fxOn}
+          className="w-full flex items-center justify-between bg-card hover:bg-card-hover py-3 px-5 rounded-2xl border border-white/8 transition-all active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2 font-semibold text-sm">
+            {fxOn ? <Volume2 size={16} className="text-accent" aria-hidden /> : <VolumeX size={16} className="text-text-muted" aria-hidden />}
+            Sound effects & vibration
+          </span>
+          <span
+            className={`relative w-10 h-6 rounded-full transition-colors ${fxOn ? 'bg-accent' : 'bg-card-hover'}`}
+            aria-hidden
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${fxOn ? 'left-[18px]' : 'left-0.5'}`}
+            />
+          </span>
+        </button>
 
         {/* ── Switch Player ─────────────────────────────────── */}
         <button

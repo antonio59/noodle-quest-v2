@@ -4,24 +4,32 @@ Brain games and board games for the whole family. Train your focus, memory, and 
 
 ## Features
 
-### 49 Games (8 categories)
+### 51 Games (8 categories)
 
 | Category | Games |
 |----------|-------|
 | Memory (9) | Anagram Blast, Copy Cat, Dual N-Back, Fill in the Blank, Flag Match, Map Quiz, Memory Match, Number Ninja, Sudoku |
 | Focus (10) | Attention Archery, Breath Bubbles, Color Rush, Echo Tap, Focus Frenzy, Go / No-Go, Grounding Garden, Mirror Match, Patience Pop, Quick Math |
-| Flexibility (5) | Flexibility Frames, Just Right, Mistake Master, Squish Lab, Stroop Challenge |
+| Flexibility (6) | Cube Twist (3D), Flexibility Frames, Just Right, Mistake Master, Squish Lab, Stroop Challenge |
 | Motor (3) | Pattern Painter, Pixel Paint, Steady Hands |
 | Social (3) | Emotion Volcano, Empathy Engine, Feelings Faces |
 | Sequence (2) | Routine Roadmap, Story Builder |
-| Board (13) | Bingo, Bookworm, Checkers, Chess, Connect Four, Connect Lines, Crossword, Ludo, Scrabble, Snakes & Ladders, Tic-Tac-Toe, UNO, Word Search |
+| Board (14) | Bingo, Bookworm, Checkers, Chess, Connect Four, Connect Lines, Crossword, Ludo, Scrabble, Score Four (3D), Snakes & Ladders, Tic-Tac-Toe, UNO, Word Search |
 | Breathe (4) | 4-7-8 Calm, Box Breathing, Coherent Breathing, Triangle Breathing |
 
-Board games play against an AI with progressive difficulty across stages. Word games (Scrabble, Bookworm, Crossword, Word Search) validate against a full SOWPODS dictionary loaded at runtime.
+Board games play against an AI with real search (minimax + alpha-beta) and stage-based difficulty — replaying an early stage is always a gentle match. Two games are fully 3D (three.js): **Cube Twist**, a twisty cube with swipe-to-turn, and **Score Four**, Connect Four in 3D with 76 winning lines. Scrabble validates against your choice of two real lexica — UK & International (SOWPODS) or US & Canada (TWL) — downloaded at runtime; online games use the host's choice so everyone plays by the same words.
 
 ### Real-Time Multiplayer
 
 Invite another player by link or in-app invite and play board games head-to-head, with live turn sync through Convex. Lobbies support 2+ players depending on the game.
+
+### Player Challenges
+
+Finish any game and dare another player to beat your score — they get a challenge card on their home screen, play the same stage, and the result posts to the family feed.
+
+### Rankings with Time Windows
+
+All-time, monthly, and weekly boards (fresh races every week), a top-3 podium, rank tiers from Starter to Diamond, and a sticky "your rank" footer.
 
 ### Audio Tracks (8 tracks, Web Audio API)
 
@@ -56,6 +64,7 @@ Lo-fi beats, focus pads, nature sounds, and meditation tones — all synthesized
 | Styling | Tailwind CSS 4 |
 | Backend | Convex (real-time database, auth, functions) |
 | Deployment | Netlify (frontend + functions), Convex Cloud (backend) |
+| 3D | three.js + @react-three/fiber (lazy-loaded only for 3D games) |
 | Icons | Lucide React |
 | Audio | Web Audio API (programmatic synthesis) |
 | Testing | Vitest, Testing Library, convex-test |
@@ -131,7 +140,7 @@ pnpm run convex:deploy   # Deploy Convex functions to production
 ```
 src/
   screens/       # Main views (home, game-hub, play, feed, leaderboard, profile, auth, admin, invite)
-  games/         # 49 game components; scrabble/ and uno/ split into logic + UI
+  games/         # 51 game components; board/word games split into tested logic + UI
   components/    # Shared UI (NavBar, error boundary, report/request modals)
   hooks/         # useAudioEngine (Web Audio API), usePageVisibility
   contexts/      # AuthContext (login/signup/session token)
@@ -161,7 +170,13 @@ tests/
 pnpm test
 ```
 
-Covers UI contract tests for every game (mount, score, lifecycle), unit tests for extracted game logic (Scrabble scoring/AI, Uno rules, puzzle engine), and Convex backend tests (auth, sessions, scoring, multiplayer authorization, admin merge).
+Covers UI contract tests for every game (mount, score, lifecycle), unit tests for all extracted game logic (board-game AIs, Scrabble scoring, cube state model, puzzle engine), and Convex backend tests (auth, sessions, scoring, challenges, multiplayer authorization, admin merge).
+
+```bash
+pnpm run test:e2e
+```
+
+Playwright smoke tests cover the public surface (app shell, PWA plumbing, dictionaries) and boot both 3D games with real WebGL via the unauthenticated `/qa/play/:gameId` route. All Convex traffic is blocked in E2E — CI never touches real data.
 
 ## Deployment
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { GameProps } from '@/types';
 import { checkWinner, bestMove, type Cell, type Player, type WinLine } from './logic';
+import { playMove } from '@/lib/feedback';
 
 function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps & { aiDifficulty?: 'easy' | 'medium' | 'hard' }) {
   const isOnline = !!multiplayerState;
@@ -61,6 +62,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       const next = [...board];
       next[i] = myMark;
       setBoard(next);
+      playMove();
       const { result, line } = checkWinner(next);
       if (result) setWinLine(line);
       // Dispatch to server; server relays to opponent and the useEffect above
@@ -76,6 +78,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     const next = [...board];
     next[i] = human;
     setBoard(next);
+    playMove();
     const { result, line } = checkWinner(next);
     if (result) {
       setWinLine(line);
@@ -198,14 +201,16 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-3 game-board">
+      <div className="grid grid-cols-3 gap-2 p-3 bg-card rounded-2xl mb-3 game-board" role="grid" aria-label="Tic-tac-toe board">
         {board.map((cell, i) => {
           const isWinCell = winLine?.includes(i) ?? false;
+          const cellName = `Row ${Math.floor(i / 3) + 1}, column ${(i % 3) + 1}`;
           return (
             <button
               key={i}
               onClick={() => handleCell(i)}
               disabled={!!cell || inputDisabled}
+              aria-label={cell ? `${cellName}: ${cell}` : `${cellName}: empty`}
               className={`game-cell w-20 h-20 rounded-xl text-4xl font-bold flex items-center justify-center transition-all active:scale-90 ${
                 !cell && !inputDisabled ? 'hover:bg-card-hover' : ''
               } ${isWinCell ? 'ring-2 ring-success bg-success/20' : cell ? '' : 'bg-card-hover/50'}`}
