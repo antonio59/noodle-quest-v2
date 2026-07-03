@@ -85,6 +85,15 @@ export function AppRouter() {
           </Suspense>
         } />
 
+        {/* QA playground: play any game without an account. Deliberate —
+            scores can't save without a session, so nothing is writable;
+            used by E2E smoke tests and manual QA of game builds. */}
+        <Route path="/qa/play/:gameId" element={
+          <Suspense fallback={<ScreenFallback />}>
+            <PlayGame />
+          </Suspense>
+        } />
+
         {/* Invite links (public — redirects to auth if needed) */}
         <Route path="/invite/:gameSlug/:code" element={
           <Suspense fallback={<ScreenFallback />}>

@@ -124,6 +124,13 @@ export function GameHub() {
   });
 
   const favGames = brainGames.filter(g => favorites.has(g.id));
+  // Search matches from OTHER tabs (board, breathe) — surfaced under the
+  // main results so any of the 51 games is findable from the search box.
+  const crossTabMatches = search
+    ? allGames.filter(g =>
+        (g.category === 'board' || g.category === 'breathe') &&
+        g.name.toLowerCase().includes(search.toLowerCase()))
+    : [];
 
   const handleTabChange = (newTab: string) => {
     setTab(newTab);
@@ -335,6 +342,31 @@ export function GameHub() {
               );
             })}
           </div>
+
+          {search && crossTabMatches.length > 0 && (
+            <div className="px-4 pb-2">
+              <h3 className="text-xs font-bold text-text-muted uppercase tracking-wide mb-2">
+                In other tabs
+              </h3>
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {crossTabMatches.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => navigate(`/play/${g.id}`, { state: { stage: 1, fromTab: g.category === 'board' ? 'board' : 'breathe' } })}
+                    className="bg-card hover:bg-card-hover rounded-xl p-3 text-center transition-all active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  >
+                    <div className="text-2xl mb-1" aria-hidden>{g.emoji}</div>
+                    <div className="text-xs font-semibold truncate">{g.name}</div>
+                    <div className="text-[9px] text-text-muted capitalize">{g.category}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {search && filteredGames.length === 0 && crossTabMatches.length === 0 && (
+            <p className="text-center text-text-muted text-sm py-8">No games match "{search}"</p>
+          )}
 
           {/* Request a Game card */}
           <div className="px-4 pb-6">

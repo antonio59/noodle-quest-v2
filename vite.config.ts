@@ -15,6 +15,11 @@ export default defineConfig({
     port: 5000,
     allowedHosts: true,
   },
+  build: {
+    // The three.js runtime is an isolated lazy chunk (~880KB raw, 234KB
+    // gzip) loaded only by the 3D games — expected, not a regression.
+    chunkSizeWarningLimit: 950,
+  },
   test: {
     globals: true,
     environment: 'jsdom',

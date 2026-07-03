@@ -47,3 +47,24 @@ test('unknown routes fall back to the SPA shell', async ({ page }) => {
   await page.goto('/definitely-not-a-route');
   await expect(page.locator('#root > *').first()).toBeVisible();
 });
+
+test('3D games boot on the QA route (WebGL smoke)', async ({ page }) => {
+  // Score Four: start screen → canvas appears once WebGL initialises
+  await page.goto('/qa/play/score-four');
+  await page.getByRole('button', { name: /start game/i }).click();
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 });
+
+  // Cube Twist: scramble → canvas + move buttons
+  await page.goto('/qa/play/cube-twist');
+  await page.getByRole('button', { name: /scramble & start/i }).click();
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('group', { name: /face turns/i })).toBeVisible();
+});
+
+test('cube twist face buttons register moves', async ({ page }) => {
+  await page.goto('/qa/play/cube-twist');
+  await page.getByRole('button', { name: /scramble & start/i }).click();
+  await expect(page.locator('canvas')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: /^turn top face$/i }).click();
+  await expect(page.getByText(/moves: 1/i)).toBeVisible({ timeout: 5_000 });
+});
