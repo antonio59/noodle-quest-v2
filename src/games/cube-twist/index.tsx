@@ -119,7 +119,14 @@ function CameraBridge({ out }: { out: React.MutableRefObject<{ camera: THREE.Cam
   return null;
 }
 
-function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }: GameProps) {
+function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const playerNumber = multiplayerState?.playerNumber ?? 1;
+  const isHost = isOnline && playerNumber === 1;
+  const isMyTurn = !isOnline || multiplayerState?.currentPlayer === playerNumber;
+  const oppName = multiplayerState?.opponentName ?? 'Opponent';
+  const oppAvatar = multiplayerState?.opponentAvatar ?? '';
+
   const scrambleLen = Math.min(2 + stage, 20);
   const [started, setStarted] = useState(false);
   const [cube, setCube] = useState<Cube>(newCube);
@@ -135,6 +142,8 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
   const faceDragRef = useRef<PendingDrag | null>(null);
   const orbitRef = useRef<{ x: number; y: number; yaw: number; pitch: number } | null>(null);
   const bridgeRef = useRef<{ camera: THREE.Camera; size: { width: number; height: number } } | null>(null);
+  const animRef = useRef(anim);
+  animRef.current = anim;
 
   const supported = useMemo(webglSupported, []);
   const animMs = reducedMotion() ? 1 : 180;
@@ -143,6 +152,29 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
     endedRef.current = false;
     return () => { endedRef.current = true; };
   }, []);
+
+  // Online: hydrate cube from shared boardState; end when someone solves
+  useEffect(() => {
+    if (!isOnline || !multiplayerState) return;
+    const bs = multiplayerState.boardState as { cube?: Cube; moveCount?: number } | null | undefined;
+    if (bs?.cube) {
+      // Don't overwrite mid-animation — local commit already applied the cube
+      if (!animRef.current) setCube(bs.cube);
+      if (typeof bs.moveCount === 'number') setMoves(bs.moveCount);
+      setStarted(true);
+    }
+    if (multiplayerState.winner != null && !endedRef.current) {
+      endedRef.current = true;
+      const iWon = multiplayerState.winner === playerNumber;
+      onScore(iWon ? 150 : 10);
+      onProgress(iWon ? 1 : 0.3);
+      onEnd({
+        score: iWon ? 150 : 10,
+        stars: iWon ? 3 : 1,
+        summary: iWon ? 'You solved the cube!' : `${oppName} solved the cube first.`,
+      });
+    }
+  }, [isOnline, multiplayerState, playerNumber, oppName, onScore, onProgress, onEnd]);
 
   // Solve timer (frozen while the tab is hidden)
   useEffect(() => {
@@ -155,15 +187,35 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
     const { cube: scrambled } = scramble(newCube(), scrambleLen);
     setCube(scrambled);
     setStarted(true);
-    onMessage(`Scrambled with ${scrambleLen} twists — restore every face!`);
+    setMoves(0);
+    onMessage(
+      isOnline
+        ? `Scrambled with ${scrambleLen} twists — first to solve wins!`
+        : `Scrambled with ${scrambleLen} twists — restore every face!`,
+    );
+    if (isOnline && isHost) {
+      // turnSeat keeps seat 1 after the seed move (makeMove would otherwise rotate to 2)
+      onMultiplayerMove?.({ boardState: { cube: scrambled, moveCount: 0, turnSeat: 1 } });
+    }
   };
 
   const commitMove = useCallback((move: Move, record: boolean) => {
     setCube(prev => {
       const next = applyMove(prev, move);
+      const nextCount = moves + 1;
+
+      if (isOnline) {
+        const solved = isSolved(next);
+        onMultiplayerMove?.({
+          boardState: { cube: next, moveCount: nextCount },
+          winner: solved ? playerNumber : undefined,
+        });
+        return next;
+      }
+
       if (isSolved(next) && !endedRef.current) {
         endedRef.current = true;
-        const used = moves + 1;
+        const used = nextCount;
         const efficient = used <= scrambleLen * 2;
         const score = Math.max(20, scrambleLen * 15 - Math.max(0, used - scrambleLen) * 2 - seconds);
         const stars = efficient ? 3 : 2;
@@ -178,15 +230,16 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
       return next;
     });
     setMoves(m => m + 1);
-    if (record) historyRef.current.push(move);
-    setCanUndo(historyRef.current.length > 0);
-  }, [moves, seconds, scrambleLen, onScore, onProgress, onEnd]);
+    if (record && !isOnline) historyRef.current.push(move);
+    setCanUndo(!isOnline && historyRef.current.length > 0);
+  }, [moves, seconds, scrambleLen, onScore, onProgress, onEnd, isOnline, playerNumber, onMultiplayerMove]);
 
   const playMove = useCallback((move: Move, record = true) => {
     if (anim || endedRef.current) return;
+    if (isOnline && !isMyTurn) return;
     sfxMove();
     setAnim({ move, started: performance.now(), record });
-  }, [anim]);
+  }, [anim, isOnline, isMyTurn]);
 
   const onAnimDone = useCallback(() => {
     if (!anim) return;
@@ -195,6 +248,7 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
   }, [anim, commitMove]);
 
   const undo = () => {
+    if (isOnline) return;
     const last = historyRef.current[historyRef.current.length - 1];
     if (!last || anim) return;
     historyRef.current.pop();
@@ -323,6 +377,19 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
   }
 
   if (!started) {
+    // Guest waits for host to scramble into boardState
+    if (isOnline && !isHost) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
+          <div className="text-6xl" aria-hidden>🧊</div>
+          <h2 className="text-2xl font-bold">Cube Twist</h2>
+          <p className="text-sm text-text-muted text-center">
+            Waiting for {oppAvatar} {oppName} to scramble the cube…
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4 p-6">
         <div className="text-6xl" aria-hidden>🧊</div>
@@ -331,9 +398,13 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
           <div className="flex items-start gap-2"><span>👆</span><span>Swipe across a face to twist that layer</span></div>
           <div className="flex items-start gap-2"><span>🔄</span><span>Drag the background to spin the whole cube</span></div>
           <div className="flex items-start gap-2"><span>⌨️</span><span>Keys work too: U D L R F B (+ Shift reverses)</span></div>
-          <div className="flex items-start gap-2"><span>🏁</span><span>Make every side one solid color to win</span></div>
+          <div className="flex items-start gap-2"><span>🏁</span><span>{isOnline ? 'First to solve the shared cube wins' : 'Make every side one solid color to win'}</span></div>
         </div>
-        <p className="text-xs text-text-muted">Stage {stage}: <span className="text-accent font-bold">{scrambleLen} scramble twists</span></p>
+        <p className="text-xs text-text-muted">
+          {isOnline
+            ? <>Online vs {oppAvatar} {oppName} · Stage {stage}: <span className="text-accent font-bold">{scrambleLen} scramble twists</span></>
+            : <>Stage {stage}: <span className="text-accent font-bold">{scrambleLen} scramble twists</span></>}
+        </p>
         <button
           onClick={start}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
@@ -346,12 +417,17 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex gap-2 justify-center py-2 text-xs flex-shrink-0">
+      <div className="flex gap-2 justify-center py-2 text-xs flex-shrink-0 flex-wrap">
         <span className="bg-card rounded-lg px-3 py-1.5 font-bold text-accent">Moves: {moves}</span>
         <span className="bg-card rounded-lg px-3 py-1.5 font-bold text-text-muted">
           {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
         </span>
         <span className="bg-card rounded-lg px-3 py-1.5 text-text-muted">Scramble: {scrambleLen}</span>
+        {isOnline && (
+          <span className={`rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'bg-accent text-bg' : 'bg-card text-text-muted'}`}>
+            {isMyTurn ? 'Your turn' : `${oppAvatar} ${oppName}'s turn`}
+          </span>
+        )}
       </div>
 
       <div
@@ -359,7 +435,7 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
         tabIndex={0}
         role="application"
         aria-roledescription="twisty cube"
-        aria-label={`Cube Twist. ${moves} moves so far. Keys U, D, L, R, F, B twist faces; hold Shift to reverse.`}
+        aria-label={`Cube Twist. ${moves} moves so far. ${isOnline ? (isMyTurn ? 'Your turn.' : `Waiting for ${oppName}.`) : ''} Keys U, D, L, R, F, B twist faces; hold Shift to reverse.`}
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -387,8 +463,9 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
             <button
               key={k}
               onClick={() => turnFace(k, reverse)}
+              disabled={isOnline && !isMyTurn}
               aria-label={`Turn ${f.label} face${reverse ? ' counterclockwise' : ''}`}
-              className="game-cell w-10 h-10 bg-card hover:bg-card-hover rounded-xl text-sm font-black text-text transition-all active:scale-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="game-cell w-10 h-10 bg-card hover:bg-card-hover rounded-xl text-sm font-black text-text transition-all active:scale-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-30"
             >
               {k.toUpperCase()}{reverse ? '′' : ''}
             </button>
@@ -406,19 +483,23 @@ function CubeTwistGame({ stage, onScore, onProgress, onMessage, onEnd, paused }:
           </button>
         </div>
         <div className="flex gap-2 justify-center">
-          <button
-            onClick={undo}
-            disabled={!canUndo || !!anim}
-            className="text-xs font-semibold text-text-muted hover:text-text bg-card hover:bg-card-hover px-4 py-1.5 rounded-lg transition-colors disabled:opacity-30"
-          >
-            Undo
-          </button>
-          <button
-            onClick={giveUp}
-            className="text-xs font-semibold text-text-muted hover:text-danger bg-card hover:bg-card-hover px-4 py-1.5 rounded-lg transition-colors"
-          >
-            Give up
-          </button>
+          {!isOnline && (
+            <button
+              onClick={undo}
+              disabled={!canUndo || !!anim}
+              className="text-xs font-semibold text-text-muted hover:text-text bg-card hover:bg-card-hover px-4 py-1.5 rounded-lg transition-colors disabled:opacity-30"
+            >
+              Undo
+            </button>
+          )}
+          {!isOnline && (
+            <button
+              onClick={giveUp}
+              className="text-xs font-semibold text-text-muted hover:text-danger bg-card hover:bg-card-hover px-4 py-1.5 rounded-lg transition-colors"
+            >
+              Give up
+            </button>
+          )}
         </div>
       </div>
     </div>

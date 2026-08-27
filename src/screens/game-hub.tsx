@@ -5,7 +5,7 @@ import { api } from '../../convex/_generated/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAllGames } from '@/lib/game-registry';
 import { GAME_CATEGORIES, type GameCategory } from '@/types';
-import { Heart, Search, Play, Pause, Users, Brain, Gamepad2, Wind, Music, Trophy, Zap, Star, Sparkles } from 'lucide-react';
+import { Heart, Search, Play, Pause, Users, Wind, Star, Sparkles } from 'lucide-react';
 import { RequestGameModal } from '@/components/RequestGameModal';
 import { getGameImage } from '@/lib/game-images';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
@@ -43,46 +43,26 @@ const TABS = [
   {
     id: 'brain',
     label: '🧠 Brain',
-    emoji: '🧠',
     tagline: 'Train your mind every day',
-    description: 'Short games for focus, memory, and flexible thinking — they get trickier as you level up.',
     color: 'text-amber-400',
-    pillBg: 'bg-amber-500/15 text-amber-300',
-    iconBg: 'bg-amber-500/15',
-    benefits: ['Sharp focus', 'Better memory', 'Faster thinking', 'Problem solving', 'Emotional skills', 'Mental agility'],
   },
   {
     id: 'board',
     label: '🎲 Board',
-    emoji: '🎲',
     tagline: 'Play solo or invite a friend',
-    description: 'Classic board games with adaptive AI — or send a link and play with friends and family in real time. Chess, Ludo, Scrabble, UNO, and more.',
     color: 'text-amber-400',
-    pillBg: 'bg-amber-500/15 text-amber-300',
-    iconBg: 'bg-amber-500/15',
-    benefits: ['Strategic thinking', 'Pattern recognition', 'Patience', 'Multiplayer fun', 'Decision making', 'Healthy competition'],
   },
   {
     id: 'breathe',
     label: '🌬️ Breathe',
-    emoji: '🌬️',
     tagline: 'Calm down in under 5 minutes',
-    description: 'Four guided breathing techniques with a simple visual timer. Take a minute when you need it.',
     color: 'text-emerald-400',
-    pillBg: 'bg-emerald-500/15 text-emerald-300',
-    iconBg: 'bg-emerald-500/15',
-    benefits: ['Reduces stress', 'Lowers heart rate', 'Aids sleep', 'Clears the mind', 'Eases anxiety', 'Restores focus'],
   },
   {
     id: 'tracks',
     label: '🎵 Tracks',
-    emoji: '🎵',
     tagline: 'Set the mood. Stay in flow.',
-    description: '8 ambient tracks for any mental state — lo-fi beats, deep focus tones, rain sounds, and meditation. Keeps playing while you game.',
     color: 'text-sky-400',
-    pillBg: 'bg-sky-500/15 text-sky-300',
-    iconBg: 'bg-sky-500/15',
-    benefits: ['Blocks noise', 'Deep focus', 'Relaxation', 'Creative flow', 'Mindfulness', 'Consistent environment'],
   },
 ];
 
@@ -190,7 +170,7 @@ export function GameHub() {
           <button
             key={t.id}
             onClick={() => handleTabChange(t.id)}
-            className={`flex-1 min-w-[80px] py-3 text-xs sm:text-sm font-semibold text-center transition-colors border-b-2 whitespace-nowrap ${
+            className={`flex-1 min-w-[72px] py-2.5 text-xs sm:text-sm font-semibold text-center transition-colors border-b-2 whitespace-nowrap ${
               tab === t.id
                 ? 'text-accent border-accent bg-accent/10'
                 : 'text-text-muted border-transparent hover:text-text hover:bg-white/5'
@@ -201,28 +181,11 @@ export function GameHub() {
         ))}
       </div>
 
-      {/* Tab header — tagline, description, benefit chips */}
-      <div className="px-4 pt-3 pb-2.5 border-b border-white/5 flex-shrink-0">
-        <div className="flex items-start gap-3 mb-2.5">
-          <div className="flex-1 min-w-0">
-            <p className={`text-[11px] font-bold uppercase tracking-widest mb-0.5 ${currentTab.color}`}>
-              {currentTab.tagline}
-            </p>
-            <p className="text-text-muted text-xs leading-relaxed line-clamp-2">
-              {currentTab.description}
-            </p>
-          </div>
-          <div className={`w-10 h-10 rounded-xl ${currentTab.iconBg} flex items-center justify-center text-xl flex-shrink-0`}>
-            {currentTab.emoji}
-          </div>
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-          {currentTab.benefits.map((benefit, i) => (
-            <span key={i} className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap ${currentTab.pillBg}`}>
-              {benefit}
-            </span>
-          ))}
-        </div>
+      {/* Compact one-line tagline — keeps catalog above the fold on phones */}
+      <div className="px-4 py-1.5 border-b border-white/5 flex-shrink-0">
+        <p className={`text-[11px] font-semibold truncate ${currentTab.color}`}>
+          {currentTab.tagline}
+        </p>
       </div>
 
       {tab === 'brain' && (

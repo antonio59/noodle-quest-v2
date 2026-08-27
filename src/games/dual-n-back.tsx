@@ -1,15 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { GameProps } from '@/types';
+import { classifyMatch, nForStage, pointsForTrial, starsFromScore } from './dual-n-back-scoring';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 const GRID_SIZE = 3;
 const POSITIONS = GRID_SIZE * GRID_SIZE; // 9
-
-function getN(stage: number): number {
-  if (stage <= 2) return 1;
-  if (stage <= 5) return 2;
-  return 3;
-}
 
 function rand(max: number) { return Math.floor(Math.random() * max); }
 
@@ -29,7 +24,7 @@ const SHOW_MS   = 2000;
 const RESPOND_MS = 2000;
 
 export default function DualNBackGame({ stage, onScore, onProgress, onEnd, onMessage }: GameProps) {
-  const n = useMemo(() => getN(stage), [stage]);
+  const n = useMemo(() => nForStage(stage), [stage]);
   const sequence = useMemo(() => buildSequence(TOTAL_TRIALS + n), [n]);
 
   const [phase, setPhase]           = useState<Phase>('intro');
@@ -69,21 +64,12 @@ export default function DualNBackGame({ stage, onScore, onProgress, onEnd, onMes
   const letMatch = current?.letter === nBack?.letter;
 
   const scoreRound = useCallback((pressedPos: boolean, pressedLet: boolean) => {
-    const posResult: 'hit' | 'miss' | 'fa' =
-      posMatch && pressedPos ? 'hit' : !posMatch && !pressedPos ? 'hit' :
-      posMatch && !pressedPos ? 'miss' : 'fa';
-    const letResult: 'hit' | 'miss' | 'fa' =
-      letMatch && pressedLet ? 'hit' : !letMatch && !pressedLet ? 'hit' :
-      letMatch && !pressedLet ? 'miss' : 'fa';
+    const posResult = classifyMatch(posMatch, pressedPos);
+    const letResult = classifyMatch(letMatch, pressedLet);
 
     setFeedback({ pos: posResult, let: letResult });
 
-    let pts = 0;
-    if (posResult === 'hit') pts += 8;
-    if (letResult === 'hit') pts += 8;
-    if (posResult === 'miss' || posResult === 'fa') pts -= 3;
-    if (letResult === 'miss' || letResult === 'fa') pts -= 3;
-    pts = Math.max(0, pts);
+    const pts = pointsForTrial(posResult, letResult);
 
     const newScore = score + pts;
     setScore(newScore);
@@ -98,8 +84,7 @@ export default function DualNBackGame({ stage, onScore, onProgress, onEnd, onMes
       if (nextIdx >= sequence.length) {
         if (endedRef.current) return;
         endedRef.current = true;
-        const pct = newScore / (TOTAL_TRIALS * 16);
-        const stars = pct >= 0.75 ? 3 : pct >= 0.5 ? 2 : 1;
+        const stars = starsFromScore(newScore, TOTAL_TRIALS);
         onEndRef.current({ score: newScore, stars, summary: `Completed N-Back (N=${n}). Score: ${newScore}` });
       } else {
         setTrialIdx(nextIdx);

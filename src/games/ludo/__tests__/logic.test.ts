@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import {
-  TRACK, TRACK_LEN, STRETCH_START, HOME, RED_ENTRY, BLUE_ENTRY,
-  RED_STRETCH, BLUE_STRETCH, SAFE_POSITIONS,
+  TRACK, TRACK_LEN, STRETCH_START, HOME,
+  RED_ENTRY, GREEN_ENTRY, BLUE_ENTRY, YELLOW_ENTRY,
+  RED_STRETCH, GREEN_STRETCH, BLUE_STRETCH, YELLOW_STRETCH,
+  SAFE_POSITIONS,
   toAbsolute, advance, getMovableIndices, capturedIndices, posCoord,
-  scoreAiMove, chooseAiMove,
+  scoreAiMove, chooseAiMove, entryFor, sidesForCount, nextSeat,
+  type Side,
 } from '../logic';
 
 describe('board geometry', () => {
@@ -13,8 +16,14 @@ describe('board geometry', () => {
     expect(keys.size).toBe(TRACK_LEN);
   });
 
-  test('every relative position maps to a real coordinate for both sides', () => {
-    for (const [entry, stretch] of [[RED_ENTRY, RED_STRETCH], [BLUE_ENTRY, BLUE_STRETCH]] as const) {
+  test('every relative position maps to a real coordinate for all four sides', () => {
+    const sides: [number, [number, number][]][] = [
+      [RED_ENTRY, RED_STRETCH],
+      [GREEN_ENTRY, GREEN_STRETCH],
+      [YELLOW_ENTRY, YELLOW_STRETCH],
+      [BLUE_ENTRY, BLUE_STRETCH],
+    ];
+    for (const [entry, stretch] of sides) {
       for (let rel = 0; rel < HOME; rel++) {
         const [row, col] = posCoord(rel, entry, stretch);
         expect(row).toBeGreaterThanOrEqual(0);
@@ -25,16 +34,13 @@ describe('board geometry', () => {
     }
   });
 
-  test('both sides travel the same distance (the old code gave blue a half-length route)', () => {
-    // From entry to home is HOME steps for red and blue alike.
-    let red = 0;
-    let blue = 0;
-    let redSteps = 0;
-    let blueSteps = 0;
-    while (red < HOME) { red = advance(red, 1); redSteps++; }
-    while (blue < HOME) { blue = advance(blue, 1); blueSteps++; }
-    expect(redSteps).toBe(blueSteps);
-    expect(redSteps).toBe(HOME);
+  test('all four sides travel the same distance', () => {
+    for (const entry of [RED_ENTRY, GREEN_ENTRY, YELLOW_ENTRY, BLUE_ENTRY]) {
+      let pos = 0;
+      let steps = 0;
+      while (pos < HOME) { pos = advance(pos, 1); steps++; }
+      expect(steps).toBe(HOME);
+    }
   });
 
   test("blue's last track square sits next to its stretch entrance", () => {
@@ -44,9 +50,35 @@ describe('board geometry', () => {
     expect(BLUE_STRETCH[0]).toEqual([7, 13]);
   });
 
-  test('entry squares are safe', () => {
+  test("green and yellow entries and stretch entrances line up", () => {
+    expect(GREEN_ENTRY).toBe(13);
+    expect(YELLOW_ENTRY).toBe(39);
+    expect(toAbsolute(47, GREEN_ENTRY)).toBe(12);
+    expect(TRACK[12]).toEqual([0, 8]);
+    expect(GREEN_STRETCH[0]).toEqual([1, 7]);
+    expect(toAbsolute(47, YELLOW_ENTRY)).toBe(38);
+    expect(TRACK[38]).toEqual([12, 6]);
+    expect(YELLOW_STRETCH[0]).toEqual([13, 7]);
+  });
+
+  test('all entry squares are safe', () => {
     expect(SAFE_POSITIONS.has(RED_ENTRY)).toBe(true);
+    expect(SAFE_POSITIONS.has(GREEN_ENTRY)).toBe(true);
     expect(SAFE_POSITIONS.has(BLUE_ENTRY)).toBe(true);
+    expect(SAFE_POSITIONS.has(YELLOW_ENTRY)).toBe(true);
+  });
+
+  test('entryFor and sidesForCount cover 2–4 players', () => {
+    expect(entryFor('red')).toBe(RED_ENTRY);
+    expect(entryFor('green')).toBe(GREEN_ENTRY);
+    expect(entryFor('yellow')).toBe(YELLOW_ENTRY);
+    expect(entryFor('blue')).toBe(BLUE_ENTRY);
+    expect(sidesForCount(2)).toEqual(['red', 'blue']);
+    expect(sidesForCount(3)).toEqual(['red', 'green', 'blue']);
+    expect(sidesForCount(4)).toEqual(['red', 'green', 'yellow', 'blue']);
+    expect(nextSeat(1, 4)).toBe(2);
+    expect(nextSeat(4, 4)).toBe(1);
+    expect(nextSeat(2, 2)).toBe(1);
   });
 });
 
@@ -88,6 +120,14 @@ describe('captures', () => {
     const redPieces = [28, -1, -1, -1];
     const hits = capturedIndices(4, BLUE_ENTRY, redPieces, RED_ENTRY);
     expect(hits).toEqual([0]);
+  });
+
+  test('green can capture yellow across frames', () => {
+    // Green rel 5 = abs 18. Yellow abs 18 = rel (18 - 39 + 48) % 48 = 27.
+    const yellowPieces = [27, -1, -1, -1];
+    expect(toAbsolute(5, GREEN_ENTRY)).toBe(18);
+    expect(toAbsolute(27, YELLOW_ENTRY)).toBe(18);
+    expect(capturedIndices(5, GREEN_ENTRY, yellowPieces, YELLOW_ENTRY)).toEqual([0]);
   });
 
   test('no capture on safe squares', () => {
@@ -187,6 +227,57 @@ describe('full game simulation', () => {
       expect(winner).not.toBeNull();
       // All positions stayed within the legal range throughout
       for (const side of ['red', 'blue'] as const) {
+        for (const p of pieces[side]) {
+          expect(p).toBeGreaterThanOrEqual(-1);
+          expect(p).toBeLessThanOrEqual(HOME);
+        }
+      }
+    }
+  });
+
+  test('four AIs finish a game with a legal winner', () => {
+    const sideList = sidesForCount(4);
+    for (let g = 0; g < 5; g++) {
+      const pieces: Record<Side, number[]> = {
+        red: [-1, -1, -1, -1],
+        green: [-1, -1, -1, -1],
+        yellow: [-1, -1, -1, -1],
+        blue: [-1, -1, -1, -1],
+      };
+      let seat = 1;
+      let winner: Side | null = null;
+      let guard = 0;
+      while (!winner && guard++ < 8000) {
+        const me = sideList[seat - 1];
+        const d = 1 + Math.floor(Math.random() * 6);
+        // Pairwise AI helpers: score each movable piece against all opponents.
+        let pick = -1;
+        let bestScore = -Infinity;
+        const movable = getMovableIndices(pieces[me], d);
+        for (const i of movable) {
+          let s = 0;
+          for (const opp of sideList) {
+            if (opp === me) continue;
+            s += scoreAiMove(pieces[me][i], d, entryFor(me), pieces[opp], entryFor(opp));
+          }
+          if (s > bestScore) { bestScore = s; pick = i; }
+        }
+        if (pick < 0 && movable.length > 0) pick = movable[0];
+        if (pick >= 0) {
+          const np = advance(pieces[me][pick], d);
+          pieces[me][pick] = np;
+          for (const opp of sideList) {
+            if (opp === me) continue;
+            for (const h of capturedIndices(np, entryFor(me), pieces[opp], entryFor(opp))) {
+              pieces[opp][h] = -1;
+            }
+          }
+          if (pieces[me].every(p => p >= HOME)) winner = me;
+        }
+        if (d !== 6) seat = nextSeat(seat, 4);
+      }
+      expect(winner).not.toBeNull();
+      for (const side of sideList) {
         for (const p of pieces[side]) {
           expect(p).toBeGreaterThanOrEqual(-1);
           expect(p).toBeLessThanOrEqual(HOME);

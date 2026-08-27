@@ -82,6 +82,9 @@ export interface Player {
   name: string;
   avatar: string;
   sessionToken: string;
+  /** When true, Chat is activity-only (no free typing / GIFs). */
+  kidMode?: boolean;
+  theme?: 'dark' | 'light';
 }
 
 export interface Track {
