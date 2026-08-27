@@ -13,14 +13,16 @@
 // 52-square arithmetic on a 48-square track — blue's route came out at
 // barely half of red's, and positions 48-51 had no board coordinates.
 
-export type Side = 'red' | 'blue';
+export type Side = 'red' | 'green' | 'yellow' | 'blue';
 
 export const TRACK_LEN = 48;
 export const STRETCH_START = 48; // first home-stretch square (relative)
 export const HOME = 54;          // finished (relative)
 
 export const RED_ENTRY = 0;
+export const GREEN_ENTRY = 13;
 export const BLUE_ENTRY = 24;
+export const YELLOW_ENTRY = 39;
 
 // (row, col) of each shared track square, walked clockwise from red's entry.
 export const TRACK: [number, number][] = [
@@ -52,7 +54,33 @@ export function rollDie(): number {
 }
 
 export function entryFor(side: Side): number {
-  return side === 'red' ? RED_ENTRY : BLUE_ENTRY;
+  switch (side) {
+    case 'red': return RED_ENTRY;
+    case 'green': return GREEN_ENTRY;
+    case 'yellow': return YELLOW_ENTRY;
+    case 'blue': return BLUE_ENTRY;
+  }
+}
+
+export function stretchFor(side: Side): [number, number][] {
+  switch (side) {
+    case 'red': return RED_STRETCH;
+    case 'green': return GREEN_STRETCH;
+    case 'yellow': return YELLOW_STRETCH;
+    case 'blue': return BLUE_STRETCH;
+  }
+}
+
+/** Sides seated for an N-player game. 2p keeps classic red vs blue. */
+export function sidesForCount(n: number): Side[] {
+  if (n <= 2) return ['red', 'blue'];
+  if (n === 3) return ['red', 'green', 'blue'];
+  return ['red', 'green', 'yellow', 'blue'];
+}
+
+/** 1-indexed seat after `seat` in an N-player clockwise rotation. */
+export function nextSeat(seat: number, n: number): number {
+  return (seat % n) + 1;
 }
 
 /** Absolute track index for a relative position, or -1 if off the shared track. */

@@ -6,7 +6,7 @@
  *  - dictionary + icons: stale-while-revalidate
  *  - everything else (Convex API, fonts, etc.): untouched
  */
-const CACHE = 'nq-v1';
+const CACHE = 'nq-v2';
 const APP_SHELL = '/index.html';
 
 self.addEventListener('install', (event) => {

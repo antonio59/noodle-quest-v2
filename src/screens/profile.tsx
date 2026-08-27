@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { getRankTier, RANK_TIERS } from '@/lib/rank-tiers';
 
 export function Profile() {
-  const { player, logout, updateAvatar, updateName } = useAuth();
+  const { player, logout, updateAvatar, updateName, updatePrefs } = useAuth();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -19,14 +19,19 @@ export function Profile() {
   const [nameSaving, setNameSaving] = useState(false);
   const [showAllAvatars, setShowAllAvatars] = useState(false);
   const [fxOn, setFxOn] = useState(feedbackEnabled);
+  const kidMode = !!player?.kidMode;
+  const lightTheme = player?.theme === 'light';
   const games = getAllGames();
 
   const toggleFx = () => {
     const next = !fxOn;
     setFeedbackEnabled(next);
     setFxOn(next);
-    if (next) playWin(); // instant audible confirmation
+    if (next) playWin();
   };
+
+  const toggleKidMode = () => { void updatePrefs({ kidMode: !kidMode }); };
+  const toggleTheme = () => { void updatePrefs({ theme: lightTheme ? 'dark' : 'light' }); };
 
   const stats = useQuery(api.games.getPlayerStats, player?.sessionToken ? { sessionToken: player.sessionToken } : 'skip' as any);
 
@@ -306,6 +311,46 @@ export function Profile() {
           >
             <span
               className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${fxOn ? 'left-[18px]' : 'left-0.5'}`}
+            />
+          </span>
+        </button>
+
+        <button
+          onClick={toggleTheme}
+          role="switch"
+          aria-checked={lightTheme}
+          className="w-full flex items-center justify-between bg-card hover:bg-card-hover py-3 px-5 rounded-2xl border border-white/8 transition-all active:scale-[0.99]"
+        >
+          <span className="flex items-center gap-2 font-semibold text-sm">
+            Light mode
+            <span className="text-text-muted text-xs font-normal">easier in bright rooms</span>
+          </span>
+          <span
+            className={`relative w-10 h-6 rounded-full transition-colors ${lightTheme ? 'bg-accent' : 'bg-card-hover'}`}
+            aria-hidden
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${lightTheme ? 'left-[18px]' : 'left-0.5'}`}
+            />
+          </span>
+        </button>
+
+        <button
+          onClick={toggleKidMode}
+          role="switch"
+          aria-checked={kidMode}
+          className="w-full flex items-center justify-between bg-card hover:bg-card-hover py-3 px-5 rounded-2xl border border-white/8 transition-all active:scale-[0.99]"
+        >
+          <span className="flex flex-col items-start gap-0.5 text-left">
+            <span className="font-semibold text-sm">Kid mode</span>
+            <span className="text-text-muted text-xs font-normal">Activity feed only — no free chat or GIFs</span>
+          </span>
+          <span
+            className={`relative w-10 h-6 rounded-full transition-colors flex-shrink-0 ${kidMode ? 'bg-accent' : 'bg-card-hover'}`}
+            aria-hidden
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${kidMode ? 'left-[18px]' : 'left-0.5'}`}
             />
           </span>
         </button>

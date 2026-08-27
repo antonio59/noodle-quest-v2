@@ -13,6 +13,9 @@ export default defineSchema({
     failedAttempts: v.optional(v.number()),
     lockedUntil: v.optional(v.number()),
     avatar: v.string(),
+    // Family prefs — optional so existing rows stay valid.
+    kidMode: v.optional(v.boolean()),
+    theme: v.optional(v.union(v.literal("dark"), v.literal("light"))),
     createdAt: v.number(),
     lastActive: v.number(),
   })

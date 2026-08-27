@@ -161,7 +161,12 @@ function renderTextContent(content: string) {
 
 export function Feed() {
   const { player } = useAuth();
-  const [tab, setTab] = useState<'chat' | 'activity'>('chat');
+  const kidMode = !!player?.kidMode;
+  const [tab, setTab] = useState<'chat' | 'activity'>(kidMode ? 'activity' : 'chat');
+
+  useEffect(() => {
+    if (kidMode) setTab('activity');
+  }, [kidMode]);
   const [message, setMessage] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
@@ -323,10 +328,15 @@ export function Feed() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-0 bg-surface flex-shrink-0">
-        <h1 className="text-lg font-bold">Chat</h1>
-        <p className="text-text-muted text-xs mt-0.5 mb-3">Chat with other players and track activity</p>
+        <h1 className="text-lg font-bold">{kidMode ? 'Activity' : 'Chat'}</h1>
+        <p className="text-text-muted text-xs mt-0.5 mb-3">
+          {kidMode
+            ? 'Stars, challenges, and game highlights — chat is off in Kid mode'
+            : 'Chat with other players and track activity'}
+        </p>
 
         {/* Tab bar */}
+        {!kidMode && (
         <div className="flex gap-1">
           {([
             { id: 'chat', icon: MessageCircle, label: 'Chat' },
@@ -350,6 +360,7 @@ export function Feed() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* Divider under tabs */}

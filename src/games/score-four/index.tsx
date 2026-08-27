@@ -6,11 +6,11 @@ import { webglSupported } from '@/lib/webgl';
 import { playPlace, playCapture } from '@/lib/feedback';
 import {
   N, newBoard, drop, landingY, isFull, winningLine, bestRod, idx,
-  type Board, type Player, type Rod,
+  type Board, type Cell, type Player, type Rod,
 } from './logic';
 
-const P1_COLOR = '#f0a83a'; // you
-const P2_COLOR = '#f59e0b'; // AI
+const P1_COLOR = '#f0a83a'; // you / player 1
+const P2_COLOR = '#f59e0b'; // AI / player 2
 const SPACING = 1.15;
 
 /** Board coordinate → world position (board centred on origin). */
@@ -26,6 +26,28 @@ interface Bead {
   z: number;
   player: Player;
   winning: boolean;
+}
+
+/** Rebuild bead list from a flat board; keys are flat indices (stable across syncs). */
+function beadsFromBoard(board: Board, winLine: number[] | null): Bead[] {
+  const out: Bead[] = [];
+  for (let y = 0; y < N; y++) {
+    for (let z = 0; z < N; z++) {
+      for (let x = 0; x < N; x++) {
+        const i = idx(x, y, z);
+        const cell = board[i] as Cell;
+        if (cell) {
+          out.push({
+            key: i,
+            x, y, z,
+            player: cell,
+            winning: winLine?.includes(i) ?? false,
+          });
+        }
+      }
+    }
+  }
+  return out;
 }
 
 const reducedMotion = () =>
@@ -124,7 +146,13 @@ function Scene({ beads, cursor, hover, onRodClick, onRodHover, yaw, pitch }: Sce
   );
 }
 
-function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty }: GameProps) {
+function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty, multiplayerState, onMultiplayerMove }: GameProps) {
+  const isOnline = !!multiplayerState;
+  const myPlayer: Player = isOnline
+    ? (multiplayerState.playerNumber === 1 ? 1 : 2)
+    : 1;
+  const otherPlayer: Player = myPlayer === 1 ? 2 : 1;
+
   const difficulty = aiDifficulty || 'medium';
   const [started, setStarted] = useState(false);
   const [beads, setBeads] = useState<Bead[]>([]);
@@ -155,6 +183,46 @@ function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     };
   }, []);
 
+  // Hydrate from multiplayer boardState
+  useEffect(() => {
+    if (!isOnline || !multiplayerState) return;
+    const bs = multiplayerState.boardState as {
+      board?: Board;
+      last?: { x: number; y: number; z: number; player: Player };
+    } | null | undefined;
+    if (bs && Array.isArray(bs.board)) {
+      boardRef.current = [...bs.board];
+      const last = bs.last;
+      let line: number[] | null = null;
+      if (last) {
+        line = winningLine(bs.board, last.player);
+      }
+      const nextBeads = beadsFromBoard(bs.board, line);
+      setBeads(nextBeads);
+      keyRef.current = Math.max(keyRef.current, ...nextBeads.map(b => b.key + 1), 0);
+      setTurn(multiplayerState.currentPlayer === 1 ? 1 : 2);
+
+      if (last && line) {
+        setOver(true);
+        if (!endedRef.current) {
+          endedRef.current = true;
+          const won = last.player === myPlayer;
+          onEnd({
+            score: won ? 130 : 10,
+            stars: won ? 3 : 1,
+            summary: won ? 'Four in a row in 3D — brilliant!' : 'Opponent lined up four.',
+          });
+        }
+      } else if (isFull(bs.board)) {
+        setOver(true);
+        if (!endedRef.current) {
+          endedRef.current = true;
+          onEnd({ score: 40, stars: 2, summary: 'Every rod is full — a draw!' });
+        }
+      }
+    }
+  }, [isOnline, multiplayerState, myPlayer, onEnd]);
+
   const finish = useCallback((result: 'win' | 'lose' | 'draw') => {
     if (endedRef.current) return;
     endedRef.current = true;
@@ -174,17 +242,46 @@ function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     setBeads(prev => prev.map(b => (line.includes(idx(b.x, b.y, b.z)) ? { ...b, winning: true } : b)));
   }, []);
 
-  const place = useCallback((rod: Rod, player: Player): boolean => {
+  const place = useCallback((rod: Rod, player: Player): number => {
     const y = drop(boardRef.current, rod.x, rod.z, player);
-    if (y < 0) return false;
+    if (y < 0) return -1;
     playPlace();
-    setBeads(prev => [...prev, { key: keyRef.current++, x: rod.x, y, z: rod.z, player, winning: false }]);
-    return true;
+    const key = idx(rod.x, y, rod.z);
+    keyRef.current = Math.max(keyRef.current, key + 1);
+    setBeads(prev => [...prev, { key, x: rod.x, y, z: rod.z, player, winning: false }]);
+    return y;
   }, []);
 
   const handleDrop = useCallback((rod: Rod) => {
-    if (endedRef.current || over || turn !== 1) return;
+    if (endedRef.current || over) return;
     if (landingY(boardRef.current, rod.x, rod.z) < 0) return;
+
+    if (isOnline) {
+      if (turn !== myPlayer) return;
+      const y = place(rod, myPlayer);
+      if (y < 0) return;
+
+      const myLine = winningLine(boardRef.current, myPlayer);
+      if (myLine) markWinning(myLine);
+      const iWon = !!myLine;
+      const drew = !iWon && isFull(boardRef.current);
+      const serverWinner = iWon ? multiplayerState!.playerNumber : drew ? 0 : undefined;
+      onMultiplayerMove?.({
+        boardState: {
+          board: [...boardRef.current],
+          last: { x: rod.x, y, z: rod.z, player: myPlayer },
+        },
+        winner: serverWinner,
+      });
+      setTurn(otherPlayer);
+      if (iWon || drew) {
+        endedRef.current = true;
+        setOver(true);
+      }
+      return;
+    }
+
+    if (turn !== 1) return;
     place(rod, 1);
 
     const myLine = winningLine(boardRef.current, 1);
@@ -214,7 +311,10 @@ function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
       setTurn(1);
       onMessage('Your turn!');
     }, 450);
-  }, [over, turn, difficulty, place, markWinning, finish, onMessage, schedule]);
+  }, [
+    over, turn, difficulty, place, markWinning, finish, onMessage, schedule,
+    isOnline, myPlayer, otherPlayer, multiplayerState, onMultiplayerMove,
+  ]);
 
   // Drag anywhere = orbit; small movements still count as clicks on rods.
   const onPointerDown = (e: React.PointerEvent) => {
@@ -264,6 +364,11 @@ function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
     setAnnounce(describeRod(next));
   };
 
+  const isMyTurn = isOnline ? turn === myPlayer : turn === 1;
+  const oppLabel = isOnline
+    ? `${multiplayerState?.opponentAvatar ?? ''} ${multiplayerState?.opponentName ?? 'Opponent'}`.trim()
+    : 'AI';
+
   if (!supported) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
@@ -287,9 +392,13 @@ function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
           <div className="flex items-start gap-2"><span>📐</span><span>Line up 4 in ANY direction — flat, up a rod, or through space</span></div>
           <div className="flex items-start gap-2"><span>🔄</span><span>Drag to spin the board and spot diagonals · arrow keys + Enter work too</span></div>
         </div>
-        <p className="text-xs text-text-muted">AI difficulty: <span className="text-accent font-bold capitalize">{difficulty}</span> · Stage {stage}</p>
+        <p className="text-xs text-text-muted">
+          {isOnline
+            ? `Online vs ${multiplayerState?.opponentName ?? 'opponent'} · Stage ${stage}`
+            : <>AI difficulty: <span className="text-accent font-bold capitalize">{difficulty}</span> · Stage {stage}</>}
+        </p>
         <button
-          onClick={() => { setStarted(true); onMessage('Your turn — tap a rod to drop!'); }}
+          onClick={() => { setStarted(true); onMessage(isOnline ? (isMyTurn ? 'Your turn — tap a rod to drop!' : 'Waiting for opponent...') : 'Your turn — tap a rod to drop!'); }}
           className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 active:scale-95 transition-all"
         >
           Start Game
@@ -300,20 +409,38 @@ function ScoreFourGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex gap-3 justify-center py-2 text-sm flex-shrink-0">
-        <span className="bg-card rounded-lg px-3 py-1.5 font-bold" style={{ color: P1_COLOR }}>You: 🟣</span>
-        <span className="bg-card rounded-lg px-3 py-1.5 font-bold" style={{ color: P2_COLOR }}>AI: 🟠</span>
-        <span className={`bg-card rounded-lg px-3 py-1.5 text-xs font-bold ${turn === 1 && !over ? 'text-accent animate-pulse' : 'text-text-muted'}`}>
-          {over ? 'Game over' : turn === 1 ? 'Your turn' : 'AI thinking…'}
-        </span>
-      </div>
+      {isOnline ? (
+        <div className="flex gap-2 justify-center py-2 text-xs items-center flex-wrap flex-shrink-0">
+          <span className={`bg-card rounded-lg px-3 py-1.5 font-bold ${isMyTurn ? 'text-accent' : 'text-text-muted'}`}>
+            You: {myPlayer === 1 ? '🟣' : '🟠'}
+          </span>
+          <span className="bg-card rounded-lg px-3 py-1.5 font-bold text-text-muted">
+            {oppLabel}: {otherPlayer === 1 ? '🟣' : '🟠'}
+          </span>
+          <span className={`font-bold ${over ? 'text-text-muted' : isMyTurn ? 'text-success animate-pulse' : 'text-text-muted'}`}>
+            {over ? 'Game over' : isMyTurn ? 'Your turn' : 'Waiting...'}
+          </span>
+        </div>
+      ) : (
+        <div className="flex gap-3 justify-center py-2 text-sm flex-shrink-0">
+          <span className="bg-card rounded-lg px-3 py-1.5 font-bold" style={{ color: P1_COLOR }}>You: 🟣</span>
+          <span className="bg-card rounded-lg px-3 py-1.5 font-bold" style={{ color: P2_COLOR }}>AI: 🟠</span>
+          <span className={`bg-card rounded-lg px-3 py-1.5 text-xs font-bold ${turn === 1 && !over ? 'text-accent animate-pulse' : 'text-text-muted'}`}>
+            {over ? 'Game over' : turn === 1 ? 'Your turn' : 'AI thinking…'}
+          </span>
+        </div>
+      )}
 
       <div
         className="flex-1 min-h-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-xl mx-2 mb-2"
         tabIndex={0}
         role="application"
         aria-roledescription="Score Four board"
-        aria-label={`Score Four: 4 by 4 by 4 board. ${beads.length} beads placed. ${turn === 1 ? 'Your turn. Arrow keys choose a rod, Enter drops a bead.' : 'AI is thinking.'}`}
+        aria-label={`Score Four: 4 by 4 by 4 board. ${beads.length} beads placed. ${
+          over ? 'Game over.'
+          : isMyTurn ? 'Your turn. Arrow keys choose a rod, Enter drops a bead.'
+          : isOnline ? 'Waiting for opponent.' : 'AI is thinking.'
+        }`}
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

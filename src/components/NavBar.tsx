@@ -30,6 +30,7 @@ export function NavBar() {
   const location = useLocation();
   const { player } = useAuth();
   const chatUnread = useChatUnread(location.pathname === '/chat');
+  const kidMode = !!player?.kidMode;
 
   const firstName = (player?.name ?? '').split(/\s+/)[0] || 'You';
 
@@ -37,7 +38,7 @@ export function NavBar() {
     { path: '/', icon: Home, label: 'Home', kind: 'icon' },
     { path: '/games', icon: Gamepad2, label: 'Games', kind: 'icon' },
     { path: '/leaderboard', icon: Trophy, label: 'Rankings', kind: 'icon' },
-    { path: '/chat', icon: MessageCircle, label: 'Chat', kind: 'icon' },
+    { path: '/chat', icon: MessageCircle, label: kidMode ? 'Activity' : 'Chat', kind: 'icon' },
     { path: '/profile', label: firstName, kind: 'avatar' },
   ];
 
@@ -67,7 +68,7 @@ export function NavBar() {
             ) : (
               <span className="relative">
                 <t.icon size={20} strokeWidth={active ? 2.5 : 2} className="relative" />
-                {t.path === '/chat' && chatUnread && (
+                {t.path === '/chat' && chatUnread && !kidMode && (
                   <span
                     className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-danger ring-2 ring-surface"
                     aria-hidden

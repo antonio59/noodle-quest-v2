@@ -37,9 +37,18 @@ export const signUp = mutation({
     const pinSalt = generateSalt();
     const pinHash = await hashPin(args.pin, pinSalt);
     const now = Date.now();
-    const playerId = await ctx.db.insert("players", { name, pinHash, pinSalt, avatar, createdAt: now, lastActive: now });
+    const playerId = await ctx.db.insert("players", {
+      name,
+      pinHash,
+      pinSalt,
+      avatar,
+      kidMode: false,
+      theme: "dark",
+      createdAt: now,
+      lastActive: now,
+    });
     const sessionToken = await createSession(ctx, playerId);
-    return { playerId, avatar, sessionToken };
+    return { playerId, avatar, sessionToken, kidMode: false, theme: "dark" as const };
   },
 });
 
@@ -80,7 +89,14 @@ export const logIn = mutation({
 
     await ctx.db.patch(player._id, { lastActive: now, failedAttempts: 0, lockedUntil: undefined });
     const sessionToken = await createSession(ctx, player._id);
-    return { playerId: player._id, name: player.name, avatar: player.avatar, sessionToken };
+    return {
+      playerId: player._id,
+      name: player.name,
+      avatar: player.avatar,
+      sessionToken,
+      kidMode: player.kidMode ?? false,
+      theme: player.theme ?? "dark",
+    };
   },
 });
 
@@ -145,6 +161,24 @@ export const updateName = mutation({
     if (existing && existing._id !== player._id) return { error: "Name already taken!" };
     await ctx.db.patch(player._id, { name: trimmed });
     return { success: true, name: trimmed };
+  },
+});
+
+export const updatePrefs = mutation({
+  args: {
+    sessionToken: v.string(),
+    kidMode: v.optional(v.boolean()),
+    theme: v.optional(v.union(v.literal("dark"), v.literal("light"))),
+  },
+  handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return { error: "Not signed in." };
+    const patch: { kidMode?: boolean; theme?: "dark" | "light" } = {};
+    if (args.kidMode !== undefined) patch.kidMode = args.kidMode;
+    if (args.theme !== undefined) patch.theme = args.theme;
+    if (Object.keys(patch).length === 0) return { error: "Nothing to update." };
+    await ctx.db.patch(player._id, patch);
+    return { success: true, ...patch };
   },
 });
 

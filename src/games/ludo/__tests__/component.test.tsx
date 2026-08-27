@@ -82,7 +82,7 @@ describe('ludo online multiplayer', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /roll/i }));
     expect(onMove).toHaveBeenCalledTimes(1);
-    const payload = onMove.mock.calls[0][0] as { boardState: { pieces: [number[], number[]]; turnSeat: number } };
+    const payload = onMove.mock.calls[0][0] as { boardState: { pieces: number[][]; turnSeat: number } };
     expect(payload.boardState.pieces[0][0]).toBe(8); // 5 + 3
     expect(payload.boardState.turnSeat).toBe(2);     // not a 6 → turn passes
   });
@@ -105,5 +105,43 @@ describe('ludo online multiplayer', () => {
     expect(onMove).toHaveBeenCalledTimes(1);
     const payload = onMove.mock.calls[0][0] as { boardState: { turnSeat: number } };
     expect(payload.boardState.turnSeat).toBe(1); // bonus roll — still my turn
+  });
+
+  test('4-player online rotates turnSeat past seat 4 back to 1', () => {
+    const onMove = vi.fn();
+    const four: MultiplayerState = {
+      sessionId: 's4',
+      playerNumber: 4,
+      currentPlayer: 4,
+      opponentName: 'P1',
+      opponentAvatar: '🐱',
+      status: 'playing',
+      players: [
+        { id: 'a', name: 'P1', avatar: '🐱', seat: 1 },
+        { id: 'b', name: 'P2', avatar: '🐶', seat: 2 },
+        { id: 'c', name: 'P3', avatar: '🦊', seat: 3 },
+        { id: 'd', name: 'P4', avatar: '🐻', seat: 4 },
+      ],
+      boardState: {
+        pieces: [
+          [-1, -1, -1, -1],
+          [-1, -1, -1, -1],
+          [-1, -1, -1, -1],
+          [5, -1, -1, -1],
+        ],
+        lastRoll: 2,
+        turnSeat: 4,
+      },
+    };
+    vi.spyOn(Math, 'random').mockReturnValue(0.4); // roll 3
+    render(<LudoGame {...props} multiplayerState={four} onMultiplayerMove={onMove} />);
+    startGame();
+
+    fireEvent.click(screen.getByRole('button', { name: /roll/i }));
+    expect(onMove).toHaveBeenCalledTimes(1);
+    const payload = onMove.mock.calls[0][0] as { boardState: { pieces: number[][]; turnSeat: number } };
+    expect(payload.boardState.pieces).toHaveLength(4);
+    expect(payload.boardState.pieces[3][0]).toBe(8);
+    expect(payload.boardState.turnSeat).toBe(1); // seat 4 → seat 1
   });
 });

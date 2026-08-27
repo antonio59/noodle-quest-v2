@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { playerFromSession } from "./model/auth";
+import { validateMoveForGame } from "./model/validateMove";
 
 // Generate a short unique invite code via CSPRNG; retry on collision.
 async function generateInviteCode(ctx: MutationCtx): Promise<string> {
@@ -359,13 +360,24 @@ export const makeMove = mutation({
       }
     }
 
-    const moves = [...session.moves, { player: seat.seat, move: args.move, at: Date.now() }];
-    const nextSeat = (seat.seat % roster.length) + 1;
+    const boardState = args.move?.boardState ?? session.boardState;
+    // Only run per-game board checks when a board snapshot is present
+    // (legacy/partial clients may send move payloads without boardState).
+    if (args.move?.boardState !== undefined) {
+      const rulesError = validateMoveForGame(session.gameId, boardState, winner, seat.seat);
+      if (rulesError) return { error: rulesError };
+    }
 
-    // boardState is still accepted from the client for now (no server-side
-    // game-rules validation yet); only winner is range-checked above.
+    const moves = [...session.moves, { player: seat.seat, move: args.move, at: Date.now() }];
+    // Prefer client-supplied turnSeat (Ludo bonus-6 / Cube Twist) when valid.
+    const clientTurn = args.move?.boardState?.turnSeat;
+    const nextSeat =
+      Number.isInteger(clientTurn) && clientTurn >= 1 && clientTurn <= roster.length
+        ? clientTurn
+        : (seat.seat % roster.length) + 1;
+
     await ctx.db.patch(args.sessionId, {
-      boardState: args.move.boardState ?? session.boardState,
+      boardState,
       currentPlayer: nextSeat,
       moves,
       winner,
