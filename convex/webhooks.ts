@@ -2,6 +2,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { timingSafeEqual } from "./model/admin";
 
 const http = httpRouter();
 
@@ -11,16 +12,20 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     try {
-      // Verify webhook secret if configured
+      // Fail closed: webhook must be configured
       const webhookSecret = process.env.WEBHOOK_SECRET;
-      if (webhookSecret) {
-        const headerSecret = request.headers.get("X-Webhook-Secret");
-        if (headerSecret !== webhookSecret) {
-          return new Response(
-            JSON.stringify({ error: "Unauthorized" }),
-            { status: 401, headers: { "Content-Type": "application/json" } }
-          );
-        }
+      if (!webhookSecret) {
+        return new Response(
+          JSON.stringify({ error: "Webhook not configured" }),
+          { status: 503, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      const headerSecret = request.headers.get("X-Webhook-Secret") ?? "";
+      if (!timingSafeEqual(headerSecret, webhookSecret)) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
       }
 
       const body = await request.json() as Record<string, any>;
@@ -86,14 +91,22 @@ http.route({
   method: "POST",
   handler: httpAction(async (ctx, request) => {
     try {
-      const body = await request.json() as Record<string, any>;
-      
-      // Verify webhook signature if configured
-      const webhookSecret = process.env.LINEAR_WEBHOOK_SECRET;
-      if (webhookSecret) {
-        const signature = request.headers.get("linear-signature");
-        // Add signature verification here if needed
+      const linearSecret = process.env.LINEAR_WEBHOOK_SECRET;
+      if (!linearSecret) {
+        return new Response(
+          JSON.stringify({ error: "Webhook not configured" }),
+          { status: 503, headers: { "Content-Type": "application/json" } }
+        );
       }
+      const signature = request.headers.get("linear-signature") ?? "";
+      if (!timingSafeEqual(signature, linearSecret)) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      const body = await request.json() as Record<string, any>;
 
       // Handle Linear issue status changes
       if (body.action === "update" && body.data?.state?.name === "Done") {
@@ -128,13 +141,6 @@ async function createLinearIssue(
     console.warn("LINEAR_TEAM_ID not configured, skipping Linear issue creation");
     return null;
   }
-
-  const severityLabels: Record<string, string> = {
-    low: "Minor",
-    medium: "Medium",
-    high: "High",
-    critical: "Urgent",
-  };
 
   const priority = report.severity === "critical" ? 1 : report.severity === "high" ? 2 : 3;
 

@@ -230,7 +230,7 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl">
+      <div className="flex justify-between items-center px-4 py-2 bg-[#1a332e] rounded-t-xl">
         <span className="text-green-400 font-bold">✓ {popped}</span>
         <span className="text-yellow-400 text-sm">Score: {score}</span>
         <span className="text-red-400 font-bold">✗ {missed}</span>
@@ -239,7 +239,7 @@ function PatiencePopGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       <div
         ref={gameAreaRef}
         className="flex-1 min-h-[280px] relative overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, #232146 0%, #0f0e17 100%)' }}
+        style={{ background: 'linear-gradient(180deg, #1a332e 0%, #0f0e17 100%)' }}
       >
         {bubbles.map(bubble => {
           let bg = 'rgba(103,232,249,0.3)';

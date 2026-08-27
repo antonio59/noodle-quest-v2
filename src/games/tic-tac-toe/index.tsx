@@ -216,7 +216,7 @@ function TicTacToeGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficu
               } ${isWinCell ? 'ring-2 ring-success bg-success/20' : cell ? '' : 'bg-card-hover/50'}`}
               style={{
                 boxShadow: cell ? 'none' : '0 2px 0 rgba(0,0,0,0.2)',
-                color: cell === 'X' ? '#a78bfa' : cell === 'O' ? '#f87171' : undefined,
+                color: cell === 'X' ? '#f0a83a' : cell === 'O' ? '#f87171' : undefined,
                 transform: isWinCell ? 'scale(1.05)' : undefined,
               }}
             >

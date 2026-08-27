@@ -320,7 +320,7 @@ function SnakesLaddersGame({ stage, onScore, onProgress, onMessage, onEnd, aiDif
             <div
               key={cell}
               className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center text-[9px] sm:text-[10px] font-medium rounded-sm relative ${
-                isDark ? 'bg-[#2d2a50]' : 'bg-[#3d3a60]'
+                isDark ? 'bg-[#23423b]' : 'bg-[#3d3a60]'
               } ${cell === BOARD_SIZE ? 'ring-1 ring-accent' : ''}`}
             >
               <span className="text-text-muted/50 absolute top-0 left-0.5">{cell}</span>

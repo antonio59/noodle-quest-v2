@@ -17,16 +17,16 @@ import { getGameComponent } from '@/lib/game-registry';
 import type { GameProps } from '@/types';
 
 const GAME_IDS = [
-  'attention-archery', 'bingo', 'box-breathing', 'breath-bubbles',
-  'calm-breathing', 'checkers', 'chess', 'coherent-breathing',
-  'connect-four', 'copy-cat', 'crossword', 'echo-tap', 'emotion-volcano',
-  'empathy-engine', 'feelings-faces', 'fill-blank', 'flag-match',
-  'flexibility-frames', 'focus-frenzy', 'just-right', 'ludo', 'map-quiz',
-  'memory-match', 'mirror-match', 'mistake-master', 'number-ninja',
-  'patience-pop', 'pattern-painter', 'pixel-paint', 'reverse-cat',
-  'routine-roadmap', 'scrabble', 'snakes-ladders', 'squish-lab',
-  'steady-hands', 'story-builder', 'tic-tac-toe', 'triangle-breathing',
-  'uno', 'wordsearch',
+  'anagram', 'attention-archery', 'bingo', 'bookworm', 'box-breathing', 'breath-bubbles',
+  'calm-breathing', 'checkers', 'chess', 'coherent-breathing', 'color-rush',
+  'connect-four', 'connect-lines', 'copy-cat', 'crossword', 'cube-twist',
+  'dual-n-back', 'echo-tap', 'emotion-volcano', 'empathy-engine', 'feelings-faces',
+  'fill-blank', 'flag-match', 'flexibility-frames', 'focus-frenzy', 'go-no-go',
+  'grounding', 'just-right', 'ludo', 'map-quiz', 'memory-match', 'mirror-match',
+  'mistake-master', 'number-ninja', 'patience-pop', 'pattern-painter', 'pixel-paint',
+  'quick-math', 'reverse-cat', 'routine-roadmap', 'score-four', 'scrabble',
+  'snakes-ladders', 'squish-lab', 'steady-hands', 'story-builder', 'stroop-challenge',
+  'sudoku', 'tic-tac-toe', 'triangle-breathing', 'uno', 'wordsearch',
 ];
 
 const EPS = 0.001;

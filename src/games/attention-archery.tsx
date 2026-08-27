@@ -224,7 +224,7 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl gap-2">
+      <div className="flex justify-between items-center px-4 py-2 bg-[#1a332e] rounded-t-xl gap-2">
         <span className="text-green-400 font-bold">🎯 {hits}</span>
         <div className="flex items-center gap-2 flex-1 mx-2">
           <div className="flex-1 h-1.5 bg-[#1a1833] rounded-full overflow-hidden">
@@ -274,7 +274,7 @@ function AttentionArcheryGame({ stage, onScore, onProgress, onEnd }: GameProps) 
         ))}
       </div>
 
-      <div className="text-center py-2 text-purple-300 text-sm min-h-[24px]">{feedback}</div>
+      <div className="text-center py-2 text-amber-300 text-sm min-h-[24px]">{feedback}</div>
     </div>
   );
 }

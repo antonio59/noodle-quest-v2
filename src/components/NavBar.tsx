@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Home, Gamepad2, MessageCircle, Trophy, User, LogOut } from 'lucide-react';
+import { Home, Gamepad2, MessageCircle, Trophy, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -28,27 +28,21 @@ type Tab =
 export function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { player, logout } = useAuth();
+  const { player } = useAuth();
   const chatUnread = useChatUnread(location.pathname === '/chat');
 
-  // First name keeps the label compact in the bottom nav.
   const firstName = (player?.name ?? '').split(/\s+/)[0] || 'You';
 
   const tabs: Tab[] = [
     { path: '/', icon: Home, label: 'Home', kind: 'icon' },
     { path: '/games', icon: Gamepad2, label: 'Games', kind: 'icon' },
-    { path: '/leaderboard', icon: Trophy, label: 'Ranks', kind: 'icon' },
+    { path: '/leaderboard', icon: Trophy, label: 'Rankings', kind: 'icon' },
     { path: '/chat', icon: MessageCircle, label: 'Chat', kind: 'icon' },
     { path: '/profile', label: firstName, kind: 'avatar' },
   ];
 
-  const handleSwitchPlayer = () => {
-    logout();
-    navigate('/auth');
-  };
-
   return (
-    <nav aria-label="Primary" className="flex-shrink-0 flex border-t border-white/5 bg-surface px-1">
+    <nav aria-label="Primary" className="flex-shrink-0 flex border-t border-white/5 bg-surface/95 backdrop-blur-sm px-1">
       {tabs.map(t => {
         const active = location.pathname === t.path;
         const accessibleName = t.kind === 'avatar' ? `Profile (${player?.name ?? 'you'})` : t.path === '/chat' && chatUnread ? `${t.label} (new messages)` : t.label;
@@ -85,15 +79,6 @@ export function NavBar() {
           </button>
         );
       })}
-      <button
-        onClick={handleSwitchPlayer}
-        aria-label={player ? `Sign out ${player.name} and switch player` : 'Switch player'}
-        className="flex-shrink-0 flex flex-col items-center justify-center gap-1 px-3 py-3 text-text-muted hover:text-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent border-l border-white/5"
-        title={player ? `Sign out ${player.name} and switch player` : 'Switch Player'}
-      >
-        <LogOut size={20} strokeWidth={2} aria-hidden />
-        <span className="text-[10px] font-semibold">Switch</span>
-      </button>
     </nav>
   );
 }

@@ -78,7 +78,7 @@ export function WordSearchGrid({
                     ? 'text-white font-extrabold'
                     : state.selected
                       ? 'bg-accent text-white ring-2 ring-white/60 scale-105 shadow-lg shadow-accent/30 z-20'
-                      : 'bg-[#1e1b4b] text-violet-200 hover:bg-[#2d2880] hover:text-white',
+                      : 'bg-[#142824] text-teal-200 hover:bg-[#23423b] hover:text-white',
                 ].join(' ')}
                 style={{ fontSize: '0.9rem', letterSpacing: '0.05em' }}
               >

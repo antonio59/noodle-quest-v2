@@ -33,12 +33,12 @@ const ALL_TEXTURES: Record<number, Texture[]> = {
   ],
   5: [
     { name: 'Pop Rocks', emoji: '💥', color: '#ef4444', bg: '#fecaca', feel: 'bubbly and fizzy' },
-    { name: 'Spider Silk', emoji: '🕸️', color: '#a78bfa', bg: '#ede9fe', feel: 'thin and tickly' },
+    { name: 'Spider Silk', emoji: '🕸️', color: '#f0a83a', bg: '#ede9fe', feel: 'thin and tickly' },
     { name: 'Mystery Goo', emoji: '🔮', color: '#8b5cf6', bg: '#ddd6fe', feel: 'unpredictable' },
     { name: 'Cold Mud', emoji: '🟤', color: '#92400e', bg: '#d6d3d1', feel: 'cold and squishy' },
   ],
   6: [
-    { name: 'Spider Silk', emoji: '🕸️', color: '#a78bfa', bg: '#ede9fe', feel: 'thin and tickly' },
+    { name: 'Spider Silk', emoji: '🕸️', color: '#f0a83a', bg: '#ede9fe', feel: 'thin and tickly' },
     { name: 'Mystery Goo', emoji: '🔮', color: '#8b5cf6', bg: '#ddd6fe', feel: 'unpredictable' },
     { name: 'Oobleck', emoji: '💧', color: '#06b6d4', bg: '#cffafe', feel: 'solid AND liquid' },
     { name: 'Magnetic Slime', emoji: '🧲', color: '#6b7280', bg: '#e5e7eb', feel: 'pulls at your fingers' },

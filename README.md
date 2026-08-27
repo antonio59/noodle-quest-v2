@@ -99,9 +99,11 @@ pnpm run dev
 | Variable | Where | Description |
 |----------|-------|-------------|
 | `VITE_CONVEX_URL` | frontend | Convex deployment URL (written to `.env.local` by `convex dev`) |
-| `ADMIN_SECRET` | Convex | Gates the admin panel functions |
-| `WEBHOOK_SECRET` | Convex | Verifies incoming report webhooks (optional) |
+| `ADMIN_SECRET` | Convex | Gates admin panel functions (must be ≥24 characters) |
+| `WEBHOOK_SECRET` | Convex | Required for `/webhook/report` (fail-closed if unset) |
 | `LINEAR_API_KEY` | Convex | Creates Linear issues from error reports (optional) |
+| `LINEAR_WEBHOOK_SECRET` | Convex | Required for `/webhook/linear` (fail-closed if unset) |
+| `REPORT_EMAIL_SECRET` | Netlify | Required header for the optional email report function |
 
 ### Scripts
 

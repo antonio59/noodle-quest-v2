@@ -7,7 +7,7 @@ const COLORS = [
   { name: 'BLUE',   hex: '#3b82f6' },
   { name: 'GREEN',  hex: '#4ade80' },
   { name: 'YELLOW', hex: '#fbbf24' },
-  { name: 'PURPLE', hex: '#a78bfa' },
+  { name: 'PURPLE', hex: '#9b59b6' },
   { name: 'ORANGE', hex: '#fb923c' },
 ];
 
@@ -191,7 +191,7 @@ export default function StroopChallenge({ stage, onScore, onProgress, onEnd }: G
               <span className="text-text-muted text-sm">= tap the <em>ink color</em> of the word</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="bg-purple-500/20 text-purple-300 text-xs font-bold px-2 py-1 rounded-lg">WORD</span>
+              <span className="bg-teal-500/20 text-teal-300 text-xs font-bold px-2 py-1 rounded-lg">WORD</span>
               <span className="text-text-muted text-sm">= tap what the <em>word says</em></span>
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function StroopChallenge({ stage, onScore, onProgress, onEnd }: G
 
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-4">
         <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest ${
-          mode === 'color' ? 'bg-accent/20 text-accent' : 'bg-purple-500/20 text-purple-300'
+          mode === 'color' ? 'bg-accent/20 text-accent' : 'bg-teal-500/20 text-teal-300'
         }`}>
           {mode === 'color' ? '🎨 Tap the TEXT COLOR' : '📝 Tap the WORD'}
         </div>

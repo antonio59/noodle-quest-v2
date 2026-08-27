@@ -21,7 +21,7 @@ const BEST_FOR = [
 ];
 
 const PHASE_META: Record<string, { label: string; instruction: string; color: string; glow: string; vertex: [number, number] }> = {
-  inhale: { label: 'Breathe In',  instruction: 'Fill your lungs slowly...',       color: '#a78bfa', glow: '#a78bfa60', vertex: [100, 20]  },
+  inhale: { label: 'Breathe In',  instruction: 'Fill your lungs slowly...',       color: '#f0a83a', glow: '#f0a83a60', vertex: [100, 20]  },
   hold:   { label: 'Hold',        instruction: 'Hold still at the peak...',       color: '#fbbf24', glow: '#fbbf2460', vertex: [180, 170] },
   exhale: { label: 'Breathe Out', instruction: 'Release steadily all the way...', color: '#4ade80', glow: '#4ade8060', vertex: [20, 170]  },
 };

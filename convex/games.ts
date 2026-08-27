@@ -8,7 +8,8 @@ export const saveScore = mutation({
   handler: async (ctx, args) => {
     const player = await playerFromSession(ctx, args.sessionToken);
     if (!player) return { error: "Not signed in." };
-    if (!Number.isFinite(args.score) || args.score < 0) return { error: "Invalid score." };
+    if (!/^[a-z0-9-]{1,40}$/.test(args.gameId)) return { error: "Invalid game." };
+    if (!Number.isFinite(args.score) || args.score < 0 || args.score > 1_000_000) return { error: "Invalid score." };
     if (!Number.isInteger(args.stars) || args.stars < 0 || args.stars > 3) return { error: "Invalid stars." };
     if (!Number.isInteger(args.stage) || args.stage < 1) return { error: "Invalid stage." };
 
@@ -28,11 +29,13 @@ export const saveScore = mutation({
 });
 
 export const getPlayerProgress = query({
-  args: { playerId: v.id("players"), gameId: v.string() },
+  args: { sessionToken: v.string(), gameId: v.string() },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return null;
     const rows = await ctx.db
       .query("progress")
-      .withIndex("by_player_game", q => q.eq("playerId", args.playerId).eq("gameId", args.gameId))
+      .withIndex("by_player_game", q => q.eq("playerId", player._id).eq("gameId", args.gameId))
       .collect();
     // Return the highest stage that was completed (earned at least 1 star)
     let maxStage = 0;
@@ -44,9 +47,11 @@ export const getPlayerProgress = query({
 });
 
 export const getPlayerStats = query({
-  args: { playerId: v.id("players") },
+  args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
-    const scores = await ctx.db.query("scores").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return null;
+    const scores = await ctx.db.query("scores").withIndex("by_player", q => q.eq("playerId", player._id)).collect();
     let totalStars = 0;
     let totalScore = 0;
     const gameIds = new Set<string>();
@@ -56,7 +61,7 @@ export const getPlayerStats = query({
       gameIds.add(s.gameId);
     }
     // Get progress for best stage info
-    const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", args.playerId)).collect();
+    const progress = await ctx.db.query("progress").withIndex("by_player", q => q.eq("playerId", player._id)).collect();
     const gameStages: Record<string, { highScore: number; starsEarned: number; timesPlayed: number; lastPlayed: number; lastStage: number }> = {};
     for (const p of progress) {
       const existing = gameStages[p.gameId];

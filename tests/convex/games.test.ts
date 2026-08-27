@@ -62,13 +62,13 @@ describe("saveScore", () => {
 describe("getPlayerStats — continue playing", () => {
   test("tracks the most recently played game and stage", async (): Promise<void> => {
     const t = setup();
-    const { sessionToken, playerId } = await signedUpPlayer(t, "Resumer");
+    const { sessionToken } = await signedUpPlayer(t, "Resumer");
     await t.mutation(api.games.saveScore, { sessionToken, gameId: "chess", stage: 3, score: 50, stars: 2 });
     await t.mutation(api.games.saveScore, { sessionToken, gameId: "ludo", stage: 5, score: 80, stars: 3 });
 
-    const stats = await t.query(api.games.getPlayerStats, { playerId });
-    const chess = stats.gameStages["chess"];
-    const ludo = stats.gameStages["ludo"];
+    const stats = await t.query(api.games.getPlayerStats, { sessionToken });
+    const chess = stats!.gameStages["chess"];
+    const ludo = stats!.gameStages["ludo"];
     expect(chess.lastStage).toBe(3);
     expect(ludo.lastStage).toBe(5);
     // Ludo was played last
@@ -148,7 +148,7 @@ describe("multiplayer", () => {
 describe("adminMergePlayers", () => {
   test("moves progress, scores, and feed posts to the target", async () => {
     const t = setup();
-    process.env.ADMIN_SECRET = "s3cret";
+    process.env.ADMIN_SECRET = "test-admin-secret-min-24chars!";
     const a = await signedUpPlayer(t, "Source");
     const b = await signedUpPlayer(t, "Target");
 
@@ -157,7 +157,7 @@ describe("adminMergePlayers", () => {
     await t.mutation(api.games.saveScore, { sessionToken: a.sessionToken, gameId: "ludo", stage: 2, score: 70, stars: 3 });
 
     const res = await t.mutation(api.auth.adminMergePlayers, {
-      sourceId: a.playerId, targetId: b.playerId, adminSecret: "s3cret",
+      sourceId: a.playerId, targetId: b.playerId, adminSecret: "test-admin-secret-min-24chars!",
     });
     expect(res.success).toBe(true);
 

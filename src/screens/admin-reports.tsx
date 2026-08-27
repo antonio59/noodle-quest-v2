@@ -1,7 +1,6 @@
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Bug, AlertCircle, Lightbulb, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, Bug, AlertCircle, Lightbulb, Clock } from 'lucide-react';
 
 const TYPE_ICONS: Record<string, typeof Bug> = {
   bug: Bug,
@@ -22,11 +21,100 @@ const STATUS_COLORS: Record<string, string> = {
   dismissed: 'text-text-muted',
 };
 
+interface ReportRow {
+  _id: string;
+  errorType: string;
+  status: string;
+  message: string;
+  playerName?: string;
+  gameId?: string;
+  createdAt: number;
+}
+
 export function AdminReports() {
   const navigate = useNavigate();
-  const reports = useQuery(api.reports.getRecentReports, { limit: 50 });
+  const [secret, setSecret] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [reports, setReports] = useState<ReportRow[] | null>(null);
+  const [error, setError] = useState('');
+
+  const CONVEX_URL = import.meta.env.VITE_CONVEX_URL;
+
+  const fetchReports = useCallback(async () => {
+    try {
+      const res = await fetch(`${CONVEX_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Convex-Client': 'npm-1.33.1' },
+        body: JSON.stringify({
+          path: 'reports:getRecentReports',
+          format: 'convex_encoded_json',
+          args: [{ limit: 50, adminSecret: secret }],
+        }),
+      });
+      const data = await res.json();
+      if (data.value?.error) {
+        setError(data.value.error);
+        setAuthenticated(false);
+        setReports(null);
+      } else if (data.value?.reports) {
+        setReports(data.value.reports);
+        setError('');
+      } else {
+        setError('Failed to load reports');
+      }
+    } catch {
+      setError('Failed to load reports');
+    }
+  }, [CONVEX_URL, secret]);
+
+  useEffect(() => {
+    if (authenticated) fetchReports();
+  }, [authenticated, fetchReports]);
+
+  const handleAuthenticate = () => {
+    if (secret.length < 4) {
+      setError('Enter admin secret');
+      return;
+    }
+    setAuthenticated(true);
+    setError('');
+  };
 
   const openCount = reports?.filter(r => r.status === 'open').length ?? 0;
+
+  if (!authenticated) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="p-5 max-w-md mx-auto">
+          <div className="flex items-center gap-3 mb-6">
+            <button
+              onClick={() => navigate('/games')}
+              className="text-text-muted hover:text-text p-2 bg-card rounded-xl"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-xl font-bold">Issue Reports</h1>
+          </div>
+          <p className="text-text-muted text-sm mb-4">Enter admin secret to view reports.</p>
+          <input
+            type="password"
+            value={secret}
+            onChange={e => setSecret(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAuthenticate()}
+            placeholder="Admin secret"
+            className="w-full bg-surface border border-white/10 rounded-xl px-4 py-3 text-sm mb-3"
+          />
+          {error && <p className="text-danger text-sm mb-3">{error}</p>}
+          <button
+            onClick={handleAuthenticate}
+            className="w-full bg-accent text-white font-bold py-3 rounded-xl"
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -45,6 +133,8 @@ export function AdminReports() {
             </p>
           </div>
         </div>
+
+        {error && <p className="text-danger text-sm mb-3">{error}</p>}
 
         {!reports?.length && (
           <div className="text-center py-12 text-text-dim">
@@ -94,12 +184,6 @@ export function AdminReports() {
                 {report.gameId && (
                   <p className="text-xs text-text-dim">
                     Game: {report.gameId}
-                  </p>
-                )}
-
-                {report.context && typeof report.context === 'object' && (report.context as any).description && (
-                  <p className="text-xs text-text-muted mt-2 bg-surface rounded-lg p-2">
-                    {(report.context as any).description}
                   </p>
                 )}
               </div>

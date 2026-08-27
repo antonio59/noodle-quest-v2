@@ -95,7 +95,7 @@ function EchoTapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [statusText, setStatusText] = useState('');
   const [statusColor, setStatusColor] = useState('#67e8f9');
   const [feedback, setFeedback] = useState('');
-  const [feedbackColor, setFeedbackColor] = useState('#a78bfa');
+  const [feedbackColor, setFeedbackColor] = useState('#f0a83a');
   const [beatDots, setBeatDots] = useState<Array<'off' | 'on' | 'tap'>>(Array(config.beats).fill('off'));
   const [tapBtnActive, setTapBtnActive] = useState(false);
   const [tapBtnFlash, setTapBtnFlash] = useState(false);
@@ -349,7 +349,7 @@ function EchoTapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
             key={i}
             className="w-6 h-6 rounded-full transition-all duration-100"
             style={{
-              background: state === 'on' ? '#c084fc' : state === 'tap' ? '#4ade80' : '#232146',
+              background: state === 'on' ? '#c084fc' : state === 'tap' ? '#4ade80' : '#1a332e',
               transform: state !== 'off' ? 'scale(1.5)' : 'scale(1)',
               boxShadow: state === 'on' ? '0 0 16px #c084fc' : state === 'tap' ? '0 0 16px #4ade80' : 'none',
               border: `2px solid ${state === 'tap' ? '#4ade80' : '#c084fc'}`,
@@ -379,7 +379,7 @@ function EchoTapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
           style={{
             border: `5px solid ${tapBtnActive ? '#4ade80' : '#c084fc'}`,
             background: tapBtnFlash
-              ? 'radial-gradient(circle, #4ade8060, #232146)'
+              ? 'radial-gradient(circle, #4ade8060, #1a332e)'
               : 'radial-gradient(circle, #2d2a5e, #1a1833)',
             boxShadow: tapBtnActive
               ? '0 0 30px #4ade8060, 0 0 60px #4ade8020, inset 0 0 20px #4ade8015'

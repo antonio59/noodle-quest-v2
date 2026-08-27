@@ -60,7 +60,7 @@ const SHAPES_BY_STAGE: Record<number, ShapeDef[]> = {
 const TIPS = [
   '💡 Tip: Focus on TWO DOTS at a time — connect them, then move to the next pair!',
   '💡 Tip: Go SLOW! Accuracy beats speed. Follow the dotted path carefully.',
-  '💡 Tip: Start at any purple dot and trace around the whole shape.',
+  '💡 Tip: Start at any gold dot and trace around the whole shape.',
   '💡 Tip: Keep your finger/mouse ON the dotted line as much as possible.',
   '💡 Tip: If you mess up, tap CLEAR and try again — practice makes perfect!',
 ];
@@ -338,7 +338,7 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
       setFeedback(`👍 Good effort! ${shapeScore}% — try to stay closer to the dots next time.`);
       setFeedbackColor('#fbbf24');
     } else if (accuracy > 0.3) {
-      setFeedback(`💡 ${shapeScore}% — Focus on connecting the purple dots one at a time!`);
+      setFeedback(`💡 ${shapeScore}% — Focus on connecting the gold dots one at a time!`);
       setFeedbackColor('#fbbf24');
     } else {
       setFeedback('💡 Try following the dotted line more closely. Start at any dot and trace around!');
@@ -397,8 +397,8 @@ function PatternPainterGame({ stage, onScore, onProgress, onMessage, onEnd }: Ga
         <div className="bg-surface rounded-lg p-3 mb-4 max-w-xs">
           <div className="text-accent text-sm mb-1">How to trace well:</div>
           <div className="text-text-dim text-xs text-left">
-            • Follow the <span className="text-accent">purple dotted line</span><br />
-            • Hit the <span className="text-accent">purple dots</span> as you go<br />
+            • Follow the <span className="text-accent">gold dotted line</span><br />
+            • Hit the <span className="text-accent">gold dots</span> as you go<br />
             • Tap <span className="text-success">Done</span> when finished
           </div>
         </div>

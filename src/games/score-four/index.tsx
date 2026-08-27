@@ -9,7 +9,7 @@ import {
   type Board, type Player, type Rod,
 } from './logic';
 
-const P1_COLOR = '#a78bfa'; // you
+const P1_COLOR = '#f0a83a'; // you
 const P2_COLOR = '#f59e0b'; // AI
 const SPACING = 1.15;
 
@@ -82,7 +82,7 @@ function Scene({ beads, cursor, hover, onRodClick, onRodHover, yaw, pitch }: Sce
       {/* Base plate */}
       <mesh position={[0, -0.15, 0]}>
         <boxGeometry args={[N * SPACING + 0.9, 0.3, N * SPACING + 0.9]} />
-        <meshStandardMaterial color="#232040" roughness={0.8} />
+        <meshStandardMaterial color="#1a332e" roughness={0.8} />
       </mesh>
 
       {/* Rods + fat invisible hit targets */}
@@ -96,8 +96,8 @@ function Scene({ beads, cursor, hover, onRodClick, onRodHover, yaw, pitch }: Sce
             <mesh position={[0, rodH / 2, 0]}>
               <cylinderGeometry args={[0.06, 0.06, rodH, 10]} />
               <meshStandardMaterial
-                color={isCursor ? '#fbbf24' : isHover ? '#a78bfa' : '#4a4570'}
-                emissive={isCursor ? '#fbbf24' : isHover ? '#a78bfa' : '#000000'}
+                color={isCursor ? '#fbbf24' : isHover ? '#f0a83a' : '#3a5a52'}
+                emissive={isCursor ? '#fbbf24' : isHover ? '#f0a83a' : '#000000'}
                 emissiveIntensity={isCursor || isHover ? 0.45 : 0}
                 roughness={0.5}
               />

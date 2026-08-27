@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { GameProps } from '@/types';
 import { scaleFromLast } from '@/lib/endless-stage';
 
-const COLORS = ['#232146', '#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24'];
+const COLORS = ['#1a332e', '#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24'];
 
 type PatternType = 'rings' | 'diagonal' | 'checkerboard' | 'spiral' | 'cross' | 'random';
 

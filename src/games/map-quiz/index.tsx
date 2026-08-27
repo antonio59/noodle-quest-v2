@@ -343,7 +343,7 @@ export default function MapQuiz({ stage, onScore, onProgress, onEnd }: GameProps
           className="h-full bg-accent transition-all duration-300 rounded-r"
           style={{
             width: `${Math.min(pct * 100, 100)}%`,
-            boxShadow: pct > 0 ? '0 0 8px var(--color-accent, #a78bfa)' : 'none',
+            boxShadow: pct > 0 ? '0 0 8px var(--color-accent, #f0a83a)' : 'none',
           }}
         />
       </div>

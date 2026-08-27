@@ -265,7 +265,7 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               </clipPath>
             </defs>
             <polygon points="14,110 58,110 72,66 64,33 50,0 22,0 8,33 0,66"
-              fill="#2d2a50" stroke="#a78bfa" strokeWidth="1" />
+              fill="#23423b" stroke="#f0a83a" strokeWidth="1" />
             <rect
               x="0" y={110 - heat * 1.1} width="72" height={heat * 1.1}
               fill="url(#lava-grad)"
@@ -315,8 +315,8 @@ function EmotionVolcanoGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               disabled={used || phase !== 'playing'}
               className="p-2.5 rounded-xl text-sm flex flex-col items-center gap-0.5 transition-all active:scale-95"
               style={{
-                background: used ? '#16534440' : 'var(--color-card, #232146)',
-                border: `2px solid ${used ? '#4ade80' : 'var(--color-accent, #a78bfa)'}`,
+                background: used ? '#16534440' : 'var(--color-card, #1a332e)',
+                border: `2px solid ${used ? '#4ade80' : 'var(--color-accent, #f0a83a)'}`,
                 opacity: used ? 0.65 : 1,
               }}
             >

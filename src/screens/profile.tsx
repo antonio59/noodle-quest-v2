@@ -28,7 +28,7 @@ export function Profile() {
     if (next) playWin(); // instant audible confirmation
   };
 
-  const stats = useQuery(api.games.getPlayerStats, player ? { playerId: player.playerId as any } : 'skip' as any);
+  const stats = useQuery(api.games.getPlayerStats, player?.sessionToken ? { sessionToken: player.sessionToken } : 'skip' as any);
 
   const totalStars = stats?.totalStars ?? 0;
   const gamesPlayed = stats?.gamesPlayed ?? 0;
@@ -203,7 +203,7 @@ export function Profile() {
             {[
               { icon: Gamepad2, color: 'text-sky-400',     bg: 'bg-sky-500/12',     val: gamesPlayed,              label: 'Games' },
               { icon: Zap,      color: 'text-emerald-400', bg: 'bg-emerald-500/12', val: totalPlays,               label: 'Plays' },
-              { icon: Trophy,   color: 'text-violet-400',  bg: 'bg-violet-500/12',  val: highestScore.toLocaleString(), label: 'Best' },
+              { icon: Trophy,   color: 'text-amber-400',  bg: 'bg-amber-500/12',  val: highestScore.toLocaleString(), label: 'Best' },
               { icon: Star,     color: 'text-amber-400',   bg: 'bg-amber-500/12',   val: avgStarsPerGame,          label: 'Avg ⭐' },
             ].map(({ icon: Icon, color, bg, val, label }) => (
               <div key={label} className="bg-card rounded-xl p-3 text-center border border-white/5">

@@ -15,7 +15,7 @@ const CONFIG: Record<number, { minLen: number; maxLen: number; showTime: number;
   10: { minLen: 8, maxLen: 10, showTime: 4500, maxRounds: 5 },
 };
 
-const DIGIT_COLORS = ['#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24', '#ff6e6c', '#a78bfa', '#34d399', '#f472b6', '#60a5fa'];
+const DIGIT_COLORS = ['#ff6e6c', '#c084fc', '#67e8f9', '#4ade80', '#fbbf24', '#ff6e6c', '#f0a83a', '#34d399', '#f472b6', '#60a5fa'];
 
 type Phase = 'ready' | 'memorize' | 'input' | 'result' | 'done';
 
@@ -32,7 +32,7 @@ function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [sequence, setSequence] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [feedbackColor, setFeedbackColor] = useState('#a78bfa');
+  const [feedbackColor, setFeedbackColor] = useState('#f0a83a');
   const [message, setMessage] = useState('');
   const [messageColor, setMessageColor] = useState('#67e8f9');
   const [timeLeft, setTimeLeft] = useState(0);
@@ -76,7 +76,7 @@ function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setMessage('🧠 Memorize!');
     setMessageColor('#67e8f9');
     setFeedback(`${seq.length} digits — try grouping in pairs!`);
-    setFeedbackColor('#a78bfa');
+    setFeedbackColor('#f0a83a');
     setPhase('memorize');
 
     const showDuration = config.showTime + (roundNum * 150);
@@ -244,7 +244,7 @@ function NumberNinjaGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               <span
                 key={i}
                 className="text-3xl font-bold font-mono w-9 h-9 rounded-lg flex items-center justify-center text-text-muted"
-                style={{ background: '#232146', border: '2px dashed #a78bfa40' }}
+                style={{ background: '#1a332e', border: '2px dashed #f0a83a40' }}
               >
                 {inputValue[i] !== undefined
                   ? <span style={{ color: inputCorrectMask[i] !== undefined ? (inputCorrectMask[i] ? '#4ade80' : '#ff6e6c') : '#fff' }}>{inputValue[i]}</span>

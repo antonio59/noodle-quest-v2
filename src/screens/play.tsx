@@ -72,7 +72,7 @@ export function PlayGame() {
   // Fetch player's progress for this game to enable stage selection
   const playerProgress = useQuery(
     api.games.getPlayerProgress,
-    player && gameId ? { playerId: player.playerId as any, gameId } : 'skip' as any,
+    player?.sessionToken && gameId ? { sessionToken: player.sessionToken, gameId } : 'skip' as any,
   );
   const maxUnlocked = playerProgress?.maxUnlockedStage ?? 1;
   // Difficulty follows the stage on the board, so replaying stage 1 is a
@@ -697,7 +697,7 @@ export function PlayGame() {
           className="h-full bg-accent transition-all duration-300 rounded-r"
           style={{
             width: `${Math.min(progress * 100, 100)}%`,
-            boxShadow: progress > 0 ? '0 0 8px var(--color-accent, #a78bfa)' : 'none',
+            boxShadow: progress > 0 ? '0 0 8px var(--color-accent, #f0a83a)' : 'none',
           }}
         />
       </div>

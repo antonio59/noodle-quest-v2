@@ -1,16 +1,26 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import { playerFromSession } from "./model/auth";
 
-// Generate a short unique invite code
-function generateInviteCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+// Generate a short unique invite code via CSPRNG; retry on collision.
+async function generateInviteCode(ctx: MutationCtx): Promise<string> {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (let attempt = 0; attempt < 32; attempt++) {
+    const bytes = new Uint8Array(6);
+    crypto.getRandomValues(bytes);
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars[bytes[i]! % chars.length];
+    }
+    const existing = await ctx.db
+      .query("multiplayer_invites")
+      .withIndex("by_code", q => q.eq("inviteCode", code))
+      .unique();
+    if (!existing) return code;
   }
-  return code;
+  throw new Error("Failed to generate unique invite code");
 }
 
 interface Seat {
@@ -90,7 +100,7 @@ export const createInvite = mutation({
       updatedAt: Date.now(),
     });
 
-    const inviteCode = generateInviteCode();
+    const inviteCode = await generateInviteCode(ctx);
     const inviteId = await ctx.db.insert("multiplayer_invites", {
       gameId: args.gameId,
       fromId,
@@ -145,12 +155,14 @@ export const getInvite = query({
   },
 });
 
-// Get pending invites for a player
+// Get pending invites for the signed-in player
 export const getPendingInvites = query({
-  args: { playerId: v.id("players") },
+  args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return [];
     const invites = await ctx.db.query("multiplayer_invites")
-      .withIndex("by_to", q => q.eq("toId", args.playerId).eq("status", "pending"))
+      .withIndex("by_to", q => q.eq("toId", player._id).eq("status", "pending"))
       .collect();
     return invites
       .filter(i => i.expiresAt > Date.now())
@@ -189,6 +201,10 @@ export const joinSession = mutation({
     const player = await playerFromSession(ctx, args.sessionToken);
     if (!player) return { error: "Not signed in." };
     const playerId = player._id;
+
+    if (invite.toId && invite.toId !== playerId) {
+      return { error: "This invite isn't for you." };
+    }
 
     if (!invite.sessionId) return { error: "Session missing." };
     const session = await ctx.db.get(invite.sessionId);
@@ -335,15 +351,25 @@ export const makeMove = mutation({
     if (!seat) return { error: "You are not in this game." };
     if (session.currentPlayer !== seat.seat) return { error: "Not your turn." };
 
+    const winner = args.move?.winner;
+    if (winner !== undefined) {
+      // 0 = draw; otherwise seat 1..roster.length
+      if (!Number.isInteger(winner) || (winner !== 0 && (winner < 1 || winner > roster.length))) {
+        return { error: "Invalid winner." };
+      }
+    }
+
     const moves = [...session.moves, { player: seat.seat, move: args.move, at: Date.now() }];
     const nextSeat = (seat.seat % roster.length) + 1;
 
+    // boardState is still accepted from the client for now (no server-side
+    // game-rules validation yet); only winner is range-checked above.
     await ctx.db.patch(args.sessionId, {
       boardState: args.move.boardState ?? session.boardState,
       currentPlayer: nextSeat,
       moves,
-      winner: args.move.winner,
-      status: args.move.winner !== undefined ? 'finished' : 'playing',
+      winner,
+      status: winner !== undefined ? 'finished' : 'playing',
       updatedAt: Date.now(),
     });
 
@@ -351,20 +377,22 @@ export const makeMove = mutation({
   },
 });
 
-// Get active games for a player. Scans playing sessions the player is in.
+// Get active games for the signed-in player.
 export const getActiveGames = query({
-  args: { playerId: v.id("players") },
+  args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return [];
     const playing = await ctx.db.query("multiplayer_sessions")
       .withIndex("by_status", q => q.eq("status", "playing"))
       .collect();
 
-    const mine = playing.filter(s => rosterFor(s).some(seat => seat.id === args.playerId));
+    const mine = playing.filter(s => rosterFor(s).some(seat => seat.id === player._id));
 
     return mine.map(s => {
       const roster = rosterFor(s);
-      const mySeat = roster.find(seat => seat.id === args.playerId)!;
-      const others = roster.filter(seat => seat.id !== args.playerId);
+      const mySeat = roster.find(seat => seat.id === player._id)!;
+      const others = roster.filter(seat => seat.id !== player._id);
       const firstOther = others[0];
       return {
         _id: s._id,
