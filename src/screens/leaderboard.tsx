@@ -92,42 +92,25 @@ export function Leaderboard() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 bg-surface border-b border-white/5 flex-shrink-0 space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-lg font-bold flex items-center gap-2">
-              <Trophy size={20} className="text-yellow-400" />
+      {/* Header — stacked on mobile so filters don't fight the title */}
+      <div className="px-3 pt-3 pb-2.5 sm:p-4 bg-surface border-b border-white/5 flex-shrink-0 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold flex items-center gap-2">
+              <Trophy size={18} className="text-yellow-400 flex-shrink-0" />
               Rankings
             </h1>
-            <p className="text-text-muted text-xs mt-0.5">
-              {entries.length} player{entries.length !== 1 ? 's' : ''} · sorted by stars earned
+            <p className="text-text-muted text-[11px] sm:text-xs mt-0.5 truncate">
+              {entries.length} player{entries.length !== 1 ? 's' : ''} · by stars
             </p>
           </div>
-          {/* Time window pills */}
-          <div className="flex gap-1 bg-card rounded-full p-0.5 border border-white/8" role="radiogroup" aria-label="Time period">
-            {([['all', 'All time'], ['month', 'Month'], ['week', 'Week']] as const).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setWindow(id)}
-                role="radio"
-                aria-checked={window === id}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${
-                  window === id ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {/* Filter dropdown */}
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setFilterOpen(!filterOpen)}
-              className="flex items-center gap-1.5 text-xs font-semibold bg-card hover:bg-card-hover border border-white/10 px-3 py-2 rounded-xl transition-colors"
+              className="flex items-center gap-1.5 text-xs font-semibold bg-card hover:bg-card-hover border border-white/10 px-2.5 py-1.5 rounded-xl transition-colors"
             >
               <Gamepad2 size={13} className="text-text-muted" />
-              <span className="max-w-[100px] truncate">{filterLabel}</span>
+              <span className="max-w-[88px] sm:max-w-[120px] truncate">{filterLabel}</span>
               <ChevronDown size={13} className={`text-text-muted transition-transform flex-shrink-0 ${filterOpen ? 'rotate-180' : ''}`} />
             </button>
             {filterOpen && (
@@ -155,21 +138,48 @@ export function Leaderboard() {
           </div>
         </div>
 
-        {/* Your rank summary */}
+        {/* Time window — own row so pills stay tappable on narrow screens */}
+        <div className="flex gap-1 bg-card rounded-full p-0.5 border border-white/8 w-full sm:w-auto" role="radiogroup" aria-label="Time period">
+          {([['all', 'All'], ['month', 'Month'], ['week', 'Week']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setWindow(id)}
+              role="radio"
+              aria-checked={window === id}
+              className={`flex-1 sm:flex-none px-2.5 py-1.5 rounded-full text-[11px] font-bold transition-all ${
+                window === id ? 'bg-accent text-bg' : 'text-text-muted hover:text-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Your rank — one-line on phones, fuller card on wider screens */}
         {currentPlayerEntry && myTier && (
-          <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${myTier.border} ${myTier.bg}`}>
-            <span className="text-2xl">{currentPlayerEntry.avatar || '🎮'}</span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-text truncate">You</span>
-                <RankTierBadge stars={currentPlayerEntry.totalStars} size="xs" />
-              </div>
-              <p className={`text-xs font-semibold ${myTier.color}`}>
-                Rank #{myRank} · {currentPlayerEntry.totalStars} ⭐ · {currentPlayerEntry.gamesPlayed} games played
-              </p>
+          <>
+            <div className={`sm:hidden flex items-center gap-2 rounded-lg px-2.5 py-1.5 border ${myTier.border} ${myTier.bg}`}>
+              <span className="text-base leading-none">{currentPlayerEntry.avatar || '🎮'}</span>
+              <span className={`text-xs font-bold ${myTier.color}`}>#{myRank}</span>
+              <span className="text-[11px] text-text-muted flex-1 truncate">
+                {currentPlayerEntry.totalStars}⭐ · {currentPlayerEntry.gamesPlayed} games
+              </span>
+              <RankTierBadge stars={currentPlayerEntry.totalStars} size="xs" />
             </div>
-            {myRank === 1 && <Crown size={18} className="text-yellow-400 flex-shrink-0" />}
-          </div>
+            <div className={`hidden sm:flex items-center gap-3 rounded-xl px-3 py-2.5 border ${myTier.border} ${myTier.bg}`}>
+              <span className="text-2xl">{currentPlayerEntry.avatar || '🎮'}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-text truncate">You</span>
+                  <RankTierBadge stars={currentPlayerEntry.totalStars} size="xs" />
+                </div>
+                <p className={`text-xs font-semibold ${myTier.color}`}>
+                  Rank #{myRank} · {currentPlayerEntry.totalStars} ⭐ · {currentPlayerEntry.gamesPlayed} games played
+                </p>
+              </div>
+              {myRank === 1 && <Crown size={18} className="text-yellow-400 flex-shrink-0" />}
+            </div>
+          </>
         )}
       </div>
 

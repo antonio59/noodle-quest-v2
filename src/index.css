@@ -135,6 +135,51 @@ button {
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Short phones / landscape: reclaim vertical chrome for content */
+@media (max-height: 700px) {
+  .nq-account-bar {
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+  }
+  .nq-account-label {
+    display: none;
+  }
+  .nq-account-avatar {
+    font-size: 0.95rem;
+  }
+  button.nq-account-switch {
+    min-height: 36px;
+    min-width: 36px;
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+  }
+  .nq-account-switch-label {
+    display: none;
+  }
+  button.nq-nav-tab {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+    margin-top: 0;
+    margin-bottom: 0;
+    gap: 0;
+    min-height: 40px;
+  }
+  .nq-nav-label {
+    font-size: 9px;
+    line-height: 1.1;
+  }
+}
+
+@media (max-height: 560px) {
+  .nq-nav-label {
+    display: none;
+  }
+  button.nq-nav-tab {
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
 @keyframes pop-in {
   0% { transform: scale(0); opacity: 0; }
   70% { transform: scale(1.15); }
