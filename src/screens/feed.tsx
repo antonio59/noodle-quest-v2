@@ -101,12 +101,12 @@ const AUTHOR_PALETTE = [
   { name: 'text-emerald-300', stripe: 'bg-emerald-400' },
   { name: 'text-amber-300', stripe: 'bg-amber-400' },
   { name: 'text-rose-300', stripe: 'bg-rose-400' },
-  { name: 'text-violet-300', stripe: 'bg-violet-400' },
+  { name: 'text-teal-300', stripe: 'bg-teal-400' },
   { name: 'text-cyan-300', stripe: 'bg-cyan-400' },
   { name: 'text-orange-300', stripe: 'bg-orange-400' },
-  { name: 'text-pink-300', stripe: 'bg-pink-400' },
   { name: 'text-lime-300', stripe: 'bg-lime-400' },
-  { name: 'text-indigo-300', stripe: 'bg-indigo-400' },
+  { name: 'text-yellow-300', stripe: 'bg-yellow-400' },
+  { name: 'text-red-300', stripe: 'bg-red-400' },
 ];
 
 function authorColor(name: string) {
@@ -182,7 +182,7 @@ export function Feed() {
 
   const chatData = useQuery(
     api.feed.getChatMessages,
-    player ? { limit: 100, playerId: player.playerId as any } : 'skip' as any,
+    player?.sessionToken ? { limit: 100, sessionToken: player.sessionToken } : 'skip',
   );
   const activityData = useQuery(api.feed.getActivity, { limit: 50 });
   const searchResults = useQuery(
@@ -323,7 +323,7 @@ export function Feed() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-0 bg-surface flex-shrink-0">
-        <h1 className="text-lg font-bold">Community</h1>
+        <h1 className="text-lg font-bold">Chat</h1>
         <p className="text-text-muted text-xs mt-0.5 mb-3">Chat with other players and track activity</p>
 
         {/* Tab bar */}

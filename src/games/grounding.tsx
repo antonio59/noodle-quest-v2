@@ -11,7 +11,7 @@ interface Sense {
 
 const SENSES: Sense[] = [
   { emoji: '👀', title: 'See',   prompt: 'Look around. Name 5 things you can see right now.',   count: 5, color: '#60a5fa' },
-  { emoji: '👂', title: 'Hear',  prompt: 'Listen carefully. Name 4 sounds you can hear.',        count: 4, color: '#a78bfa' },
+  { emoji: '👂', title: 'Hear',  prompt: 'Listen carefully. Name 4 sounds you can hear.',        count: 4, color: '#f0a83a' },
   { emoji: '🤲', title: 'Feel',  prompt: 'What can you physically feel or touch? Name 3 things.', count: 3, color: '#4ade80' },
   { emoji: '👃', title: 'Smell', prompt: 'Notice any smells around you — name 2.',               count: 2, color: '#fb923c' },
   { emoji: '👅', title: 'Taste', prompt: 'What taste is in your mouth right now? Name 1.',       count: 1, color: '#f472b6' },
@@ -119,7 +119,7 @@ export default function GroundingGame({ onScore, onProgress, onEnd, onMessage }:
 
   if (done && breathing) {
     const circleScale = breathPhase === 'in' ? 1.4 : breathPhase === 'hold' ? 1.4 : 0.85;
-    const circleColor = breathPhase === 'in' ? '#60a5fa' : breathPhase === 'hold' ? '#a78bfa' : '#4ade80';
+    const circleColor = breathPhase === 'in' ? '#60a5fa' : breathPhase === 'hold' ? '#f0a83a' : '#4ade80';
     const label = breathPhase === 'in' ? 'Breathe in...' : breathPhase === 'hold' ? 'Hold...' : 'Breathe out...';
     return (
       <div className="h-full flex flex-col items-center justify-center gap-6 p-6 text-center">

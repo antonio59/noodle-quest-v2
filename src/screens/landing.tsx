@@ -2,155 +2,89 @@ import { useNavigate } from 'react-router-dom';
 import { getAllGames } from '@/lib/game-registry';
 import {
   Brain,
-  Target,
-  Zap,
-  Hand,
-  RefreshCw,
-  Heart,
-  ListOrdered,
   Gamepad2,
-  Users,
   Wind,
   Music,
-  Sparkles,
-  Star,
   ChevronRight,
-  CheckCircle2,
 } from 'lucide-react';
 
-const BRAIN_CATEGORIES = [
-  {
-    icon: Target,
-    label: 'Focus',
-    desc: 'Sharpen attention and block out distractions with precision-based challenges.',
-    color: 'text-accent',
-  },
-  {
-    icon: Brain,
-    label: 'Memory',
-    desc: 'Strengthen working memory and recall through progressive matching games.',
-    color: 'text-primary',
-  },
-  {
-    icon: Hand,
-    label: 'Motor',
-    desc: 'Improve reaction time and hand-eye coordination with timed physical tasks.',
-    color: 'text-success',
-  },
-  {
-    icon: RefreshCw,
-    label: 'Flexibility',
-    desc: 'Boost cognitive switching and mental adaptability under changing rules.',
-    color: 'text-warning',
-  },
-  {
-    icon: Heart,
-    label: 'Social',
-    desc: 'Build emotional intelligence, empathy, and social awareness interactively.',
-    color: 'text-danger',
-  },
-  {
-    icon: ListOrdered,
-    label: 'Sequence',
-    desc: 'Develop pattern recognition, planning, and logical ordering skills.',
-    color: 'text-accent',
-  },
+const HIGHLIGHTS = [
+  { icon: Brain, title: 'Brain games', desc: 'Focus, memory, and quick thinking — short rounds that feel like play.' },
+  { icon: Gamepad2, title: 'Board night', desc: 'Chess, Scrabble, UNO, and more. Solo vs AI or invite the family.' },
+  { icon: Wind, title: 'Breathe', desc: 'Guided calm in a few minutes when the day gets loud.' },
+  { icon: Music, title: 'Soundscapes', desc: 'Lo-fi, nature, and focus tracks that keep playing while you game.' },
 ];
-
-const BOARD_GAMES = [
-  'Tic-Tac-Toe',
-  'Checkers',
-  'Chess',
-  'Connect Four',
-  'Ludo',
-  'Snakes & Ladders',
-  'Crossword',
-  'Word Search',
-  'Bingo',
-  'UNO',
-  'Scrabble',
-];
-
-const BREATHING_EXERCISES = [
-  {
-    name: 'Box Breathing',
-    desc: 'Used by Navy SEALs to stay calm under pressure — inhale, hold, exhale, hold in equal counts.',
-  },
-  {
-    name: 'Coherent Breathing',
-    desc: 'Balance your nervous system in just five minutes with slow, rhythmic breaths.',
-  },
-  {
-    name: 'Calm Breathing',
-    desc: 'A gentle rhythm designed to ease anxiety and bring your heart rate down.',
-  },
-  {
-    name: 'Triangle Breathing',
-    desc: 'Build mental resilience through structured inhale-hold-exhale cycles.',
-  },
-];
-
-const TRACK_TYPES = [
-  { emoji: '☕', name: 'Lo-Fi', desc: 'Chill beats for deep work and study sessions.' },
-  { emoji: '🧠', name: 'Focus', desc: 'Sonic environments designed to trigger flow state.' },
-  { emoji: '🌿', name: 'Nature', desc: 'Grounding sounds of rain, wind, and forest ambience.' },
-  { emoji: '🧘', name: 'Meditation', desc: 'Tones and drones to support mindfulness practice.' },
-];
-
-function SectionTitle({ children, icon: Icon }: { children: React.ReactNode; icon?: React.ComponentType<{ className?: string; size?: number }> }) {
-  return (
-    <h2 className="text-xl font-bold text-text flex items-center gap-2 mb-4">
-      {Icon && <Icon size={22} className="text-accent" />}
-      {children}
-    </h2>
-  );
-}
-
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`bg-card rounded-2xl p-5 shadow-sm border border-white/5 ${className}`}>
-      {children}
-    </div>
-  );
-}
 
 export function Landing() {
   const navigate = useNavigate();
+  const gameCount = getAllGames().length;
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* Hero */}
-      <div className="relative px-6 pt-10 pb-6 text-center">
-        <div className="text-7xl mb-5 animate-[celebrate_3s_ease-in-out_infinite]">🍜</div>
-        <h1 className="text-4xl font-extrabold text-text mb-3 tracking-tight">Noodle Quest</h1>
-        <p className="text-text-dim text-lg font-medium mb-2">Play smarter. Breathe deeper. Feel better.</p>
-        <p className="text-text-muted text-sm max-w-sm mx-auto mb-6 leading-relaxed">
-          Brain training, classic board games, breathing exercises, and lo-fi
-          soundscapes — for the whole family.
-        </p>
-        <button
-          onClick={() => navigate('/auth')}
-          className="bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 transition-opacity active:scale-95 shadow-lg shadow-accent/20"
-        >
-          Get Started
-        </button>
-        <p className="text-text-muted text-xs font-semibold mt-4 tracking-wide">
-          {getAllGames().length} games · 8 focus tracks · play solo or together
-        </p>
-      </div>
+      {/* Hero — brand first, one job */}
+      <section className="relative min-h-[88dvh] flex flex-col items-center justify-center px-6 pt-8 pb-10 text-center overflow-hidden">
+        <div className="nq-hero-bowl" aria-hidden />
+        <div className="relative z-10 flex flex-col items-center max-w-md mx-auto">
+          <div className="relative mb-6">
+            <span className="text-8xl leading-none select-none" aria-hidden>🍜</span>
+            <span
+              className="absolute left-1/2 -top-2 w-3 h-3 rounded-full bg-accent/40 animate-[steam_2.4s_ease-out_infinite]"
+              style={{ marginLeft: '-18px' }}
+              aria-hidden
+            />
+            <span
+              className="absolute left-1/2 -top-1 w-2.5 h-2.5 rounded-full bg-primary/35 animate-[steam_2.8s_ease-out_0.6s_infinite]"
+              style={{ marginLeft: '6px' }}
+              aria-hidden
+            />
+            <span
+              className="absolute left-1/2 -top-3 w-2 h-2 rounded-full bg-accent/30 animate-[steam_3.2s_ease-out_1.1s_infinite]"
+              style={{ marginLeft: '-2px' }}
+              aria-hidden
+            />
+          </div>
+          <h1 className="font-display text-5xl sm:text-6xl font-bold text-text tracking-tight mb-3">
+            Noodle Quest
+          </h1>
+          <p className="text-text-dim text-lg sm:text-xl font-semibold mb-8 leading-snug">
+            Family games for bright minds and calm evenings.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => navigate('/auth')}
+              className="bg-accent text-bg font-bold px-8 py-3.5 rounded-2xl text-lg hover:brightness-110 transition-all active:scale-[0.98]"
+            >
+              Start playing
+            </button>
+            <button
+              onClick={() => navigate('/qa/play/memory-match')}
+              className="bg-card border border-white/10 text-text font-semibold px-8 py-3.5 rounded-2xl text-lg hover:bg-card-hover transition-all active:scale-[0.98]"
+            >
+              Try a game
+            </button>
+          </div>
+          <p className="text-text-muted text-sm font-semibold mt-6 tracking-wide">
+            {gameCount} games · no email · shared tablet friendly
+          </p>
+        </div>
+      </section>
 
-      {/* Game emoji marquee — show the goods before a word of copy */}
-      <div className="pb-10 space-y-2 overflow-hidden select-none" aria-hidden>
+      {/* Marquee of games */}
+      <div className="pb-12 space-y-2 overflow-hidden select-none" aria-hidden>
         {[0, 1].map(row => {
           const all = getAllGames().map(g => g.emoji);
           const half = Math.ceil(all.length / 2);
           const emojis = row === 0 ? all.slice(0, half) : all.slice(half);
           return (
-            <div key={row} className="flex w-max" style={{ animation: `marquee ${emojis.length * 3.2}s linear infinite${row === 1 ? ' reverse' : ''}` }}>
+            <div
+              key={row}
+              className="flex w-max"
+              style={{ animation: `marquee ${emojis.length * 3.2}s linear infinite${row === 1 ? ' reverse' : ''}` }}
+            >
               {[...emojis, ...emojis].map((e, i) => (
                 <span
                   key={i}
-                  className="flex items-center justify-center w-12 h-12 mx-1 text-2xl bg-card border border-white/5 rounded-2xl flex-shrink-0"
+                  className="flex items-center justify-center w-12 h-12 mx-1 text-2xl bg-card/80 border border-white/5 rounded-2xl flex-shrink-0"
                 >
                   {e}
                 </span>
@@ -160,175 +94,61 @@ export function Landing() {
         })}
       </div>
 
-      {/* Mission */}
-      <div className="px-5 pb-10">
-        <Card className="bg-accent-soft/30 border-accent/20">
-          <Sparkles size={20} className="text-accent mb-2" />
-          <h3 className="text-base font-bold text-text mb-2">Built for daily mental fitness</h3>
-          <p className="text-text-muted text-sm leading-relaxed">
-            Looking after your mind should be fun and part of your everyday
-            routine — whether you have two minutes or twenty.
-          </p>
-        </Card>
-      </div>
-
-      {/* Brain Training */}
-      <div className="px-5 pb-10">
-        <SectionTitle icon={Brain}>Brain Training</SectionTitle>
-        <p className="text-text-muted text-sm mb-4 leading-relaxed">
-          Six cognitive categories. Over thirty games. Each one adapts to your level with staged
-          progression, star ratings, and leaderboards. Train the skills that matter most.
+      {/* What's inside — one job */}
+      <section className="px-5 pb-14 max-w-2xl mx-auto">
+        <h2 className="font-display text-2xl font-bold text-text text-center mb-2">What&apos;s in the bowl</h2>
+        <p className="text-text-muted text-sm text-center mb-8 max-w-sm mx-auto">
+          Pick a game, earn stars, challenge someone at home — or just breathe for a minute.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {BRAIN_CATEGORIES.map((cat) => (
-            <div
-              key={cat.label}
-              className="bg-card rounded-xl p-4 border border-white/5 flex items-start gap-3"
-            >
-              <div className={`mt-0.5 ${cat.color}`}>
-                <cat.icon size={18} />
-              </div>
-              <div>
-                <div className="font-semibold text-sm text-text">{cat.label}</div>
-                <div className="text-text-muted text-xs leading-relaxed mt-0.5">{cat.desc}</div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {HIGHLIGHTS.map((item) => (
+            <div key={item.title} className="rounded-2xl p-5 bg-card/70 border border-white/5">
+              <item.icon size={22} className="text-accent mb-3" />
+              <h3 className="font-display text-lg font-semibold text-text mb-1">{item.title}</h3>
+              <p className="text-text-muted text-sm leading-relaxed">{item.desc}</p>
             </div>
           ))}
         </div>
-      </div>
-
-      {/* Board Games */}
-      <div className="px-5 pb-10">
-        <SectionTitle icon={Gamepad2}>Board Games</SectionTitle>
-        <p className="text-text-muted text-sm mb-4 leading-relaxed">
-          Play solo against a smart AI with three difficulty levels, or challenge friends in
-          real-time multiplayer sessions. From quick classics to deep strategy — there is a board
-          for every mood.
-        </p>
-        <Card>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {BOARD_GAMES.map((g) => (
-              <span
-                key={g}
-                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-surface text-text-muted text-xs font-medium border border-white/5"
-              >
-                {g}
-              </span>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="flex items-center gap-2 text-text-muted text-xs">
-              <Users size={14} className="text-accent" />
-              <span>Real-time multiplayer</span>
-            </div>
-            <div className="flex items-center gap-2 text-text-muted text-xs">
-              <Zap size={14} className="text-warning" />
-              <span>Three AI difficulties</span>
-            </div>
-            <div className="flex items-center gap-2 text-text-muted text-xs">
-              <Star size={14} className="text-success" />
-              <span>Invite links for friends</span>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Breathing */}
-      <div className="px-5 pb-10">
-        <SectionTitle icon={Wind}>Breathing Exercises</SectionTitle>
-        <p className="text-text-muted text-sm mb-4 leading-relaxed">
-          Four scientifically-backed techniques to reduce stress, improve focus, and regulate
-          your nervous system. Each exercise includes a gentle visual guide so you can find your
-          rhythm without counting in your head.
-        </p>
-        <div className="space-y-3">
-          {BREATHING_EXERCISES.map((b) => (
-            <div
-              key={b.name}
-              className="bg-card rounded-xl p-4 border border-white/5 flex items-start gap-3"
-            >
-              <CheckCircle2 size={16} className="text-success mt-0.5 flex-shrink-0" />
-              <div>
-                <div className="font-semibold text-sm text-text">{b.name}</div>
-                <div className="text-text-muted text-xs leading-relaxed mt-0.5">{b.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Soundscapes */}
-      <div className="px-5 pb-10">
-        <SectionTitle icon={Music}>Focus Soundscapes</SectionTitle>
-        <p className="text-text-muted text-sm mb-4 leading-relaxed">
-          Eight curated audio environments to support different mental states. Procedurally
-          generated so the atmosphere stays fresh every time you press play.
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {TRACK_TYPES.map((t) => (
-            <div
-              key={t.name}
-              className="bg-card rounded-xl p-4 border border-white/5 text-center"
-            >
-              <div className="text-2xl mb-2">{t.emoji}</div>
-              <div className="font-semibold text-sm text-text">{t.name}</div>
-              <div className="text-text-muted text-xs leading-relaxed mt-1">{t.desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      </section>
 
       {/* How it works */}
-      <div className="px-5 pb-10">
-        <SectionTitle icon={Sparkles}>How it works</SectionTitle>
-        <div className="space-y-3">
+      <section className="px-5 pb-14 max-w-md mx-auto">
+        <h2 className="font-display text-2xl font-bold text-text text-center mb-8">Three steps</h2>
+        <ol className="space-y-6">
           {[
-            {
-              step: '1',
-              title: 'Create your profile',
-              desc: 'Pick a name and an avatar. No email required. Takes ten seconds.',
-            },
-            {
-              step: '2',
-              title: 'Choose your path',
-              desc: 'Brain training, board games, breathing, or soundscapes — jump into whatever you need right now.',
-            },
-            {
-              step: '3',
-              title: 'Build the habit',
-              desc: 'Earn stars, track progress, challenge friends, and feel the difference with just a few minutes a day.',
-            },
+            { n: '1', title: 'Pick who\'s playing', desc: 'Name, avatar, and a 6-digit passcode. No email.' },
+            { n: '2', title: 'Jump into a game', desc: 'Brain training, board games, or a quick breathe.' },
+            { n: '3', title: 'Play together', desc: 'Challenge siblings, keep a ranking, chat at home.' },
           ].map((s) => (
-            <div key={s.step} className="flex items-start gap-4">
-              <div className="w-8 h-8 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-accent text-xs font-bold">{s.step}</span>
-              </div>
+            <li key={s.n} className="flex gap-4 items-start">
+              <span className="w-9 h-9 rounded-full bg-primary/20 text-primary font-display font-bold flex items-center justify-center flex-shrink-0">
+                {s.n}
+              </span>
               <div>
-                <div className="font-semibold text-sm text-text">{s.title}</div>
-                <div className="text-text-muted text-xs leading-relaxed mt-0.5">{s.desc}</div>
+                <div className="font-semibold text-text">{s.title}</div>
+                <div className="text-text-muted text-sm mt-0.5 leading-relaxed">{s.desc}</div>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-      </div>
+        </ol>
+      </section>
 
-      {/* Final CTA */}
-      <div className="px-5 pb-12 text-center">
-        <div className="bg-card rounded-2xl p-8 border border-white/5">
-          <div className="text-4xl mb-3">🎯</div>
-          <h3 className="text-lg font-bold text-text mb-2">Ready to train your brain?</h3>
-          <p className="text-text-muted text-sm mb-6 max-w-xs mx-auto">
-            Join thousands of players building focus, memory, and calm — one game at a time.
+      {/* Closing CTA */}
+      <section className="px-5 pb-16 text-center">
+        <div className="max-w-sm mx-auto">
+          <p className="font-display text-2xl font-bold text-text mb-2">Ready when you are</p>
+          <p className="text-text-muted text-sm mb-6">
+            One shared tablet. Everyone gets their own bowl.
           </p>
           <button
             onClick={() => navigate('/auth')}
-            className="inline-flex items-center gap-2 bg-accent text-bg font-bold px-8 py-3 rounded-xl text-lg hover:opacity-90 transition-opacity active:scale-95 shadow-lg shadow-accent/20"
+            className="inline-flex items-center gap-2 bg-accent text-bg font-bold px-8 py-3.5 rounded-2xl text-lg hover:brightness-110 transition-all active:scale-[0.98]"
           >
-            Get Started
+            Start playing
             <ChevronRight size={20} />
           </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

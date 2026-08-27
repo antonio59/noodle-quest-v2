@@ -1,17 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { AVATARS } from '@/lib/avatars';
 import { ArrowLeft, Lock, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const PIN_LENGTH = 6;
 const PROFILE_COLORS = [
-  'from-yellow-400 to-orange-500',
-  'from-blue-400 to-purple-500',
-  'from-green-400 to-emerald-500',
-  'from-pink-400 to-rose-500',
-  'from-cyan-400 to-teal-500',
-  'from-indigo-400 to-violet-500',
+  'from-amber-400 to-orange-500',
+  'from-teal-400 to-emerald-600',
+  'from-sky-400 to-cyan-600',
+  'from-rose-400 to-red-500',
+  'from-lime-400 to-green-600',
+  'from-yellow-300 to-amber-500',
 ];
+
+function safeReturnTo(raw: string | null): string {
+  if (!raw) return '/';
+  // Only same-origin relative paths — blocks open redirects / backslash tricks.
+  if (!/^\/(?!\/|\\)[A-Za-z0-9/_\-?=&.%]*$/.test(raw)) return '/';
+  return raw;
+}
 
 interface Profile {
   id: string;
@@ -24,7 +32,7 @@ export function Auth() {
   const { login, signup } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const returnTo = searchParams.get('returnTo') || '/';
+  const returnTo = safeReturnTo(searchParams.get('returnTo'));
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [pin, setPin] = useState('');
@@ -36,7 +44,6 @@ export function Auth() {
   const [signupPin, setSignupPin] = useState('');
   const [signupPinConfirm, setSignupPinConfirm] = useState('');
 
-  const AVATARS = ['🦊','🐱','🐶','🦁','🐼','🐨','🦄','🐸','🐙','🦋','🐢','🦖','🐧','🦜','🐝'];
   // Nudge toward unique avatars so profile cards stay distinguishable.
   const takenAvatars = new Set(profiles.map(p => p.avatar));
 
@@ -126,7 +133,7 @@ export function Auth() {
     if (!/^\d{6}$/.test(signupPin)) { setError('Passcode must be 6 digits'); return; }
     if (signupPin !== signupPinConfirm) { setError('Passcodes don\'t match!'); return; }
     setLoading(true);
-    const err = await signup(signupName.trim(), signupPin);
+    const err = await signup(signupName.trim(), signupPin, signupAvatar);
     setLoading(false);
     if (err) setError(err);
     else navigate(returnTo);
@@ -186,18 +193,18 @@ export function Auth() {
               type="password"
               placeholder="6-digit passcode"
               value={signupPin}
-              onChange={e => { setSignupPin(e.target.value.replace(/\D/g, '').slice(0, 8)); setError(''); }}
+              onChange={e => { setSignupPin(e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH)); setError(''); }}
               className="w-full bg-surface rounded-xl px-4 py-3 text-text placeholder-text-muted border border-transparent focus:border-accent outline-none"
-              maxLength={8}
+              maxLength={PIN_LENGTH}
               inputMode="numeric"
             />
             <input
               type="password"
               placeholder="Confirm passcode"
               value={signupPinConfirm}
-              onChange={e => { setSignupPinConfirm(e.target.value.replace(/\D/g, '').slice(0, 8)); setError(''); }}
+              onChange={e => { setSignupPinConfirm(e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH)); setError(''); }}
               className="w-full bg-surface rounded-xl px-4 py-3 text-text placeholder-text-muted border border-transparent focus:border-accent outline-none"
-              maxLength={8}
+              maxLength={PIN_LENGTH}
               inputMode="numeric"
             />
 
@@ -234,7 +241,7 @@ export function Auth() {
           <div className="text-center mb-8">
             <Lock className="w-8 h-8 text-text-muted mx-auto mb-4" />
             <h2 className="text-xl font-bold text-text">Enter your passcode</h2>
-            <div className="flex justify-center gap-3 mt-6">
+            <div className="flex justify-center gap-3 mt-6" aria-live="polite" aria-atomic="true">
               {[...Array(PIN_LENGTH)].map((_, i) => (
                 <div
                   key={i}
@@ -243,6 +250,7 @@ export function Auth() {
                   }`}
                 />
               ))}
+              <span className="sr-only">{pin.length} of {PIN_LENGTH} digits entered</span>
             </div>
             {error && <p className="text-danger text-sm mt-4 font-medium">{error}</p>}
             {loading && <p className="text-text-muted text-sm mt-4">Signing in...</p>}

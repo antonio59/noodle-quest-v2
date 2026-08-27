@@ -658,7 +658,7 @@ function DiceFace({ value, highlight }: { value: number | null; highlight?: bool
             fill={highlight ? 'rgba(167,139,250,0.08)' : 'rgba(255,255,255,0.04)'} />
           {pips.map(([px, py], i) => (
             <circle key={i} cx={px} cy={py} r={10}
-              fill={highlight ? '#a78bfa' : '#cbd5e1'} />
+              fill={highlight ? '#f0a83a' : '#cbd5e1'} />
           ))}
         </svg>
       )}

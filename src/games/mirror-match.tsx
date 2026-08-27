@@ -227,7 +227,7 @@ function MirrorMatchGame({ stage, onScore, onProgress, onMessage, onEnd }: GameP
               style={{
                 width: `${memorizeProgress}%`,
                 background: memorizeProgress > 50
-                  ? 'linear-gradient(90deg, #67e8f9, #a78bfa)'
+                  ? 'linear-gradient(90deg, #67e8f9, #f0a83a)'
                   : memorizeProgress > 20
                     ? 'linear-gradient(90deg, #fbbf24, #fb923c)'
                     : 'linear-gradient(90deg, #ef4444, #ff6e6c)',

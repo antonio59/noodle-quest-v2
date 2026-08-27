@@ -11,6 +11,7 @@ import {
   MAX_LOGIN_ATTEMPTS,
   LOCKOUT_MS,
 } from "./model/auth";
+import { assertAdminSecret } from "./model/admin";
 
 // Expanded avatar pool — must stay in sync with src/lib/avatars.ts
 const AVATARS = [
@@ -161,7 +162,8 @@ export const getAllPlayers = query({
 export const adminGetAllPlayers = query({
   args: { adminSecret: v.string() },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) return { error: "Unauthorized" };
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
     const players = await ctx.db.query("players").collect();
     return { players: players.map(p => ({ id: p._id, name: p.name, avatar: p.avatar, createdAt: p.createdAt, lastActive: p.lastActive })) };
   },
@@ -171,7 +173,8 @@ export const adminGetAllPlayers = query({
 export const adminResetPin = mutation({
   args: { playerId: v.id("players"), newPin: v.string(), adminSecret: v.string() },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) return { error: "Unauthorized" };
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
     if (!isValidPin(args.newPin)) return { error: "PIN must be 6 digits" };
     const player = await ctx.db.get(args.playerId);
     if (!player) return { error: "Player not found" };
@@ -188,7 +191,8 @@ export const adminResetPin = mutation({
 export const adminMergePlayers = mutation({
   args: { sourceId: v.id("players"), targetId: v.id("players"), adminSecret: v.string() },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) return { error: "Unauthorized" };
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
     if (args.sourceId === args.targetId) return { error: "Cannot merge a player into themselves" };
 
     const source = await ctx.db.get(args.sourceId);
@@ -296,7 +300,8 @@ export const adminMergePlayers = mutation({
 export const adminGetPlayerDetails = query({
   args: { playerId: v.id("players"), adminSecret: v.string() },
   handler: async (ctx, args) => {
-    if (args.adminSecret !== process.env.ADMIN_SECRET) return { error: "Unauthorized" };
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
     const player = await ctx.db.get(args.playerId);
     if (!player) return { error: "Player not found" };
 

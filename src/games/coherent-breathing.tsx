@@ -22,7 +22,7 @@ const BEST_FOR = [
 ];
 
 const PHASE_META = {
-  inhale: { label: 'Breathe In',  instruction: 'Slow, smooth inhale through your nose...', color: '#a78bfa', glow: '#a78bfa60' },
+  inhale: { label: 'Breathe In',  instruction: 'Slow, smooth inhale through your nose...', color: '#f0a83a', glow: '#f0a83a60' },
   exhale: { label: 'Breathe Out', instruction: 'Long, steady exhale through your mouth...', color: '#4ade80', glow: '#4ade8060' },
 };
 

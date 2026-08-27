@@ -202,8 +202,8 @@ export default function DualNBackGame({ stage, onScore, onProgress, onEnd, onMes
           className="px-5 py-3 rounded-xl font-bold text-sm transition-all active:scale-90 disabled:opacity-50"
           style={{
             background: posPressed ? 'rgba(167,139,250,0.4)' : feedback?.pos === 'hit' ? 'rgba(74,222,128,0.3)' : feedback?.pos ? 'rgba(239,68,68,0.3)' : 'rgba(167,139,250,0.2)',
-            border: `2px solid ${posPressed || feedback?.pos === 'hit' ? '#a78bfa' : feedback?.pos ? '#ef4444' : '#a78bfa44'}`,
-            color: '#a78bfa',
+            border: `2px solid ${posPressed || feedback?.pos === 'hit' ? '#f0a83a' : feedback?.pos ? '#ef4444' : '#f0a83a44'}`,
+            color: '#f0a83a',
           }}
         >
           📍 Position

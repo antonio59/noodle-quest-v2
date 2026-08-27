@@ -185,7 +185,7 @@ export default function WordSearchGame({ stage = 1, onScore, onProgress, onEnd }
                     className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
                       isFound
                         ? 'text-white shadow-sm'
-                        : 'bg-[#1e1b4b] text-violet-200 border border-white/5'
+                        : 'bg-[#142824] text-teal-200 border border-white/5'
                     }`}
                     style={isFound ? { backgroundColor: color, boxShadow: `0 0 8px ${color}55` } : undefined}
                   >

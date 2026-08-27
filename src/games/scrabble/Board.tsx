@@ -42,7 +42,7 @@ export function ScrabbleBoard({ board, placedKeys, isHumanTurn, onCellClick }: S
             y={BLABEL / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="#818cf8"
+            fill="#e85d4c"
             fontSize={7}
             fontWeight="bold"
             fontFamily="system-ui"
@@ -57,7 +57,7 @@ export function ScrabbleBoard({ board, placedKeys, isHumanTurn, onCellClick }: S
             y={BLABEL + r * BCS + BCS / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fill="#818cf8"
+            fill="#e85d4c"
             fontSize={7}
             fontWeight="bold"
             fontFamily="system-ui"
@@ -169,7 +169,7 @@ export function ScrabbleBoard({ board, placedKeys, isHumanTurn, onCellClick }: S
                       height={BCS - 1}
                       rx={1.5}
                       fill="none"
-                      stroke="#a78bfa"
+                      stroke="#f0a83a"
                       strokeWidth={1.5}
                       style={{ pointerEvents: 'none' }}
                     />

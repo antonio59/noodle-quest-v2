@@ -4,10 +4,29 @@ import { playerFromSession } from "./model/auth";
 
 const MAX_POST_LENGTH = 2000;
 
+const CLIENT_POST_TYPES = v.union(
+  v.literal("chat"),
+  v.literal("gif_url"),
+  v.literal("sticker"),
+);
+
+function isAllowedGiphyUrl(content: string): boolean {
+  try {
+    const url = new URL(content);
+    if (url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase();
+    if (host === "giphy.com" || host === "i.giphy.com") return true;
+    // media*.giphy.com (e.g. media0.giphy.com, media1.giphy.com)
+    return /^media\d*\.giphy\.com$/.test(host);
+  } catch {
+    return false;
+  }
+}
+
 export const createPost = mutation({
   args: {
     sessionToken: v.string(),
-    type: v.string(),
+    type: CLIENT_POST_TYPES,
     content: v.string(),
     gameId: v.optional(v.string()),
     gameName: v.optional(v.string()),
@@ -21,6 +40,9 @@ export const createPost = mutation({
     if (!author) return { error: "Not signed in." };
     if (args.content.length === 0 || args.content.length > MAX_POST_LENGTH) {
       return { error: "Message must be 1-2000 characters." };
+    }
+    if (args.type === "gif_url" && !isAllowedGiphyUrl(args.content)) {
+      return { error: "GIF must be an https Giphy URL." };
     }
 
     // Snapshot the quoted message so deletions/edits don't break old replies.
@@ -85,19 +107,13 @@ const mapPost = (p: any) => ({
 });
 
 export const getChatMessages = query({
-  args: { limit: v.optional(v.number()), playerId: v.optional(v.id("players")) },
+  args: { limit: v.optional(v.number()), sessionToken: v.string() },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 100;
-    // Hide chat history that predates the viewer's join time. Without a
-    // playerId we fall back to "show nothing" — anonymous viewers should not
-    // see the room's backlog.
-    let since = Number.POSITIVE_INFINITY;
-    if (args.playerId) {
-      const viewer = await ctx.db.get(args.playerId);
-      if (viewer) since = viewer.createdAt;
-    }
-    if (!Number.isFinite(since)) return [];
-
+    const viewer = await playerFromSession(ctx, args.sessionToken);
+    if (!viewer) return [];
+    // Hide chat history that predates the viewer's join time.
+    const since = viewer.createdAt;
     // Fetch chat, gif, and gif_url posts separately via the type+time index
     const [chats, gifs, gifUrls] = await Promise.all([
       ctx.db.query("feed").withIndex("by_type_time", q => q.eq("type", "chat")).order("desc").take(limit),

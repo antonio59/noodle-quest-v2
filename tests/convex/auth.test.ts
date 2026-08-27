@@ -152,19 +152,19 @@ describe("migrations:hashAllPins", () => {
 describe("admin functions", () => {
   test("adminResetPin requires the admin secret and invalidates sessions", async () => {
     const t = setup();
-    process.env.ADMIN_SECRET = "s3cret";
+    process.env.ADMIN_SECRET = "test-admin-secret-min-24chars!";
     const created = await signUp(t);
     const denied = await t.mutation(api.auth.adminResetPin, {
       playerId: created.playerId!,
       newPin: "654321",
-      adminSecret: "wrong",
+      adminSecret: "wrong-secret-that-is-long-enough!!",
     });
     expect(denied.error).toBe("Unauthorized");
 
     const ok = await t.mutation(api.auth.adminResetPin, {
       playerId: created.playerId!,
       newPin: "654321",
-      adminSecret: "s3cret",
+      adminSecret: "test-admin-secret-min-24chars!",
     });
     expect(ok.success).toBe(true);
 

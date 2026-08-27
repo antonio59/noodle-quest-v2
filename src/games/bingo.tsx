@@ -342,7 +342,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
                       width={cs - 2}
                       height={cs - 2}
                       rx={4}
-                      fill={marked ? (isFree ? '#6366f1' : '#818cf8') : isCurrent ? '#fbbf24' : canClick ? '#2d2566' : '#1e1b4b'}
+                      fill={marked ? (isFree ? '#6366f1' : '#e85d4c') : isCurrent ? '#fbbf24' : canClick ? '#1a332e' : '#142824'}
                       stroke={isCurrent ? '#fbbf24' : canClick ? '#a5b4fc' : '#312e81'}
                       strokeWidth={canClick || isCurrent ? 2.5 : 1}
                     >
@@ -367,7 +367,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
                         y={y + cs / 2}
                         textAnchor="middle"
                         dominantBaseline="central"
-                        fill={marked ? 'white' : isCurrent ? '#1e1b4b' : '#c7d2fe'}
+                        fill={marked ? 'white' : isCurrent ? '#142824' : '#c7d2fe'}
                         fontSize={16}
                         fontWeight="bold"
                         fontFamily="system-ui"
@@ -441,7 +441,7 @@ function BingoGame({ stage, onScore, onProgress, onMessage, onEnd, aiDifficulty,
                       width={aiCs - 1}
                       height={aiCs - 1}
                       rx={2}
-                      fill={marked ? (isFree ? '#6366f1' : '#818cf8') : '#1f2937'}
+                      fill={marked ? (isFree ? '#6366f1' : '#e85d4c') : '#1f2937'}
                       stroke="#374151"
                       strokeWidth={1}
                     />

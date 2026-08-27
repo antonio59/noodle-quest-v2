@@ -134,10 +134,10 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     const checkpoints = checkpointsRef.current;
     const obstacles = obstaclesRef.current;
 
-    ctx.fillStyle = '#0f0d1a';
+    ctx.fillStyle = '#0c1916';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = '#a78bfa55';
+    ctx.strokeStyle = '#f0a83a55';
     ctx.lineWidth = config.pathWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -409,7 +409,7 @@ function SteadyHandsGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       <div
         ref={gameAreaRef}
         className="flex-1 min-h-[280px] relative overflow-hidden rounded-b-xl"
-        style={{ background: '#0f0d1a', touchAction: 'none' }}
+        style={{ background: '#0c1916', touchAction: 'none' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

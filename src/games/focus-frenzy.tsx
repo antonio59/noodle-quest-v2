@@ -186,7 +186,7 @@ export default function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: G
           </div>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex-shrink-0"
-              style={{ background: 'radial-gradient(circle, #67e8f9, #232146)', boxShadow: '0 0 8px #67e8f9' }} />
+              style={{ background: 'radial-gradient(circle, #67e8f9, #1a332e)', boxShadow: '0 0 8px #67e8f9' }} />
             <span className="text-sm text-text"><span className="text-cyan-400 font-bold">Blue</span> = Distraction! -5</span>
           </div>
         </div>
@@ -203,8 +203,8 @@ export default function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: G
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl gap-2 flex-shrink-0">
-        <div className="text-purple-400 font-bold">⚡ {score}</div>
+      <div className="flex justify-between items-center px-4 py-2 bg-[#1a332e] rounded-t-xl gap-2 flex-shrink-0">
+        <div className="text-amber-400 font-bold">⚡ {score}</div>
         <div className="flex items-center gap-2 flex-1 mx-2">
           <div className="flex-1 h-1.5 bg-[#1a1833] rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all duration-200"
@@ -235,7 +235,7 @@ export default function FocusFrenzyGame({ stage, onScore, onProgress, onEnd }: G
               transition: 'transform 0.15s, opacity 0.2s',
               ...(orb.isTarget
                 ? { background: 'radial-gradient(circle at 30% 30%, #ff6e6c, #c084fc)', boxShadow: '0 0 20px #ff6e6c, 0 0 40px #c084fc' }
-                : { background: 'radial-gradient(circle at 30% 30%, #67e8f9, #232146)', boxShadow: '0 0 8px #67e8f9', opacity: orb.fading ? 0.35 : 0.75 }
+                : { background: 'radial-gradient(circle at 30% 30%, #67e8f9, #1a332e)', boxShadow: '0 0 8px #67e8f9', opacity: orb.fading ? 0.35 : 0.75 }
               ),
             }}
           />

@@ -3,6 +3,13 @@ import { v } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { playerFromSession } from "./model/auth";
+import { assertAdminSecret } from "./model/admin";
+
+/** Strip fields that must not leave the server for browser admin UIs. */
+function stripReportForBrowser<T extends { stackTrace?: string; context?: unknown }>(report: T) {
+  const { stackTrace: _st, context: _ctx, ...safe } = report;
+  return safe;
+}
 
 // Submit a game request from a player. Attribution comes from the session
 // (when provided) rather than client-supplied identity.
@@ -15,8 +22,8 @@ export const createGameRequest = mutation({
   handler: async (ctx, args) => {
     const player = args.sessionToken ? await playerFromSession(ctx, args.sessionToken) : null;
     return await ctx.db.insert("game_requests", {
-      gameName: args.gameName,
-      description: args.description,
+      gameName: args.gameName.slice(0, 80),
+      description: args.description.slice(0, 2000),
       playerId: player?._id,
       playerName: player?.name,
       createdAt: Date.now(),
@@ -88,14 +95,14 @@ export const createReport = mutation({
   handler: async (ctx, args) => {
     const player = args.sessionToken ? await playerFromSession(ctx, args.sessionToken) : null;
     return await upsertReport(ctx, {
-      errorId: args.errorId,
+      errorId: args.errorId.slice(0, 120),
       gameId: args.gameId,
       playerId: player?._id,
       playerName: player?.name,
       errorType: args.errorType,
       severity: args.severity,
-      message: args.message,
-      stackTrace: args.stackTrace,
+      message: args.message.slice(0, 2000),
+      stackTrace: args.stackTrace?.slice(0, 8000),
       context: args.context,
     });
   },
@@ -164,39 +171,48 @@ export const resolveReport = internalMutation({
   },
 });
 
-// Get open reports
+// Get open reports (admin only; stack/context stripped for browser)
 export const getOpenReports = query({
-  handler: async (ctx) => {
-    return await ctx.db
+  args: { adminSecret: v.string() },
+  handler: async (ctx, args) => {
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
+    const reports = await ctx.db
       .query("reports")
       .withIndex("by_status", (q) => q.eq("status", "open"))
       .order("desc")
       .collect();
+    return { reports: reports.map(stripReportForBrowser) };
   },
 });
 
-// Get reports for a specific game
+// Get reports for a specific game (admin only; stack/context stripped)
 export const getGameReports = query({
-  args: { gameId: v.string() },
+  args: { gameId: v.string(), adminSecret: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
+    const reports = await ctx.db
       .query("reports")
       .withIndex("by_game", (q) => q.eq("gameId", args.gameId))
       .order("desc")
       .collect();
+    return { reports: reports.map(stripReportForBrowser) };
   },
 });
 
-// Get recent reports
+// Get recent reports (admin only; stack/context stripped for browser)
 export const getRecentReports = query({
-  args: { limit: v.optional(v.number()) },
+  args: { limit: v.optional(v.number()), adminSecret: v.string() },
   handler: async (ctx, args) => {
+    const auth = await assertAdminSecret(ctx, args.adminSecret);
+    if (auth.ok === false) return { error: auth.error };
     const reports = await ctx.db
       .query("reports")
       .withIndex("by_created", (q) => q)
       .order("desc")
       .take(args.limit || 10);
-    return reports;
+    return { reports: reports.map(stripReportForBrowser) };
   },
 });
 

@@ -39,7 +39,7 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
   const [feedback, setFeedback] = useState('');
   const [feedbackColor, setFeedbackColor] = useState('#67e8f9');
   const [hint, setHint] = useState('Press and hold to blow!');
-  const [hintColor, setHintColor] = useState('#a78bfa');
+  const [hintColor, setHintColor] = useState('#f0a83a');
   const [timeLeft, setTimeLeft] = useState(0);
   const [floatAway, setFloatAway] = useState(false);
 
@@ -107,7 +107,7 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setFeedback('');
     setFeedbackColor('#67e8f9');
     setHint('Press and hold to blow!');
-    setHintColor('#a78bfa');
+    setHintColor('#f0a83a');
   }, []);
 
   const releaseBubble = useCallback((popped = false) => {
@@ -186,7 +186,7 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
     setFeedback('');
     setFeedbackColor('#67e8f9');
     setHint('Press and hold to blow!');
-    setHintColor('#a78bfa');
+    setHintColor('#f0a83a');
     setFloatAway(false);
     setTimeLeft(config.time);
   }, [config.time]);
@@ -235,9 +235,9 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         <h2 className="text-2xl font-bold text-cyan-400 mb-2">Breath Bubbles</h2>
         <p className="text-cyan-200 mb-4 max-w-xs">Blow perfect bubbles by breathing slow and steady!</p>
 
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+        <div className="bg-[#1a332e] rounded-xl p-4 mb-5 max-w-xs">
           <div className="text-xl text-cyan-400 mb-2">🎯 Goal: {config.bubbles} perfect bubbles</div>
-          <div className="text-purple-300 mb-3">Hold the button and breathe OUT slowly</div>
+          <div className="text-amber-300 mb-3">Hold the button and breathe OUT slowly</div>
           <div className="flex gap-3 justify-center items-center">
             <div className="w-8 h-8 rounded-full bg-red-400 text-xs flex items-center justify-center">Too<br />small</div>
             <div className="w-12 h-12 rounded-full bg-green-400 text-xs flex items-center justify-center" style={{ boxShadow: '0 0 15px #4ade80' }}>Just<br />right!</div>
@@ -259,7 +259,7 @@ function BreathBubblesGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px] items-center">
-      <div className="flex gap-4 px-4 py-2 bg-[#232146] rounded-xl mb-3">
+      <div className="flex gap-4 px-4 py-2 bg-[#1a332e] rounded-xl mb-3">
         <span className="text-cyan-400 font-bold">Bubble {Math.min(currentBubble + 1, config.bubbles)}/{config.bubbles}</span>
         <span className="text-green-400">Perfect: {perfectCount}</span>
         {config.time > 0 && <span className="text-yellow-400">⏱️ {timeLeft}</span>}

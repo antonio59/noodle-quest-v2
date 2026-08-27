@@ -240,12 +240,12 @@ function MemoryMatchGame({ stage, onScore, onProgress, onEnd }: GameProps) {
               background: card.matched
                 ? `linear-gradient(135deg, #4ade80, #22c55e)`
                 : card.flipped
-                  ? `linear-gradient(135deg, #a78bfa, #818cf8)`
+                  ? `linear-gradient(135deg, #f0a83a, #e85d4c)`
                   : `linear-gradient(135deg, #3730a3, #4c1d95)`,
               boxShadow: card.justMatched
                 ? '0 0 20px #4ade80, 0 0 40px #4ade8060'
                 : card.flipped
-                  ? '0 0 15px #a78bfa60'
+                  ? '0 0 15px #f0a83a60'
                   : '0 3px 0 rgba(0,0,0,0.4)',
               transform: card.justMatched ? 'scale(1.08)' : 'scale(1)',
               cursor: card.matched ? 'default' : 'pointer',

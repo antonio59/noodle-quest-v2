@@ -181,6 +181,13 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_created", ["createdAt"]),
 
+  // Admin secret brute-force gate (single row keyed "default")
+  admin_gate: defineTable({
+    key: v.string(),
+    failedAttempts: v.number(),
+    lockedUntil: v.optional(v.number()),
+  }).index("by_key", ["key"]),
+
   // Error reports and bot integration
   reports: defineTable({
     errorId: v.string(), // unique error identifier

@@ -290,7 +290,7 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         <div className="text-6xl mb-4">📋</div>
         <h2 className="text-2xl font-bold text-[#fbbf24] mb-2">Routine Roadmap</h2>
         <p className="text-[#fcd34d] mb-4 max-w-xs">Put the tasks in the right order!</p>
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+        <div className="bg-[#1a332e] rounded-xl p-4 mb-5 max-w-xs">
           <div className="text-xl text-[#fbbf24] mb-2">{routine.name}</div>
           <div className="text-[#67e8f9]">{routine.tasks.length} steps to put in order</div>
           <div className="flex gap-1 justify-center flex-wrap mt-2">
@@ -315,14 +315,14 @@ function RoutineRoadmapGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px] items-center">
-      <div className="px-4 py-2 bg-[#232146] rounded-xl mb-2 text-center">
+      <div className="px-4 py-2 bg-[#1a332e] rounded-xl mb-2 text-center">
         <span className="text-[#fbbf24] font-bold">{routine.name}</span>
       </div>
       <div className="text-[#67e8f9] text-sm mb-2">Drag to put in order! First at top.</div>
       <div className="flex flex-col gap-1.5 w-full max-w-sm flex-1 overflow-y-auto p-1">
         {currentOrder.map((task, i) => {
           const borderColor = resultColors[i] || '#c084fc';
-          const bgColor = resultColors[i] ? `${resultColors[i]}26` : '#232146';
+          const bgColor = resultColors[i] ? `${resultColors[i]}26` : '#1a332e';
           return (
             <div
               key={`${task.order}-${i}`}

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-const COLORS = ['#a78bfa', '#fbbf24', '#4ade80', '#f472b6', '#38bdf8', '#fb923c'];
+const COLORS = ['#f0a83a', '#f5c542', '#3ecf8e', '#e85d4c', '#38bdf8', '#fb923c'];
 
 interface ConfettiProps {
   /** More pieces for bigger wins. */

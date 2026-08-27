@@ -40,22 +40,6 @@ export function ReportIssueModal({ gameId, gameName, onClose }: ReportIssueModal
         context: { category, description: description.trim(), gameName },
       });
 
-      // Also try to send email via Netlify function
-      try {
-        await fetch('/.netlify/functions/send-report-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            gameName,
-            playerName: player?.name || 'Anonymous',
-            category: CATEGORIES.find(c => c.id === category)?.label,
-            description: description.trim(),
-          }),
-        });
-      } catch {
-        // Email function may not be configured, that's OK
-      }
-
       setSubmitted(true);
     } finally {
       setSending(false);

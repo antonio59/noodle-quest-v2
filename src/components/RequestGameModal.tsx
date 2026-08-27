@@ -10,8 +10,8 @@ interface RequestGameModalProps {
 }
 
 const TYPES = [
-  { id: 'brain', label: 'Brain training', icon: Brain, color: 'text-violet-400' },
-  { id: 'board', label: 'Board / strategy', icon: Puzzle, color: 'text-amber-400' },
+  { id: 'brain', label: 'Brain training', icon: Brain, color: 'text-amber-400' },
+  { id: 'board', label: 'Board / strategy', icon: Puzzle, color: 'text-teal-400' },
   { id: 'other', label: 'Something else', icon: Gamepad2, color: 'text-sky-400' },
 ];
 
@@ -33,24 +33,6 @@ export function RequestGameModal({ onClose }: RequestGameModalProps) {
         description: description.trim(),
         sessionToken: player?.sessionToken,
       });
-
-      // Mirror the same email mechanism as ReportIssueModal
-      try {
-        await fetch('/.netlify/functions/send-report-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            gameName: gameName.trim(),
-            playerName: player?.name || 'Anonymous',
-            category: `Game Request · ${TYPES.find(t => t.id === gameType)?.label}`,
-            description: description.trim()
-              ? `${gameName.trim()}: ${description.trim()}`
-              : gameName.trim(),
-          }),
-        });
-      } catch {
-        // Email function may not be configured — request is saved in DB either way
-      }
 
       setSubmitted(true);
     } finally {

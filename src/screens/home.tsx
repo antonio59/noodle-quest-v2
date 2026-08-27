@@ -20,12 +20,12 @@ export function Home() {
   const { player } = useAuth();
   const games = getAllGames();
 
-  const stats = useQuery(api.games.getPlayerStats, player?.playerId ? { playerId: player.playerId as any } : 'skip' as any);
-  const isLoading = stats === undefined && !!player?.playerId;
+  const stats = useQuery(api.games.getPlayerStats, player?.sessionToken ? { sessionToken: player.sessionToken } : 'skip' as any);
+  const isLoading = stats === undefined && !!player?.sessionToken;
   const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
   const pendingChallenges = useQuery(
     api.challenges.getPendingChallenges,
-    player?.playerId ? { playerId: player.playerId as any } : 'skip' as any,
+    player?.sessionToken ? { sessionToken: player.sessionToken } : 'skip' as any,
   ) ?? [];
   const bonusTiers = monthlyPlays ? computeBonusTiers(monthlyPlays.counts, games.map(g => g.id)) : {};
 

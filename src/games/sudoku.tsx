@@ -219,7 +219,7 @@ export default function SudokuGame({ stage, onScore, onProgress, onEnd, onMessag
                   borderRight: borderR,
                   borderBottom: borderB,
                   background: isSelected ? 'rgba(167,139,250,0.35)' : isErr ? 'rgba(239,68,68,0.25)' : sameNum ? 'rgba(167,139,250,0.2)' : highlight ? 'rgba(167,139,250,0.08)' : 'transparent',
-                  color: isErr ? '#ef4444' : fixed ? 'white' : val !== 0 ? '#a78bfa' : 'transparent',
+                  color: isErr ? '#ef4444' : fixed ? 'white' : val !== 0 ? '#f0a83a' : 'transparent',
                 }}>
                 {val || ''}
               </div>

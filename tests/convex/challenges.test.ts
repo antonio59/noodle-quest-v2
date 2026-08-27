@@ -27,7 +27,7 @@ describe("sendChallenge", () => {
     });
     expect(res.challengeId).toBeDefined();
 
-    const pending = await t.query(api.challenges.getPendingChallenges, { playerId: bob.playerId });
+    const pending = await t.query(api.challenges.getPendingChallenges, { sessionToken: bob.sessionToken });
     expect(pending).toHaveLength(1);
     expect(pending[0].fromName).toBe("Alice");
     expect(pending[0].fromScore).toBe(120);
@@ -84,7 +84,7 @@ describe("respondToChallenge", () => {
     expect(res.won).toBe(true);
 
     // Completed challenges leave the pending list and can't be replayed
-    const pending = await t.query(api.challenges.getPendingChallenges, { playerId: bob.playerId });
+    const pending = await t.query(api.challenges.getPendingChallenges, { sessionToken: bob.sessionToken });
     expect(pending).toHaveLength(0);
     const again = await t.mutation(api.challenges.respondToChallenge, {
       sessionToken: bob.sessionToken, challengeId, toScore: 999,

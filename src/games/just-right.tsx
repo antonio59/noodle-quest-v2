@@ -205,16 +205,16 @@ function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
         <div className="text-6xl mb-4">🎨</div>
         <h2 className="text-2xl font-bold text-[#c084fc] mb-2">Just Right</h2>
-        <p className="text-[#a78bfa] mb-4 max-w-xs">Splatter paint, then stop when you have JUST the right amount!</p>
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+        <p className="text-[#f0a83a] mb-4 max-w-xs">Splatter paint, then stop when you have JUST the right amount!</p>
+        <div className="bg-[#1a332e] rounded-xl p-4 mb-5 max-w-xs">
           <div className="text-3xl mb-2">🎯 Target: {config.target}</div>
           <div className="text-[#4ade80] text-base">Sweet spot: {minTarget} - {maxTarget} splatters</div>
           {config.time > 0 && <div className="text-[#fbbf24] mt-2">⏱️ Time limit: {config.time} seconds</div>}
         </div>
         <div className="bg-[#1a1833] rounded-lg p-3 mb-4 max-w-xs">
           <div className="text-[#67e8f9] text-sm">How to play:</div>
-          <div className="text-[#a78bfa] text-sm mt-1">1. Tap SPLAT to add paint 🎨</div>
-          <div className="text-[#a78bfa] text-sm">2. Tap STOP when you&apos;re close to {config.target} ✋</div>
+          <div className="text-[#f0a83a] text-sm mt-1">1. Tap SPLAT to add paint 🎨</div>
+          <div className="text-[#f0a83a] text-sm">2. Tap STOP when you&apos;re close to {config.target} ✋</div>
         </div>
         <p className="text-[#67e8f9] text-sm mb-5 max-w-xs">{tip}</p>
         <button
@@ -238,7 +238,7 @@ function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px]">
-      <div className="flex justify-between items-center px-4 py-2 bg-[#232146] rounded-t-xl">
+      <div className="flex justify-between items-center px-4 py-2 bg-[#1a332e] rounded-t-xl">
         <span className="text-[#c084fc] font-bold">Splatters: {splatters}</span>
         <span className="text-[#4ade80] text-sm">Target: {minTarget}-{maxTarget}</span>
         {config.time > 0 && (
@@ -250,7 +250,7 @@ function JustRightGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       <div className="flex-1 min-h-[200px] relative">
         <canvas
           ref={canvasRef}
-          className="w-full h-full bg-[#232146] block"
+          className="w-full h-full bg-[#1a332e] block"
         />
       </div>
       <div className="text-center py-1 text-sm" style={{ color: feedbackColor }}>

@@ -13,8 +13,8 @@ import { TRACKS } from '@/tracks/track-list';
 import { computeBonusTiers, getBonusTier } from '@/lib/bonus-multiplier';
 
 const BREATHE_THEMES: Record<string, { from: string; border: string; glow: string; accent: string; iconBg: string }> = {
-  'box-breathing':      { from: 'from-violet-600/20 to-violet-900/5',  border: 'border-violet-500/25', glow: 'hover:shadow-[0_0_30px_rgba(139,92,246,0.18)]', accent: 'text-violet-400',  iconBg: 'bg-violet-500/20' },
-  'calm-breathing':     { from: 'from-blue-600/20 to-blue-900/5',      border: 'border-blue-500/25',   glow: 'hover:shadow-[0_0_30px_rgba(59,130,246,0.18)]',  accent: 'text-blue-400',    iconBg: 'bg-blue-500/20' },
+  'box-breathing':      { from: 'from-teal-600/20 to-teal-900/5',      border: 'border-teal-500/25',   glow: 'hover:shadow-[0_0_30px_rgba(20,184,166,0.18)]',  accent: 'text-teal-400',    iconBg: 'bg-teal-500/20' },
+  'calm-breathing':     { from: 'from-sky-600/20 to-sky-900/5',        border: 'border-sky-500/25',    glow: 'hover:shadow-[0_0_30px_rgba(14,165,233,0.18)]',  accent: 'text-sky-400',     iconBg: 'bg-sky-500/20' },
   'triangle-breathing': { from: 'from-cyan-600/20 to-cyan-900/5',      border: 'border-cyan-500/25',   glow: 'hover:shadow-[0_0_30px_rgba(6,182,212,0.18)]',   accent: 'text-cyan-400',    iconBg: 'bg-cyan-500/20' },
   'coherent-breathing': { from: 'from-emerald-600/20 to-emerald-900/5',border: 'border-emerald-500/25',glow: 'hover:shadow-[0_0_30px_rgba(16,185,129,0.18)]',  accent: 'text-emerald-400', iconBg: 'bg-emerald-500/20' },
 };
@@ -23,7 +23,7 @@ const TRACK_TYPE_STYLES: Record<string, { bg: string; border: string; iconBg: st
   lofi:       { bg: 'bg-amber-500/8',   border: 'border-amber-500/20',   iconBg: 'bg-amber-500/20',   accent: 'text-amber-400',   pill: 'bg-amber-500/15 text-amber-400' },
   focus:      { bg: 'bg-sky-500/8',     border: 'border-sky-500/20',     iconBg: 'bg-sky-500/20',     accent: 'text-sky-400',     pill: 'bg-sky-500/15 text-sky-400' },
   nature:     { bg: 'bg-emerald-500/8', border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/20', accent: 'text-emerald-400', pill: 'bg-emerald-500/15 text-emerald-400' },
-  meditation: { bg: 'bg-violet-500/8',  border: 'border-violet-500/20',  iconBg: 'bg-violet-500/20',  accent: 'text-violet-400',  pill: 'bg-violet-500/15 text-violet-400' },
+  meditation: { bg: 'bg-teal-500/8',    border: 'border-teal-500/20',    iconBg: 'bg-teal-500/20',    accent: 'text-teal-400',    pill: 'bg-teal-500/15 text-teal-400' },
 };
 
 const TRACK_TYPE_LABELS: Record<string, string> = {
@@ -31,12 +31,12 @@ const TRACK_TYPE_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_STYLES: Record<string, { label: string; badge: string; glow: string; playBtn: string }> = {
-  focus:       { label: 'Focus',       badge: 'bg-sky-500/20 text-sky-300 border-sky-500/30',         glow: 'hover:shadow-[0_0_30px_rgba(56,189,248,0.25)]',   playBtn: 'bg-sky-500 hover:shadow-[0_0_20px_rgba(56,189,248,0.5)]' },
-  memory:      { label: 'Memory',      badge: 'bg-purple-500/20 text-purple-300 border-purple-500/30', glow: 'hover:shadow-[0_0_30px_rgba(167,139,250,0.25)]',  playBtn: 'bg-[#a78bfa] hover:shadow-[0_0_20px_rgba(167,139,250,0.5)]' },
-  motor:       { label: 'Motor',       badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30', glow: 'hover:shadow-[0_0_30px_rgba(249,115,22,0.25)]',   playBtn: 'bg-orange-500 hover:shadow-[0_0_20px_rgba(249,115,22,0.5)]' },
-  flexibility: { label: 'Flexibility', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', glow: 'hover:shadow-[0_0_30px_rgba(234,179,8,0.25)]',    playBtn: 'bg-yellow-500 hover:shadow-[0_0_20px_rgba(234,179,8,0.5)]' },
-  social:      { label: 'Social',      badge: 'bg-pink-500/20 text-pink-300 border-pink-500/30',       glow: 'hover:shadow-[0_0_30px_rgba(236,72,153,0.25)]',   playBtn: 'bg-pink-500 hover:shadow-[0_0_20px_rgba(236,72,153,0.5)]' },
-  sequence:    { label: 'Sequence',    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', glow: 'hover:shadow-[0_0_30px_rgba(52,211,153,0.25)]', playBtn: 'bg-emerald-500 hover:shadow-[0_0_20px_rgba(52,211,153,0.5)]' },
+  focus:       { label: 'Focus',       badge: 'bg-sky-500/20 text-sky-300 border-sky-500/30',         glow: 'hover:shadow-[0_0_24px_rgba(56,189,248,0.2)]',   playBtn: 'bg-sky-500 hover:brightness-110' },
+  memory:      { label: 'Memory',      badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',   glow: 'hover:shadow-[0_0_24px_rgba(240,168,58,0.22)]',  playBtn: 'bg-accent hover:brightness-110' },
+  motor:       { label: 'Motor',       badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30', glow: 'hover:shadow-[0_0_24px_rgba(249,115,22,0.2)]',   playBtn: 'bg-orange-500 hover:brightness-110' },
+  flexibility: { label: 'Flexibility', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', glow: 'hover:shadow-[0_0_24px_rgba(234,179,8,0.2)]',    playBtn: 'bg-yellow-500 hover:brightness-110' },
+  social:      { label: 'Social',      badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',       glow: 'hover:shadow-[0_0_24px_rgba(244,63,94,0.2)]',    playBtn: 'bg-rose-500 hover:brightness-110' },
+  sequence:    { label: 'Sequence',    badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', glow: 'hover:shadow-[0_0_24px_rgba(52,211,153,0.2)]', playBtn: 'bg-emerald-500 hover:brightness-110' },
 };
 
 const TABS = [
@@ -45,10 +45,10 @@ const TABS = [
     label: '🧠 Brain',
     emoji: '🧠',
     tagline: 'Train your mind every day',
-    description: 'Over 30 games across 6 cognitive areas. Difficulty adapts as you level up — so it always feels just challenging enough.',
-    color: 'text-violet-400',
-    pillBg: 'bg-violet-500/15 text-violet-300',
-    iconBg: 'bg-violet-500/15',
+    description: 'Short games for focus, memory, and flexible thinking — they get trickier as you level up.',
+    color: 'text-amber-400',
+    pillBg: 'bg-amber-500/15 text-amber-300',
+    iconBg: 'bg-amber-500/15',
     benefits: ['Sharp focus', 'Better memory', 'Faster thinking', 'Problem solving', 'Emotional skills', 'Mental agility'],
   },
   {
@@ -67,7 +67,7 @@ const TABS = [
     label: '🌬️ Breathe',
     emoji: '🌬️',
     tagline: 'Calm down in under 5 minutes',
-    description: 'Four science-backed breathing techniques — guided, timed, and visualised. Reduce stress, lower your heart rate, and clear your head.',
+    description: 'Four guided breathing techniques with a simple visual timer. Take a minute when you need it.',
     color: 'text-emerald-400',
     pillBg: 'bg-emerald-500/15 text-emerald-300',
     iconBg: 'bg-emerald-500/15',
@@ -95,7 +95,7 @@ export function GameHub() {
   const { player } = useAuth();
   const playerStats = useQuery(
     api.games.getPlayerStats,
-    player ? { playerId: player.playerId as any } : 'skip' as any,
+    player?.sessionToken ? { sessionToken: player.sessionToken } : 'skip' as any,
   );
   const gameStages = playerStats?.gameStages ?? {};
   const monthlyPlays = useQuery(api.games.getMonthlyPlayCounts, {});
@@ -292,23 +292,24 @@ export function GameHub() {
               return (
                 <div
                   key={g.id}
-                  className={`bg-card rounded-3xl p-5 relative group overflow-hidden cursor-pointer flex flex-col items-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-1 ${style.glow}`}
-                  onClick={() => navigateToGame(g.id)}
+                  className={`bg-card rounded-3xl p-5 relative flex flex-col items-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-0.5 ${style.glow}`}
                 >
                   {/* Category badge — top left */}
                   <span className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${style.badge}`}>
                     {style.label}
                   </span>
 
-                  {/* Bonus badge — top right */}
+                  {/* Bonus / favorite — top right (always visible on touch) */}
                   {tier ? (
                     <span className="absolute top-3 right-3 bg-warning/20 text-warning px-2.5 py-1 rounded-full text-[10px] font-bold border border-warning/30 animate-pulse">
                       {tier.label}
                     </span>
                   ) : (
                     <button
-                      onClick={e => { e.stopPropagation(); toggleFav(g.id); }}
-                      className="absolute top-3 right-3 p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      type="button"
+                      onClick={() => toggleFav(g.id)}
+                      aria-label={favorites.has(g.id) ? `Unfavorite ${g.name}` : `Favorite ${g.name}`}
+                      className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-white/5"
                     >
                       <Heart
                         size={14}
@@ -318,26 +319,21 @@ export function GameHub() {
                     </button>
                   )}
 
-                  <div className="text-5xl mt-7 mb-3 leading-none group-hover:scale-110 transition-transform duration-300">
-                    {g.emoji}
-                  </div>
-
-                  {/* Name + description */}
-                  <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
-                  <div className="text-text-muted text-xs line-clamp-2 mb-2">{g.description}</div>
-
-                  {/* Stars */}
-                  <CardMeta gameId={g.id} size="lg" />
-
-                  {/* Hover play overlay */}
-                  <div className="absolute inset-0 bg-bg/60 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <button
-                      className={`${style.playBtn} text-white rounded-full px-5 py-2.5 flex items-center gap-2 font-bold text-sm translate-y-4 group-hover:translate-y-0 transition-all duration-300`}
-                    >
+                  <button
+                    type="button"
+                    onClick={() => navigateToGame(g.id)}
+                    className="w-full flex flex-col items-center text-center pt-6 pb-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-2xl"
+                    aria-label={`Play ${g.name}`}
+                  >
+                    <div className="text-5xl mb-3 leading-none">{g.emoji}</div>
+                    <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
+                    <div className="text-text-muted text-xs line-clamp-2 mb-2">{g.description}</div>
+                    <CardMeta gameId={g.id} size="lg" />
+                    <span className={`mt-3 ${style.playBtn} text-bg rounded-full px-5 py-2 flex items-center gap-2 font-bold text-sm`}>
                       <Play size={16} className="fill-current" />
-                      Play Now
-                    </button>
-                  </div>
+                      Play
+                    </span>
+                  </button>
                 </div>
               );
             })}
@@ -403,8 +399,7 @@ export function GameHub() {
                 return (
                   <div
                     key={g.id}
-                    onClick={() => navigateToGame(g.id)}
-                    className="bg-card rounded-3xl p-5 flex flex-col items-center text-center border border-white/5 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_0_30px_rgba(167,139,250,0.2)] group relative overflow-hidden"
+                    className="bg-card rounded-3xl p-5 flex flex-col items-center text-center border border-white/5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_24px_rgba(240,168,58,0.18)] relative overflow-hidden"
                   >
                     {/* Bonus badge top-right */}
                     {bonusTierBadge && (
@@ -420,7 +415,7 @@ export function GameHub() {
                       </span>
                     )}
 
-                    <div className="text-5xl mb-3 leading-none mt-2 group-hover:scale-110 transition-transform duration-300">{g.emoji}</div>
+                    <div className="text-5xl mb-3 leading-none mt-2">{g.emoji}</div>
 
                     {/* Name + description */}
                     <div className="font-bold text-sm mb-1 text-text">{g.name}</div>
@@ -429,15 +424,17 @@ export function GameHub() {
                     <CardMeta gameId={g.id} size="lg" />
 
                     {/* Solo + Friends buttons */}
-                    <div className="flex gap-2 mt-3 w-full" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-2 mt-3 w-full">
                       <button
+                        type="button"
                         onClick={() => navigateToGame(g.id)}
-                        className="flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:opacity-90 transition-opacity active:scale-95"
+                        className="flex-1 bg-accent text-bg text-xs font-bold py-2.5 rounded-xl hover:brightness-110 transition-all active:scale-95"
                       >
                         Play
                       </button>
                       {isMulti && (
                         <button
+                          type="button"
                           onClick={() => navigateToMultiplayer(g.id)}
                           className="flex-1 flex items-center justify-center gap-1 bg-surface border border-white/10 text-text-muted text-xs font-bold py-2.5 rounded-xl hover:bg-card-hover hover:text-accent hover:border-accent/30 transition-all active:scale-95"
                         >

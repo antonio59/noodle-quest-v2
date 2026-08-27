@@ -232,9 +232,9 @@ export default function AnagramGame({ stage, onScore, onProgress, onEnd, onMessa
 
   const categoryColors: Record<string, string> = {
     Animals: '#4ade80', Food: '#fb923c', Actions: '#60a5fa',
-    Emotions: '#f472b6', Mindfulness: '#a78bfa', Nature: '#34d399',
+    Emotions: '#f472b6', Mindfulness: '#f0a83a', Nature: '#34d399',
   };
-  const catColor = categoryColors[currentWord.category] ?? '#a78bfa';
+  const catColor = categoryColors[currentWord.category] ?? '#f0a83a';
 
   return (
     <div className="h-full flex flex-col p-4 gap-3">

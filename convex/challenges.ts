@@ -2,11 +2,18 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { playerFromSession } from "./model/auth";
 
+const MAX_SCORE = 1_000_000;
+
+function isValidScore(n: number): boolean {
+  return Number.isFinite(n) && n >= 0 && n <= MAX_SCORE;
+}
+
 export const sendChallenge = mutation({
   args: { sessionToken: v.string(), toId: v.id("players"), gameId: v.string(), stage: v.number(), fromScore: v.number() },
   handler: async (ctx, args) => {
     const from = await playerFromSession(ctx, args.sessionToken);
     if (!from) return { error: "Not signed in." };
+    if (!isValidScore(args.fromScore)) return { error: "Invalid score." };
     const to = await ctx.db.get(args.toId);
     if (!to) return { error: "Player not found." };
     if (to._id === from._id) return { error: "You can't challenge yourself!" };
@@ -50,6 +57,7 @@ export const respondToChallenge = mutation({
   handler: async (ctx, args) => {
     const player = await playerFromSession(ctx, args.sessionToken);
     if (!player) return { error: "Not signed in." };
+    if (!isValidScore(args.toScore)) return { error: "Invalid score." };
     const challenge = await ctx.db.get(args.challengeId);
     if (!challenge || challenge.status !== "pending") return { error: "Challenge not found or already completed." };
     if (challenge.toId !== player._id) return { error: "This challenge isn't for you." };
@@ -75,11 +83,13 @@ export const respondToChallenge = mutation({
 });
 
 export const getPendingChallenges = query({
-  args: { playerId: v.id("players") },
+  args: { sessionToken: v.string() },
   handler: async (ctx, args) => {
+    const player = await playerFromSession(ctx, args.sessionToken);
+    if (!player) return [];
     const challenges = await ctx.db
       .query("challenges")
-      .withIndex("by_to", q => q.eq("toId", args.playerId).eq("status", "pending"))
+      .withIndex("by_to", q => q.eq("toId", player._id).eq("status", "pending"))
       .collect();
     // Enrich with the challenger's current name/avatar for the UI.
     const out = [];

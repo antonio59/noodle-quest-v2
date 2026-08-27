@@ -252,8 +252,8 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
       <div className="flex flex-col items-center justify-center min-h-[350px] p-5 text-center">
         <div className="text-6xl mb-4">📖</div>
         <h2 className="text-2xl font-bold text-[#c084fc] mb-2">Story Builder</h2>
-        <p className="text-[#a78bfa] mb-4 max-w-xs">Put the comic panels in order to tell the story!</p>
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+        <p className="text-[#f0a83a] mb-4 max-w-xs">Put the comic panels in order to tell the story!</p>
+        <div className="bg-[#1a332e] rounded-xl p-4 mb-5 max-w-xs">
           <div className="text-xl text-[#ff6e6c] mb-2">&quot;{story.title}&quot;</div>
           <div className="text-[#67e8f9]">{story.panels.length} panels to arrange</div>
           <div className="flex gap-1 justify-center flex-wrap mt-2">
@@ -277,7 +277,7 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px] items-center">
-      <div className="px-4 py-2 bg-[#232146] rounded-xl mb-2">
+      <div className="px-4 py-2 bg-[#1a332e] rounded-xl mb-2">
         <span className="text-[#ff6e6c] font-bold">{story.title}</span>
       </div>
       <div className="text-[#67e8f9] text-sm mb-2">Tap two panels to swap them!</div>
@@ -285,7 +285,7 @@ function StoryBuilderGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         {currentOrder.map((panel, i) => {
           const isSelected = selectedIndex === i;
           const borderColor = resultColors[i] || (isSelected ? '#ff6e6c' : '#c084fc');
-          const bgColor = resultColors[i] ? `${resultColors[i]}26` : '#232146';
+          const bgColor = resultColors[i] ? `${resultColors[i]}26` : '#1a332e';
           return (
             <button
               key={`${panel.order}-${i}`}

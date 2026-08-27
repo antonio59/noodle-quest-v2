@@ -338,7 +338,7 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
         <div className="text-6xl mb-4">💝</div>
         <h2 className="text-2xl font-bold text-[#f472b6] mb-2">Empathy Engine</h2>
         <p className="text-[#fb7185] mb-4 max-w-xs">Choose the most helpful response for your friends!</p>
-        <div className="bg-[#232146] rounded-xl p-4 mb-5 max-w-xs">
+        <div className="bg-[#1a332e] rounded-xl p-4 mb-5 max-w-xs">
           <div className="text-[#67e8f9] mb-2">{scenarios.length} friends need your help!</div>
           <div className="flex gap-1.5 justify-center flex-wrap">
             {scenarios.map((s, i) => (
@@ -364,19 +364,19 @@ function EmpathyEngineGame({ stage, onScore, onProgress, onEnd }: GameProps) {
 
   return (
     <div className="flex flex-col h-full min-h-[350px] items-center justify-center p-4">
-      <div className="flex gap-4 px-4 py-2 bg-[#232146] rounded-xl mb-3">
+      <div className="flex gap-4 px-4 py-2 bg-[#1a332e] rounded-xl mb-3">
         <span className="text-[#f472b6] font-bold">Friend {currentQ + 1}/{scenarios.length}</span>
         <span className="text-[#c084fc]">Score: {score}</span>
       </div>
       <div className="text-5xl mb-1">{s.emoji}</div>
       <div className="text-[#f472b6] text-base mb-2">{s.friend}</div>
-      <div className="bg-[#232146] p-3.5 px-4 rounded-xl text-center text-white text-[0.95rem] max-w-xs leading-snug mb-2.5">
+      <div className="bg-[#1a332e] p-3.5 px-4 rounded-xl text-center text-white text-[0.95rem] max-w-xs leading-snug mb-2.5">
         {s.situation}
       </div>
       <div className="text-[#67e8f9] text-sm mb-2.5">What would you say?</div>
       <div className="flex flex-col gap-2 w-full max-w-sm">
         {s.options.map((opt, optIdx) => {
-          let bg = '#232146';
+          let bg = '#1a332e';
           let border = '#c084fc';
           if (phase === 'feedback' && selectedIdx === optIdx) {
             if (opt.score === 3) { bg = '#4ade80'; border = '#4ade80'; }
